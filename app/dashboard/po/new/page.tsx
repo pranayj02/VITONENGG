@@ -317,7 +317,7 @@ export default function NewPOPage() {
       setVendors((vData ?? []) as unknown as Vendor[]);
       const { count } = await supabase.from("purchase_orders").select("*", { count: "exact", head: true });
       const nextNum = 170 + (count ?? 0);
-      setPoNumber(`VEPLPUR${nextNum}25-26`);
+      setPoNumber(`VEPL/PUR/${nextNum}/25-26`);
     }
     init();
   }, []);
