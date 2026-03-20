@@ -270,18 +270,12 @@ function POPreviewModal({
           <h2 className="font-bold text-gray-900 text-lg">Purchase Order Preview</h2>
           <div className="flex gap-2">
             <PDFDownloadLink
-              document={<POPdfDocument po={poData} />}
-              fileName={`${poNumber.replace(/\//g, "-")}.pdf`}
-            >
-              {({ loading }) => (
-                <button
-                  className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-all"
-                  disabled={loading}
-                >
-                  <Printer size={15} /> {loading ? "Generating..." : "Download PDF"}
-                </button>
-              )}
-            </PDFDownloadLink>
+                document={<POPdfDocument po={poData} />}
+                fileName={`${poNumber.replace(/\//g, "-")}.pdf`}
+                className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-all"
+              >
+                <Printer size={15} /> Download PDF
+              </PDFDownloadLink>
             <button onClick={onClose} className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 transition-all">
               <X size={18} />
             </button>
