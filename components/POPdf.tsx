@@ -25,12 +25,13 @@ const styles = StyleSheet.create({
 
 type VendorData = {
   name: string;
-  address?: string;
-  gstin?: string;
-  contact_name?: string;
-  contact_phone?: string;
-  payment_terms?: string;
+  address?: string | null;
+  gstin?: string | null;
+  contact_name?: string | null;
+  contact_phone?: string | null;
+  payment_terms?: string | null;
 };
+
 
 type LineItemData = {
   name: string;
