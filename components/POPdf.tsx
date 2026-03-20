@@ -1,4 +1,4 @@
-import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
+import { Document, Page, Text, View, StyleSheet, Image } from "@react-pdf/renderer";
 
 const S = StyleSheet.create({
   page: { fontSize: 8, fontFamily: "Helvetica", padding: 36, color: "#000" },
@@ -86,7 +86,12 @@ export function POPdfDocument({ po }: { po: POData }) {
 
         {/* Letterhead */}
         <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 6 }}>
-          <View style={{ width: "62%" }}>
+          <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 10, width: "62%" }}>
+          <Image
+            src="https://vitonvalves.vercel.app/Logo.JPG"
+            style={{ width: 48, height: 48, objectFit: "contain" }}
+          />
+          <View>
             <Text style={{ fontSize: 14, fontWeight: "bold" }}>VITON ENGINEERS PVT. LTD.</Text>
             <Text style={{ fontSize: 7, marginTop: 3, lineHeight: 1.5 }}>
               OFFICE: 701, 7th Floor, Swastik Disa Corporate Park, LBS Marg, Ghatkopar W, Mumbai - 400086
@@ -98,6 +103,7 @@ export function POPdfDocument({ po }: { po: POData }) {
               Tel: 08779301215 / 9769639388  |  Email: info@vitonvalves.com  |  GSTIN: 27AACCV7755N1ZK
             </Text>
           </View>
+        </View>
           <View style={{ width: "35%", alignItems: "flex-end" }}>
             <View style={{ border: "2pt solid #5060AB", borderRadius: 4, padding: "6 10" }}>
               <Text style={{ fontSize: 7, color: "#999", textTransform: "uppercase", letterSpacing: 1 }}>Purchase Order</Text>
