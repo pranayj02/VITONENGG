@@ -255,11 +255,11 @@ function POPreviewModal({
       <style>{`
         @media print {
           body > * { display: none !important; }
-          .po-print-wrapper { display: block !important; position: fixed; top: 0; left: 0; width: 100%; z-index: 9999; background: white; }
+          .po-print-wrapper { display: block !important; position: fixed; top: 0; left: 0; width: 100%; z-index: 9999; background: white; padding: 0; margin: 0; }
+          .po-print-wrapper * { visibility: visible !important; }
         }
         .po-print-wrapper { display: none; }
       `}</style>
-
       <div className="po-print-wrapper">
         <PODocument
           poNumber={poNumber} vendor={vendor} lineItems={lineItems}
