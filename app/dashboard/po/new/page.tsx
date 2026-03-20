@@ -6,6 +6,8 @@ import {
   CheckCircle, Printer, ChevronDown, ChevronUp,
 } from "lucide-react";
 import type { Item, Vendor, LineItem } from "@/lib/types";
+import { PDFDownloadLink } from "@react-pdf/renderer";
+import { POPdfDocument } from "@/components/POPdf";
 
 interface LineItemWithNote extends LineItem {
   custom_note: string;
@@ -274,12 +276,19 @@ function POPreviewModal({
           <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white sticky top-0 z-10">
             <h2 className="font-bold text-gray-900 text-lg">Purchase Order Preview</h2>
             <div className="flex gap-2">
-              <button
-                onClick={() => window.print()}
-                className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-all"
+              <PDFDownloadLink
+                document={<POPdfDocument po={poData} />}
+                fileName={`${poData.po_number}.pdf`}
               >
-                <Printer size={15} /> Print / Save PDF
-              </button>
+                {({ loading }) => (
+                  <button
+                    className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-all"
+                    disabled={loading}
+                  >
+                    <Printer size={15} /> {loading ? "Generating..." : "Download PDF"}
+                  </button>
+                )}
+              </PDFDownloadLink>
               <button onClick={onClose} className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 transition-all">
                 <X size={18} />
               </button>
