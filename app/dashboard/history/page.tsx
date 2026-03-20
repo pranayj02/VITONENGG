@@ -261,15 +261,11 @@ export default function HistoryPage() {
                             document={<POPdfDocument po={po} />}
                             fileName={`${po.po_number.replace(/\//g, "-")}.pdf`}
                             onClick={(e) => e.stopPropagation()}
+                            className="flex items-center gap-2 bg-blue-500/10 hover:bg-blue-500 text-blue-400 hover:text-white border border-blue-500/30 hover:border-blue-500 font-semibold px-4 py-2 rounded-xl text-sm transition-all"
                           >
-                            {({ loading: pdfLoading }) => (
-                              <button
-                                className="flex items-center gap-2 bg-blue-500/10 hover:bg-blue-500 text-blue-400 hover:text-white border border-blue-500/30 hover:border-blue-500 font-semibold px-4 py-2 rounded-xl text-sm transition-all"
-                              >
-                                <Printer size={14} /> {pdfLoading ? "..." : "Download PDF"}
-                              </button>
-                            )}
+                            <Printer size={14} /> Download PDF
                           </PDFDownloadLink>
+
                           <button
                             onClick={(e) => { e.stopPropagation(); handleDuplicate(po); }}
                             className="flex items-center gap-2 bg-orange-500/10 hover:bg-orange-500 text-orange-400 hover:text-white border border-orange-500/30 hover:border-orange-500 font-semibold px-4 py-2 rounded-xl text-sm transition-all"
