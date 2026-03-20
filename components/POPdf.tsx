@@ -121,7 +121,7 @@ type POData = {
   created_at: string;
   subtotal: number;
   total: number;
-  notes?: string;
+  notes?: string | null;
   line_items: LineItem[];
   dispatch_meta?: DispatchMeta;
   vendor?: {
