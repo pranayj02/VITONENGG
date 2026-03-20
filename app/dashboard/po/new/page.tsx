@@ -64,12 +64,11 @@ function PODocument({
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: "14px", borderBottom: "3px solid #5060AB", marginBottom: "14px" }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
           <img
-          src="/Logo.JPG"
-          alt="Viton Engineers"
-          style={{ width: "52px", height: "52px", objectFit: "contain", flexShrink: 0 }}
-          crossOrigin="anonymous"
+            src="/Logo.JPG"
+            alt="Viton Engineers"
+            style={{ width: "52px", height: "52px", objectFit: "contain", flexShrink: 0 }}
+            crossOrigin="anonymous"
           />
-
           <div>
             <div style={{ fontSize: "17px", fontWeight: "900", color: "#111", letterSpacing: "0.3px" }}>VITON ENGINEERS PVT. LTD.</div>
             <div style={{ fontSize: "10px", color: "#555", marginTop: "3px", lineHeight: "1.5" }}>
@@ -234,6 +233,7 @@ function PODocument({
   );
 }
 
+// ✅ FIXED: poData is now constructed from props. No more window.print() or CSS hack.
 function POPreviewModal({
   poNumber, vendor, lineItems, subtotal, pfAmount, grandTotal,
   notes, dispatch, onClose, quotNo, quotDate,
@@ -252,17 +252,41 @@ function POPreviewModal({
 }) {
   const today = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" });
 
+  const poData = {
+    po_number: poNumber,
+    created_at: new Date().toISOString(),
+    subtotal,
+    total: grandTotal,
+    notes,
+    line_items: lineItems,
+    dispatch_meta: dispatch,
+    vendors: vendor,
+  };
+
   return (
-    <>
-      <style>{`
-        @media print {
-          body > * { display: none !important; }
-          .po-print-wrapper { display: block !important; position: fixed; top: 0; left: 0; width: 100%; z-index: 9999; background: white; padding: 0; margin: 0; }
-          .po-print-wrapper * { visibility: visible !important; }
-        }
-        .po-print-wrapper { display: none; }
-      `}</style>
-      <div className="po-print-wrapper">
+    <div className="fixed inset-0 bg-black/80 z-50 flex items-start justify-center p-4 overflow-y-auto">
+      <div className="bg-white rounded-2xl w-full max-w-3xl my-4 shadow-2xl overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white sticky top-0 z-10">
+          <h2 className="font-bold text-gray-900 text-lg">Purchase Order Preview</h2>
+          <div className="flex gap-2">
+            <PDFDownloadLink
+              document={<POPdfDocument po={poData} />}
+              fileName={`${poNumber.replace(/\//g, "-")}.pdf`}
+            >
+              {({ loading }) => (
+                <button
+                  className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-all"
+                  disabled={loading}
+                >
+                  <Printer size={15} /> {loading ? "Generating..." : "Download PDF"}
+                </button>
+              )}
+            </PDFDownloadLink>
+            <button onClick={onClose} className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 transition-all">
+              <X size={18} />
+            </button>
+          </div>
+        </div>
         <PODocument
           poNumber={poNumber} vendor={vendor} lineItems={lineItems}
           subtotal={subtotal} pfAmount={pfAmount} grandTotal={grandTotal}
@@ -270,39 +294,7 @@ function POPreviewModal({
           quotNo={quotNo} quotDate={quotDate}
         />
       </div>
-
-      <div className="fixed inset-0 bg-black/80 z-50 flex items-start justify-center p-4 overflow-y-auto">
-        <div className="bg-white rounded-2xl w-full max-w-3xl my-4 shadow-2xl overflow-hidden">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white sticky top-0 z-10">
-            <h2 className="font-bold text-gray-900 text-lg">Purchase Order Preview</h2>
-            <div className="flex gap-2">
-              <PDFDownloadLink
-                document={<POPdfDocument po={poData} />}
-                fileName={`${poData.po_number}.pdf`}
-              >
-                {({ loading }) => (
-                  <button
-                    className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-all"
-                    disabled={loading}
-                  >
-                    <Printer size={15} /> {loading ? "Generating..." : "Download PDF"}
-                  </button>
-                )}
-              </PDFDownloadLink>
-              <button onClick={onClose} className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 transition-all">
-                <X size={18} />
-              </button>
-            </div>
-          </div>
-          <PODocument
-            poNumber={poNumber} vendor={vendor} lineItems={lineItems}
-            subtotal={subtotal} pfAmount={pfAmount} grandTotal={grandTotal}
-            notes={notes} dispatch={dispatch} date={today}
-            quotNo={quotNo} quotDate={quotDate}
-          />
-        </div>
-      </div>
-    </>
+    </div>
   );
 }
 
@@ -463,7 +455,7 @@ export default function NewPOPage() {
               onClick={() => setShowPreview(true)}
               className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-5 py-2.5 rounded-xl text-sm flex items-center gap-2"
             >
-              <Printer size={15} /> Preview and Print
+              <Printer size={15} /> Preview &amp; Download PDF
             </button>
             <a href="/dashboard/po/new" className="bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold px-5 py-2.5 rounded-xl text-sm flex items-center gap-2">
               <Plus size={15} /> New PO
@@ -720,7 +712,7 @@ export default function NewPOPage() {
             onClick={() => setShowDispatch(!showDispatch)}
             className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-800/50 transition-colors"
           >
-            <h2 className="text-white font-semibold">Dispatch, Delivery & Terms</h2>
+            <h2 className="text-white font-semibold">Dispatch, Delivery &amp; Terms</h2>
             {showDispatch ? <ChevronUp size={18} className="text-gray-500" /> : <ChevronDown size={18} className="text-gray-500" />}
           </button>
           {showDispatch && (
@@ -743,7 +735,7 @@ export default function NewPOPage() {
                 </div>
               ))}
               <div className="mt-4">
-                <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Packing & Forwarding</label>
+                <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Packing &amp; Forwarding</label>
                 <div className="flex gap-2">
                   <select
                     value={dispatch.pf_mode}
