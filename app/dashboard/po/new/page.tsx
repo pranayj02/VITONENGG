@@ -60,10 +60,8 @@ function PODocument({
     >
       {/* ── Letterhead ── */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: "14px", borderBottom: "3px solid #ea580c", marginBottom: "14px" }}>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
-          <div style={{ width: "52px", height: "52px", background: "#ea580c", borderRadius: "10px", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <span style={{ color: "white", fontWeight: "900", fontSize: "22px", letterSpacing: "-1px" }}>V</span>
-          </div>
+        <img src="/Logo.jpg" alt="Viton Engineers" style={{ width: "52px", height: "52px", objectFit: "contain", flexShrink: 0 }} />
+
           <div>
             <div style={{ fontSize: "17px", fontWeight: "900", color: "#111", letterSpacing: "0.3px" }}>VITON ENGINEERS PVT. LTD.</div>
             <div style={{ fontSize: "10px", color: "#555", marginTop: "3px", lineHeight: "1.5" }}>
