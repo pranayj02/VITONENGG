@@ -66,6 +66,7 @@ export default function HistoryPage() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [printPO, setPrintPO] = useState<POWithVendor | null>(null);
   const router = useRouter();
 
   async function load() {
@@ -119,6 +120,28 @@ export default function HistoryPage() {
 
   return (
     <div className="p-6 lg:p-8 max-w-5xl mx-auto">
+    {printPO && (
+  <div className="fixed inset-0 bg-black/80 z-50 flex items-start justify-center p-4 overflow-y-auto">
+    <div className="bg-white rounded-2xl w-full max-w-3xl my-4 shadow-2xl overflow-hidden">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white sticky top-0 z-10">
+        <h2 className="font-bold text-gray-900 text-lg">{printPO.po_number}</h2>
+        <div className="flex gap-2">
+          <PDFDownloadLink
+            document={<POPdfDocument po={printPO} />}
+            fileName={`${printPO.po_number.replace(/\//g, "-")}.pdf`}
+            className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-all"
+          >
+            <Printer size={15} /> Download PDF
+          </PDFDownloadLink>
+          <button onClick={() => setPrintPO(null)} className="p-2 rounded-xl hover:bg-gray-100 text-gray-500">
+            <X size={18} />
+          </button>
+        </div>
+      </div>
+      <HistoryPODocument po={printPO} />
+    </div>
+  </div>
+)}
 
       {/* Delete Confirmation Modal */}
       {confirmId && (
