@@ -1,11 +1,93 @@
 "use client";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
-import { FileText, Copy, ChevronDown, ChevronUp, Search, X } from "lucide-react";
+import { FileText, Copy, ChevronDown, ChevronUp, Search, X, Trash2, Download } from "lucide-react";
 import type { PurchaseOrder, Vendor, LineItem } from "@/lib/types";
 import { useRouter } from "next/navigation";
 
 type POWithVendor = PurchaseOrder & { vendors: Vendor };
+
+function exportToExcel(po: POWithVendor) {
+  const lineItems = po.line_items as unknown as LineItem[];
+  const vendorName = po.vendors?.name ?? "Unknown";
+  const date = new Date(po.created_at).toLocaleDateString("en-IN");
+
+  // Build CSV content (opens perfectly in Excel)
+  const rows: string[][] = [];
+
+  rows.push(["VITON ENGINEERS PVT. LTD."]);
+  rows.push(["B401, ADDL. Ambernath MIDC, Ambernath East, Dist. Thane - 421506"]);
+  rows.push([]);
+  rows.push(["Purchase Order No.", po.po_number, "", "Date:", date]);
+  rows.push(["Vendor:", vendorName]);
+  if (po.vendors?.address) rows.push(["Address:", po.vendors.address]);
+  if (po.vendors?.gstin) rows.push(["GSTIN:", po.vendors.gstin]);
+  if (po.vendors?.contact_name) rows.push(["Attn:", po.vendors.contact_name]);
+  rows.push(["Payment Terms:", po.vendors?.payment_terms ?? "60 Days"]);
+  rows.push([]);
+  rows.push(["#", "Serial ID", "Description", "Qty", "Unit", "Unit Rate (Rs.)", "Total (Rs.)", "Note"]);
+
+  lineItems.forEach((line, i) => {
+    rows.push([
+      String(i + 1),
+      line.serial_id,
+      line.name,
+      String(line.quantity),
+      line.unit,
+      String(line.unit_price),
+      String(line.total),
+      line.custom_note ?? "",
+    ]);
+  });
+
+  rows.push([]);
+
+  const dispatch = po.dispatch_meta as Record<string, string> | null;
+  if (dispatch) {
+    if (po.subtotal !== po.total) {
+      rows.push(["", "", "", "", "", "Subtotal", String(po.subtotal)]);
+      rows.push(["", "", "", "", "", "Packing & Forwarding", String(po.total - po.subtotal)]);
+    }
+  }
+  rows.push(["", "", "", "", "", "TOTAL (Rs.)", String(po.total)]);
+  rows.push([]);
+
+  if (po.notes) {
+    rows.push(["Notes:", po.notes]);
+    rows.push([]);
+  }
+
+  if (dispatch) {
+    rows.push(["Delivery:", dispatch.delivery ?? ""]);
+    rows.push(["Inspection:", dispatch.inspection ?? ""]);
+    rows.push(["Mode of Dispatch:", dispatch.mode_of_dispatch ?? ""]);
+    rows.push(["Place of Delivery:", dispatch.place_of_delivery ?? ""]);
+    rows.push(["Taxes:", dispatch.taxes ?? ""]);
+  }
+
+  rows.push([]);
+  rows.push(["", "", "", "", "", "For VITON ENGINEERS PVT. LTD."]);
+  rows.push(["", "", "", "", "", "Authorised Signatory"]);
+
+  // Convert to CSV string
+  const csv = rows
+    .map((row) =>
+      row.map((cell) => {
+        const val = String(cell ?? "").replace(/"/g, '""');
+        return val.includes(",") || val.includes("\n") || val.includes('"') ? `"${val}"` : val;
+      }).join(",")
+    )
+    .join("\n");
+
+  // Add BOM for Excel UTF-8 compatibility
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${po.po_number.replace(/\//g, "-")}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 export default function HistoryPage() {
   const [pos, setPos] = useState<POWithVendor[]>([]);
@@ -13,22 +95,23 @@ export default function HistoryPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
   const router = useRouter();
 
-  useEffect(() => {
-    async function load() {
-      const supabase = createClient();
-      const { data } = await supabase
-        .from("purchase_orders")
-        .select("*, vendors(*)")
-        .order("created_at", { ascending: false });
-      const rows = (data ?? []) as unknown as POWithVendor[];
-      setPos(rows);
-      setFiltered(rows);
-      setLoading(false);
-    }
-    load();
-  }, []);
+  async function load() {
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("purchase_orders")
+      .select("*, vendors(*)")
+      .order("created_at", { ascending: false });
+    const rows = (data ?? []) as unknown as POWithVendor[];
+    setPos(rows);
+    setFiltered(rows);
+    setLoading(false);
+  }
+
+  useEffect(() => { load(); }, []);
 
   useEffect(() => {
     if (!search.trim()) { setFiltered(pos); return; }
@@ -42,6 +125,15 @@ export default function HistoryPage() {
       )
     );
   }, [search, pos]);
+
+  async function handleDelete(id: string) {
+    setDeletingId(id);
+    const supabase = createClient();
+    await supabase.from("purchase_orders").delete().eq("id", id);
+    setConfirmId(null);
+    setDeletingId(null);
+    await load();
+  }
 
   function handleDuplicate(po: POWithVendor) {
     const params = new URLSearchParams({
@@ -61,6 +153,37 @@ export default function HistoryPage() {
 
   return (
     <div className="p-6 lg:p-8 max-w-5xl mx-auto">
+
+      {/* Delete Confirmation Modal */}
+      {confirmId && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-sm p-6">
+            <div className="w-12 h-12 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Trash2 size={22} className="text-red-400" />
+            </div>
+            <h3 className="text-white font-bold text-center text-lg mb-1">Delete PO?</h3>
+            <p className="text-gray-400 text-sm text-center mb-6">
+              This cannot be undone. The PO record will be permanently removed.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmId(null)}
+                className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold py-3 rounded-xl text-sm transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDelete(confirmId)}
+                disabled={deletingId === confirmId}
+                className="flex-1 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white font-semibold py-3 rounded-xl text-sm transition-all"
+              >
+                {deletingId === confirmId ? "Deleting..." : "Yes, Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="mb-6">
         <h1 className="text-white text-2xl font-bold">PO History</h1>
         <p className="text-gray-500 text-sm mt-1">{pos.length} purchase orders total</p>
@@ -97,6 +220,7 @@ export default function HistoryPage() {
             const date = new Date(po.created_at).toLocaleDateString("en-IN", {
               day: "2-digit", month: "short", year: "numeric",
             });
+
             return (
               <div key={po.id} className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden hover:border-gray-700 transition-all">
                 <div
@@ -119,7 +243,10 @@ export default function HistoryPage() {
                     <span className={`text-xs font-semibold px-2.5 py-1 rounded-lg capitalize ${statusColors[po.status] ?? "bg-gray-500/10 text-gray-400"}`}>
                       {po.status}
                     </span>
-                    {isOpen ? <ChevronUp size={16} className="text-gray-500" /> : <ChevronDown size={16} className="text-gray-500" />}
+                    {isOpen
+                      ? <ChevronUp size={16} className="text-gray-500" />
+                      : <ChevronDown size={16} className="text-gray-500" />
+                    }
                   </div>
                 </div>
 
@@ -141,7 +268,12 @@ export default function HistoryPage() {
                             <tr key={i} className="border-b border-gray-800/40 last:border-0">
                               <td className="px-5 py-2.5 text-gray-500 text-xs">{i + 1}</td>
                               <td className="px-5 py-2.5 text-orange-400 font-mono text-xs font-semibold">{line.serial_id}</td>
-                              <td className="px-5 py-2.5 text-white text-sm">{line.name}</td>
+                              <td className="px-5 py-2.5">
+                                <p className="text-white text-sm">{line.name}</p>
+                                {line.custom_note && (
+                                  <p className="text-gray-500 text-xs mt-0.5 italic">↳ {line.custom_note}</p>
+                                )}
+                              </td>
                               <td className="px-5 py-2.5 text-gray-400">{line.quantity} {line.unit}</td>
                               <td className="px-5 py-2.5 text-right text-white font-medium">Rs. {line.total.toLocaleString("en-IN")}</td>
                             </tr>
@@ -149,20 +281,38 @@ export default function HistoryPage() {
                         </tbody>
                       </table>
                     </div>
-                    <div className="px-5 py-4 border-t border-gray-800 flex items-center justify-between">
-                      <div className="text-sm">
-                        <span className="text-gray-500">Total: </span>
-                        <span className="text-white font-bold">Rs. {po.total.toLocaleString("en-IN")}</span>
-                        {po.notes && (
-                          <p className="text-gray-500 text-xs mt-1">{po.notes}</p>
-                        )}
+
+                    <div className="px-5 py-4 border-t border-gray-800">
+                      <div className="flex items-center justify-between flex-wrap gap-3">
+                        <div>
+                          <span className="text-gray-500 text-sm">Total: </span>
+                          <span className="text-white font-bold">Rs. {po.total.toLocaleString("en-IN")}</span>
+                          {po.notes && <p className="text-gray-500 text-xs mt-1">{po.notes}</p>}
+                        </div>
+                        <div className="flex gap-2 flex-wrap">
+                          {/* Excel Export */}
+                          <button
+                            onClick={() => exportToExcel(po)}
+                            className="flex items-center gap-2 bg-green-500/10 hover:bg-green-500 text-green-400 hover:text-white border border-green-500/30 hover:border-green-500 font-semibold px-4 py-2 rounded-xl text-sm transition-all"
+                          >
+                            <Download size={14} /> Export CSV
+                          </button>
+                          {/* Duplicate */}
+                          <button
+                            onClick={() => handleDuplicate(po)}
+                            className="flex items-center gap-2 bg-orange-500/10 hover:bg-orange-500 text-orange-400 hover:text-white border border-orange-500/30 hover:border-orange-500 font-semibold px-4 py-2 rounded-xl text-sm transition-all"
+                          >
+                            <Copy size={14} /> Duplicate
+                          </button>
+                          {/* Delete */}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setConfirmId(po.id); }}
+                            className="flex items-center gap-2 bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/30 hover:border-red-500 font-semibold px-4 py-2 rounded-xl text-sm transition-all"
+                          >
+                            <Trash2 size={14} /> Delete
+                          </button>
+                        </div>
                       </div>
-                      <button
-                        onClick={() => handleDuplicate(po)}
-                        className="flex items-center gap-2 bg-orange-500/10 hover:bg-orange-500 text-orange-400 hover:text-white border border-orange-500/30 hover:border-orange-500 font-semibold px-4 py-2 rounded-xl text-sm transition-all"
-                      >
-                        <Copy size={14} /> Duplicate PO
-                      </button>
                     </div>
                   </div>
                 )}
