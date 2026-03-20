@@ -7,7 +7,6 @@ import {
 } from "lucide-react";
 import type { Item, Vendor, LineItem } from "@/lib/types";
 
-// ─── Extended Types ───────────────────────────────────────────────────────────
 interface LineItemWithNote extends LineItem {
   custom_note: string;
 }
@@ -38,10 +37,9 @@ function computePF(subtotal: number, meta: DispatchMeta): number {
   return meta.pf_value;
 }
 
-// ─── PO Document (Print / Preview) ───────────────────────────────────────────
 function PODocument({
   poNumber, vendor, lineItems, subtotal, pfAmount, grandTotal,
-  notes, dispatch, date,
+  notes, dispatch, date, quotNo, quotDate,
 }: {
   poNumber: string;
   vendor: Vendor | null;
@@ -52,16 +50,22 @@ function PODocument({
   notes: string;
   dispatch: DispatchMeta;
   date: string;
+  quotNo: string;
+  quotDate: string;
 }) {
   return (
     <div
       className="po-preview-document bg-white text-gray-900"
       style={{ fontFamily: "Arial, sans-serif", fontSize: "12px", padding: "28px 32px" }}
     >
-      {/* ── Letterhead ── */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: "14px", borderBottom: "3px solid #ea580c", marginBottom: "14px" }}>
-        <img src="/Logo.jpg" alt="Viton Engineers" style={{ width: "52px", height: "52px", objectFit: "contain", flexShrink: 0 }} />
-
+      {/* Letterhead */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: "14px", borderBottom: "3px solid #5060AB", marginBottom: "14px" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
+          <img
+            src="/Logo.jpg"
+            alt="Viton Engineers"
+            style={{ width: "52px", height: "52px", objectFit: "contain", flexShrink: 0 }}
+          />
           <div>
             <div style={{ fontSize: "17px", fontWeight: "900", color: "#111", letterSpacing: "0.3px" }}>VITON ENGINEERS PVT. LTD.</div>
             <div style={{ fontSize: "10px", color: "#555", marginTop: "3px", lineHeight: "1.5" }}>
@@ -76,15 +80,15 @@ function PODocument({
           </div>
         </div>
         <div style={{ textAlign: "right", flexShrink: 0, marginLeft: "24px" }}>
-          <div style={{ border: "2px solid #ea580c", borderRadius: "8px", padding: "8px 16px", display: "inline-block" }}>
+          <div style={{ border: "2px solid #5060AB", borderRadius: "8px", padding: "8px 16px", display: "inline-block" }}>
             <div style={{ fontSize: "9px", color: "#999", textTransform: "uppercase", letterSpacing: "1.5px" }}>Purchase Order</div>
-            <div style={{ fontSize: "15px", fontWeight: "bold", color: "#ea580c", fontFamily: "monospace", marginTop: "2px" }}>{poNumber}</div>
+            <div style={{ fontSize: "15px", fontWeight: "bold", color: "#5060AB", fontFamily: "monospace", marginTop: "2px" }}>{poNumber}</div>
           </div>
           <div style={{ fontSize: "10px", color: "#666", marginTop: "6px" }}>Date: {date}</div>
         </div>
       </div>
 
-      {/* ── To + PO Meta ── */}
+      {/* To + PO Meta */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "14px" }}>
         <div style={{ background: "#f8f8f8", border: "1px solid #e5e5e5", borderRadius: "6px", padding: "10px 12px" }}>
           <div style={{ fontSize: "9px", color: "#aaa", fontWeight: "700", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "5px" }}>To</div>
@@ -98,8 +102,8 @@ function PODocument({
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11px" }}>
             <tbody>
               {[
-                ["Your Quot. No.", "—"],
-                ["Your Quot. Date", "—"],
+                ...(quotNo ? [["Your Quot. No.", quotNo]] : []),
+                ...(quotDate ? [["Your Quot. Date", new Date(quotDate).toLocaleDateString("en-IN")]] : []),
                 ["Payment Terms", vendor?.payment_terms ?? "60 Days"],
               ].map(([label, val]) => (
                 <tr key={label}>
@@ -112,13 +116,14 @@ function PODocument({
         </div>
       </div>
 
-      {/* ── Items Table ── */}
+      {/* Items Table */}
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11px" }}>
         <thead>
-          <tr style={{ background: "#ea580c" }}>
+          <tr style={{ background: "#5060AB" }}>
             {["Sr.", "Serial ID", "Particulars", "Qty.", "Unit", "Rate Rs.", "Total Rs."].map((h, i) => (
               <th key={h} style={{
-                padding: "7px 8px", color: "white", fontWeight: "700", textAlign: i < 3 ? "left" : (i >= 5 ? "right" : "center"),
+                padding: "7px 8px", color: "white", fontWeight: "700",
+                textAlign: i < 3 ? "left" : (i >= 5 ? "right" : "center"),
                 width: ["32px", "110px", "auto", "50px", "44px", "80px", "90px"][i],
               }}>{h}</th>
             ))}
@@ -129,7 +134,7 @@ function PODocument({
             <React.Fragment key={i}>
               <tr style={{ background: i % 2 === 0 ? "#fff" : "#fafafa", borderBottom: line.custom_note ? "none" : "1px solid #ebebeb" }}>
                 <td style={{ padding: "7px 8px", color: "#999", verticalAlign: "top" }}>{i + 1}</td>
-                <td style={{ padding: "7px 8px", fontFamily: "monospace", fontSize: "10px", color: "#c2410c", fontWeight: "700", verticalAlign: "top" }}>{line.serial_id}</td>
+                <td style={{ padding: "7px 8px", fontFamily: "monospace", fontSize: "10px", color: "#3a4a8a", fontWeight: "700", verticalAlign: "top" }}>{line.serial_id}</td>
                 <td style={{ padding: "7px 8px", color: "#111", verticalAlign: "top" }}>{line.name}</td>
                 <td style={{ padding: "7px 8px", textAlign: "center", verticalAlign: "top" }}>{line.quantity}</td>
                 <td style={{ padding: "7px 8px", textAlign: "center", color: "#666", verticalAlign: "top" }}>{line.unit}</td>
@@ -162,7 +167,7 @@ function PODocument({
               <td style={{ padding: "6px 8px", textAlign: "right" }}>{pfAmount.toLocaleString("en-IN")}</td>
             </tr>
           )}
-          <tr style={{ background: "#111", color: "white" }}>
+          <tr style={{ background: "#5060AB", color: "white" }}>
             <td colSpan={6} style={{ padding: "9px 8px", textAlign: "right", fontWeight: "700", letterSpacing: "1px" }}>TOTAL</td>
             <td style={{ padding: "9px 8px", textAlign: "right", fontWeight: "700", fontSize: "13px" }}>
               Rs.&nbsp;{grandTotal.toLocaleString("en-IN")}
@@ -171,15 +176,15 @@ function PODocument({
         </tfoot>
       </table>
 
-      {/* ── Notes ── */}
+      {/* Notes */}
       {notes && (
-        <div style={{ margin: "12px 0 0 0", padding: "10px 12px", background: "#fffbf5", border: "1px solid #fde8c8", borderRadius: "6px", fontSize: "11px" }}>
-          <div style={{ fontWeight: "700", marginBottom: "4px", color: "#c2410c" }}>Notes:</div>
+        <div style={{ margin: "12px 0 0 0", padding: "10px 12px", background: "#f0f2ff", border: "1px solid #c7ccee", borderRadius: "6px", fontSize: "11px" }}>
+          <div style={{ fontWeight: "700", marginBottom: "4px", color: "#5060AB" }}>Notes:</div>
           <div style={{ color: "#444", whiteSpace: "pre-wrap", lineHeight: "1.6" }}>{notes}</div>
         </div>
       )}
 
-      {/* ── Dispatch Footer ── */}
+      {/* Dispatch Footer */}
       <div style={{ marginTop: "14px", border: "1px solid #ddd", borderRadius: "6px", overflow: "hidden", fontSize: "10px" }}>
         {[
           [
@@ -211,7 +216,7 @@ function PODocument({
         ))}
       </div>
 
-      {/* ── Signature ── */}
+      {/* Signature */}
       <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "28px" }}>
         <div style={{ textAlign: "center", minWidth: "200px" }}>
           <div style={{ height: "40px" }}></div>
@@ -225,14 +230,21 @@ function PODocument({
   );
 }
 
-// ─── Preview Modal ─────────────────────────────────────────────────────────────
 function POPreviewModal({
   poNumber, vendor, lineItems, subtotal, pfAmount, grandTotal,
-  notes, dispatch, onClose,
+  notes, dispatch, onClose, quotNo, quotDate,
 }: {
-  poNumber: string; vendor: Vendor | null; lineItems: LineItemWithNote[];
-  subtotal: number; pfAmount: number; grandTotal: number;
-  notes: string; dispatch: DispatchMeta; onClose: () => void;
+  poNumber: string;
+  vendor: Vendor | null;
+  lineItems: LineItemWithNote[];
+  subtotal: number;
+  pfAmount: number;
+  grandTotal: number;
+  notes: string;
+  dispatch: DispatchMeta;
+  onClose: () => void;
+  quotNo: string;
+  quotDate: string;
 }) {
   const today = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" });
 
@@ -251,6 +263,7 @@ function POPreviewModal({
           poNumber={poNumber} vendor={vendor} lineItems={lineItems}
           subtotal={subtotal} pfAmount={pfAmount} grandTotal={grandTotal}
           notes={notes} dispatch={dispatch} date={today}
+          quotNo={quotNo} quotDate={quotDate}
         />
       </div>
 
@@ -274,6 +287,7 @@ function POPreviewModal({
             poNumber={poNumber} vendor={vendor} lineItems={lineItems}
             subtotal={subtotal} pfAmount={pfAmount} grandTotal={grandTotal}
             notes={notes} dispatch={dispatch} date={today}
+            quotNo={quotNo} quotDate={quotDate}
           />
         </div>
       </div>
@@ -281,7 +295,6 @@ function POPreviewModal({
   );
 }
 
-// ─── Main Page ─────────────────────────────────────────────────────────────────
 export default function NewPOPage() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [selectedVendorId, setSelectedVendorId] = useState("");
@@ -295,6 +308,8 @@ export default function NewPOPage() {
   const [itemNote, setItemNote] = useState("");
   const [notes, setNotes] = useState("");
   const [poNumber, setPoNumber] = useState("");
+  const [quotNo, setQuotNo] = useState("");
+  const [quotDate, setQuotDate] = useState("");
   const [saving, setSaving] = useState(false);
   const [savedPoId, setSavedPoId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
@@ -452,6 +467,7 @@ export default function NewPOPage() {
             poNumber={poNumber} vendor={selectedVendor} lineItems={lineItems}
             subtotal={subtotal} pfAmount={pfAmount} grandTotal={grandTotal}
             notes={notes} dispatch={dispatch} onClose={() => setShowPreview(false)}
+            quotNo={quotNo} quotDate={quotDate}
           />
         )}
       </div>
@@ -473,7 +489,7 @@ export default function NewPOPage() {
 
       <div className="grid gap-5">
 
-        {/* ── Vendor ── */}
+        {/* Vendor */}
         <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
           <h2 className="text-white font-semibold mb-4">Vendor</h2>
           <div className="grid sm:grid-cols-2 gap-4">
@@ -481,11 +497,7 @@ export default function NewPOPage() {
               <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Select Vendor *</label>
               <select
                 value={selectedVendorId}
-                onChange={(e) => {
-                  setSelectedVendorId(e.target.value);
-                  const v = vendors.find((v) => v.id === e.target.value);
-                  if (v?.payment_terms) setDispatchField("mode_of_dispatch", "");
-                }}
+                onChange={(e) => { setSelectedVendorId(e.target.value); }}
                 className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
                 <option value="">— select vendor —</option>
@@ -500,6 +512,24 @@ export default function NewPOPage() {
                 className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-orange-500"
               />
             </div>
+            <div>
+              <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Vendor Quot. No. (optional)</label>
+              <input
+                value={quotNo}
+                onChange={(e) => setQuotNo(e.target.value)}
+                placeholder="Leave blank if none"
+                className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500"
+              />
+            </div>
+            <div>
+              <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Vendor Quot. Date (optional)</label>
+              <input
+                type="date"
+                value={quotDate}
+                onChange={(e) => setQuotDate(e.target.value)}
+                className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+              />
+            </div>
           </div>
           {selectedVendor && (
             <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
@@ -511,7 +541,7 @@ export default function NewPOPage() {
           )}
         </div>
 
-        {/* ── Item Search ── */}
+        {/* Item Search */}
         <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
           <h2 className="text-white font-semibold mb-4">Add Items</h2>
           <div className="relative" ref={searchContainerRef}>
@@ -572,7 +602,7 @@ export default function NewPOPage() {
                 </div>
               </div>
               <div className="mb-4">
-                <label className="block text-gray-500 text-xs mb-1.5">Custom Note for this line item (optional)</label>
+                <label className="block text-gray-500 text-xs mb-1.5">Custom note for this line item (optional)</label>
                 <input
                   value={itemNote}
                   onChange={(e) => setItemNote(e.target.value)}
@@ -592,7 +622,7 @@ export default function NewPOPage() {
           )}
         </div>
 
-        {/* ── Line Items Table ── */}
+        {/* Line Items Table */}
         {lineItems.length > 0 && (
           <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-800 flex items-center justify-between">
@@ -616,7 +646,7 @@ export default function NewPOPage() {
                 <tbody>
                   {lineItems.map((line, i) => (
                     <React.Fragment key={i}>
-                      <tr className={`border-b border-gray-800/30 hover:bg-gray-800/30 transition-colors`}>
+                      <tr className="border-b border-gray-800/30 hover:bg-gray-800/30 transition-colors">
                         <td className="px-5 py-3 text-gray-500 align-top">{i + 1}</td>
                         <td className="px-5 py-3 align-top">
                           <p className="text-orange-400 font-mono text-xs font-semibold">{line.serial_id}</p>
@@ -673,7 +703,7 @@ export default function NewPOPage() {
           </div>
         )}
 
-        {/* ── Dispatch & Delivery ── */}
+        {/* Dispatch & Delivery */}
         <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
           <button
             onClick={() => setShowDispatch(!showDispatch)}
@@ -701,8 +731,6 @@ export default function NewPOPage() {
                   />
                 </div>
               ))}
-
-              {/* P&F */}
               <div className="mt-4">
                 <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Packing & Forwarding</label>
                 <div className="flex gap-2">
@@ -735,7 +763,7 @@ export default function NewPOPage() {
           )}
         </div>
 
-        {/* ── Notes ── */}
+        {/* Notes */}
         <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
           <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">General Notes / Terms</label>
           <textarea
@@ -747,7 +775,7 @@ export default function NewPOPage() {
           />
         </div>
 
-        {/* ── Actions ── */}
+        {/* Actions */}
         <div className="flex flex-wrap gap-3 pb-10">
           <button
             onClick={() => setShowPreview(true)}
@@ -778,6 +806,7 @@ export default function NewPOPage() {
           poNumber={poNumber} vendor={selectedVendor} lineItems={lineItems}
           subtotal={subtotal} pfAmount={pfAmount} grandTotal={grandTotal}
           notes={notes} dispatch={dispatch} onClose={() => setShowPreview(false)}
+          quotNo={quotNo} quotDate={quotDate}
         />
       )}
     </div>
