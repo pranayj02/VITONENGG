@@ -265,11 +265,12 @@ export default function HistoryPage() {
       {printPO && (
         <>
           <style>{`
-            @media print {
-              body > * { display: none !important; }
-              .po-history-print-wrapper { display: block !important; position: fixed; top: 0; left: 0; width: 100%; z-index: 9999; background: white; }
-            }
-            .po-history-print-wrapper { display: none; }
+              @media print {
+                body > * { display: none !important; }
+                .po-history-print-wrapper { display: block !important; position: fixed; top: 0; left: 0; width: 100%; z-index: 9999; background: white; padding: 0; margin: 0; }
+                .po-history-print-wrapper * { visibility: visible !important; }
+              }
+              .po-history-print-wrapper { display: none; }
           `}</style>
           <div className="po-history-print-wrapper">
             <HistoryPODocument po={printPO} />
