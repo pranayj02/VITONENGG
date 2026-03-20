@@ -1,28 +1,4 @@
-export type Item = {
-  id: string;
-  serial_id: string;
-  name: string;
-  description: string | null;
-  specs: Record<string, string> | null;
-  hsn_code: string | null;
-  unit: string;
-  category: string | null;
-  created_at: string;
-};
-
-export type Vendor = {
-  id: string;
-  name: string;
-  gstin: string | null;
-  address: string | null;
-  contact_name: string | null;
-  contact_phone: string | null;
-  contact_email: string | null;
-  payment_terms: string | null;
-  created_at: string;
-};
-
-export type LineItem = {
+export interface LineItem {
   item_id: string;
   serial_id: string;
   name: string;
@@ -31,9 +7,32 @@ export type LineItem = {
   quantity: number;
   unit_price: number;
   total: number;
-};
+  custom_note?: string;
+}
 
-export type PurchaseOrder = {
+export interface Item {
+  id: string;
+  serial_id: string;
+  name: string;
+  description: string | null;
+  hsn_code: string | null;
+  unit: string;
+  category: string | null;
+  specs: Record<string, unknown> | null;
+}
+
+export interface Vendor {
+  id: string;
+  name: string;
+  gstin: string | null;
+  address: string | null;
+  contact_name: string | null;
+  contact_phone: string | null;
+  contact_email: string | null;
+  payment_terms: string | null;
+}
+
+export interface PurchaseOrder {
   id: string;
   po_number: string;
   vendor_id: string;
@@ -42,22 +41,21 @@ export type PurchaseOrder = {
   subtotal: number;
   total: number;
   notes: string | null;
+  dispatch_meta: Record<string, unknown> | null;
   created_at: string;
-  vendor?: Vendor;
-};
+}
 
-export type Invoice = {
+export interface Invoice {
   id: string;
   invoice_number: string;
-  buyer_name: string;
-  buyer_gstin: string | null;
-  buyer_address: string | null;
+  po_id: string | null;
+  vendor_id: string;
+  status: string;
   line_items: LineItem[];
   subtotal: number;
-  cgst: number;
-  sgst: number;
-  igst: number;
+  tax_amount: number;
   total: number;
   notes: string | null;
+  due_date: string | null;
   created_at: string;
-};
+}
