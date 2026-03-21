@@ -314,11 +314,19 @@ export default function NewPOPage() {
   const [showDispatch, setShowDispatch] = useState(false);
   const [fyLabel, setFyLabel] = useState("");
   const [fySerial, setFySerial] = useState(0);
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [deliveryGstin, setDeliveryGstin] = useState("");
   const [error, setError] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
   const selectedVendor = vendors.find((v) => v.id === selectedVendorId) ?? null;
+  useEffect(() => {
+  if (selectedVendor) {
+    setDeliveryAddress(selectedVendor.delivery_address ?? "");
+    setDeliveryGstin(selectedVendor.delivery_gstin ?? "");
+    }
+  }, [selectedVendor]);
   const subtotal = lineItems.reduce((s, l) => s + l.total, 0);
   const pfAmount = computePF(subtotal, dispatch);
   const grandTotal = subtotal + pfAmount;
@@ -446,6 +454,17 @@ export default function NewPOPage() {
     if (saveErr) { setError(saveErr.message); setSaving(false); return; }
     const row = data as unknown as { id: string };
     setSavedPoId(row.id);
+    if (deliveryAddress || deliveryGstin) {
+  const supabase2 = createClient();
+  await supabase2
+    .from("vendors")
+    .update({
+      delivery_address: deliveryAddress || null,
+      delivery_gstin: deliveryGstin || null,
+    })
+    .eq("id", selectedVendorId);
+}
+
     setSaving(false);
   }
 
@@ -549,6 +568,30 @@ export default function NewPOPage() {
               {selectedVendor.contact_phone && <span>{selectedVendor.contact_phone}</span>}
               {selectedVendor.gstin && <span className="font-mono">GST: {selectedVendor.gstin}</span>}
             </div>
+      {selectedVendor && (
+  <div className="mt-3 grid grid-cols-1 gap-3">
+    <div>
+      <label className="text-xs text-gray-500 mb-1 block">Delivery Address</label>
+      <textarea
+        value={deliveryAddress}
+        onChange={(e) => setDeliveryAddress(e.target.value)}
+        placeholder="Enter delivery address (saved for next time)"
+        rows={2}
+        className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500"
+      />
+    </div>
+    <div>
+      <label className="text-xs text-gray-500 mb-1 block">Delivery GSTIN</label>
+      <input
+        value={deliveryGstin}
+        onChange={(e) => setDeliveryGstin(e.target.value)}
+        placeholder="GST number at delivery location"
+        className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500"
+      />
+    </div>
+  </div>
+)}
+
           )}
         </div>
 
