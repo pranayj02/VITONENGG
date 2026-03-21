@@ -125,15 +125,19 @@ const S = StyleSheet.create({
     alignItems: "center",
     minWidth: 160,
   },
+  // FIX: wrapper View carries the background, not the Text
+  poBoxTitleWrap: {
+    backgroundColor: BRAND,
+    width: "100%",
+    borderRadius: 3,
+    paddingVertical: 4,
+    alignItems: "center",
+  },
   poBoxTitle: {
     fontSize: 12,
     fontFamily: "Helvetica-Bold",
     color: "#ffffff",
-    backgroundColor: BRAND,
-    width: "100%",
     textAlign: "center",
-    paddingVertical: 4,
-    borderRadius: 3,
     textTransform: "uppercase",
     letterSpacing: 0.8,
   },
@@ -254,14 +258,14 @@ const S = StyleSheet.create({
     flex: 1,
   },
 
-  // column widths
+  // FIX: column widths now on View wrappers, not Text directly
   colSr: { width: 22 },
   colSerial: { width: 90 },
   colDesc: { flex: 1 },
-  colQty: { width: 36, textAlign: "center" },
-  colUnit: { width: 34, textAlign: "center" },
-  colRate: { width: 60, textAlign: "right" },
-  colTotal: { width: 68, textAlign: "right" },
+  colQty: { width: 36 },
+  colUnit: { width: 34 },
+  colRate: { width: 60 },
+  colTotal: { width: 68 },
 
   // ── Totals ──────────────────────────────────────────────────────
   totalsRow: {
@@ -367,39 +371,6 @@ const S = StyleSheet.create({
     color: TEXT_DARK,
   },
 
-  // ── Signature ───────────────────────────────────────────────────
-  signatureBlock: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    marginTop: 24,
-  },
-  signatureInner: {
-    alignItems: "center",
-    minWidth: 160,
-  },
-  signatureSpace: {
-    height: 32,
-  },
-  signatureLine: {
-    borderTopWidth: 0.5,
-    borderTopColor: "#aaaaaa",
-    width: "100%",
-    paddingTop: 4,
-    alignItems: "center",
-  },
-  signatureCompany: {
-    fontSize: 7,
-    fontFamily: "Helvetica-Bold",
-    color: TEXT_DARK,
-    textAlign: "center",
-  },
-  signatureRole: {
-    fontSize: 6,
-    color: "#888888",
-    marginTop: 2,
-    textAlign: "center",
-  },
-
   // ── Disclaimer ──────────────────────────────────────────────────
   disclaimer: {
     marginTop: 10,
@@ -419,7 +390,10 @@ export function POPdfDocument({ po }: { po: POData }) {
     inspection: rawDispatch?.inspection ?? "",
     taxes: rawDispatch?.taxes ?? "",
     payment_date: rawDispatch?.payment_date ?? "",
-    pf_mode: rawDispatch?.pf_mode === "percent" || rawDispatch?.pf_mode === "fixed" ? rawDispatch.pf_mode : "nil",
+    pf_mode:
+      rawDispatch?.pf_mode === "percent" || rawDispatch?.pf_mode === "fixed"
+        ? rawDispatch.pf_mode
+        : "nil",
     pf_value: typeof rawDispatch?.pf_value === "number" ? rawDispatch.pf_value : 0,
   };
   const lineItems = po.line_items ?? [];
@@ -440,7 +414,9 @@ export function POPdfDocument({ po }: { po: POData }) {
   const pfDisplay =
     dispatch.pf_mode === "nil"
       ? "Nil"
-      : `Rs. ${pfAmount.toLocaleString("en-IN")}${dispatch.pf_mode === "percent" ? ` (${dispatch.pf_value}%)` : ""}`;
+      : `Rs. ${pfAmount.toLocaleString("en-IN")}${
+          dispatch.pf_mode === "percent" ? ` (${dispatch.pf_value}%)` : ""
+        }`;
 
   const dispatchRows = [
     [
@@ -476,15 +452,19 @@ export function POPdfDocument({ po }: { po: POData }) {
                 Ambernath East, Dist. Thane - 421506
               </Text>
               <Text style={S.companyDetail}>
-                Tel: 08779301215 / 9769639388  |  Email: info@vitonvalves.com  |  GSTIN:{" "}
+                Tel: 08779301215 / 9769639388{"  "}|{"  "}Email: info@vitonvalves.com
+                {"  "}|{"  "}GSTIN:{" "}
                 <Text style={S.companyDetailBold}>27AACCV7755N1ZK</Text>
               </Text>
             </View>
           </View>
 
           <View style={{ alignItems: "flex-end" }}>
+            {/* FIX: View wrapper carries backgroundColor, not Text */}
             <View style={S.poBox}>
-              <Text style={S.poBoxTitle}>Purchase Order</Text>
+              <View style={S.poBoxTitleWrap}>
+                <Text style={S.poBoxTitle}>Purchase Order</Text>
+              </View>
               <Text style={S.poBoxNumber}>{po.po_number}</Text>
             </View>
             <Text style={S.poBoxDate}>Date: {date}</Text>
@@ -493,31 +473,23 @@ export function POPdfDocument({ po }: { po: POData }) {
 
         {/* ── To + Meta ── */}
         <View style={S.metaRow}>
-          {/* Left: Vendor */}
           <View style={S.metaCard}>
             <Text style={S.metaCardLabel}>To</Text>
             <Text style={S.vendorName}>{vendor?.name ?? "—"}</Text>
-
             {displayAddress ? (
               <Text style={S.vendorDetail}>{displayAddress}</Text>
             ) : null}
-
             {displayGstin ? (
               <Text style={S.vendorDetail}>GSTIN: {displayGstin}</Text>
             ) : null}
-
             {vendor?.contact_name ? (
-              <Text style={S.vendorDetailBold}>
-                Kind Attn: {vendor.contact_name}
-              </Text>
+              <Text style={S.vendorDetailBold}>Kind Attn: {vendor.contact_name}</Text>
             ) : null}
-
             {vendor?.contact_phone ? (
               <Text style={S.vendorDetail}>Tel: {vendor.contact_phone}</Text>
             ) : null}
           </View>
 
-          {/* Right: Quot details only */}
           <View style={S.metaCard}>
             {po.quot_no ? (
               <View style={S.metaTableRow}>
@@ -525,7 +497,6 @@ export function POPdfDocument({ po }: { po: POData }) {
                 <Text style={S.metaTableValue}>{po.quot_no}</Text>
               </View>
             ) : null}
-
             {po.quot_date ? (
               <View style={S.metaTableRow}>
                 <Text style={S.metaTableLabel}>Your Quot. Date</Text>
@@ -538,31 +509,60 @@ export function POPdfDocument({ po }: { po: POData }) {
         </View>
 
         {/* ── Items Table Header ── */}
+        {/* FIX: all columns use View wrappers so widths are respected */}
         <View style={S.tableHeader}>
-          <Text style={[S.tableHeaderCell, S.colSr]}>Sr.</Text>
-          <Text style={[S.tableHeaderCell, S.colSerial]}>Serial ID</Text>
-          <Text style={[S.tableHeaderCell, S.colDesc]}>Particulars</Text>
-          <Text style={[S.tableHeaderCell, S.colQty, { textAlign: "center" }]}>Qty.</Text>
-          <Text style={[S.tableHeaderCell, S.colUnit, { textAlign: "center" }]}>Unit</Text>
-          <Text style={[S.tableHeaderCell, S.colRate, { textAlign: "right" }]}>Rate Rs.</Text>
-          <Text style={[S.tableHeaderCell, S.colTotal, { textAlign: "right" }]}>Total Rs.</Text>
+          <View style={S.colSr}>
+            <Text style={S.tableHeaderCell}>Sr.</Text>
+          </View>
+          <View style={S.colSerial}>
+            <Text style={S.tableHeaderCell}>Serial ID</Text>
+          </View>
+          <View style={S.colDesc}>
+            <Text style={S.tableHeaderCell}>Particulars</Text>
+          </View>
+          <View style={[S.colQty, { alignItems: "center" }]}>
+            <Text style={S.tableHeaderCell}>Qty.</Text>
+          </View>
+          <View style={[S.colUnit, { alignItems: "center" }]}>
+            <Text style={S.tableHeaderCell}>Unit</Text>
+          </View>
+          <View style={[S.colRate, { alignItems: "flex-end" }]}>
+            <Text style={S.tableHeaderCell}>Rate Rs.</Text>
+          </View>
+          <View style={[S.colTotal, { alignItems: "flex-end" }]}>
+            <Text style={S.tableHeaderCell}>Total Rs.</Text>
+          </View>
         </View>
 
         {/* ── Items Rows ── */}
         {lineItems.map((line, i) => (
           <React.Fragment key={i}>
             <View style={[S.tableRow, i % 2 !== 0 ? S.tableRowAlt : {}]}>
-              <Text style={[S.tableCellLight, S.colSr]}>{i + 1}</Text>
-              <Text style={[S.tableCellMono, S.colSerial]}>{line.serial_id}</Text>
-              <Text style={[S.tableCell, S.colDesc]}>{line.name}</Text>
-              <Text style={[S.tableCell, S.colQty, { textAlign: "center" }]}>{line.quantity}</Text>
-              <Text style={[S.tableCellLight, S.colUnit, { textAlign: "center" }]}>{line.unit}</Text>
-              <Text style={[S.tableCell, S.colRate, { textAlign: "right" }]}>
-                {Number(line.unit_price || 0).toLocaleString("en-IN")}
-              </Text>
-              <Text style={[S.tableCell, S.colTotal, { textAlign: "right", fontFamily: "Helvetica-Bold" }]}>
-                {Number(line.total || 0).toLocaleString("en-IN")}
-              </Text>
+              <View style={S.colSr}>
+                <Text style={S.tableCellLight}>{i + 1}</Text>
+              </View>
+              <View style={S.colSerial}>
+                <Text style={S.tableCellMono}>{line.serial_id}</Text>
+              </View>
+              <View style={S.colDesc}>
+                <Text style={S.tableCell}>{line.name}</Text>
+              </View>
+              <View style={[S.colQty, { alignItems: "center" }]}>
+                <Text style={S.tableCell}>{line.quantity}</Text>
+              </View>
+              <View style={[S.colUnit, { alignItems: "center" }]}>
+                <Text style={S.tableCellLight}>{line.unit}</Text>
+              </View>
+              <View style={[S.colRate, { alignItems: "flex-end" }]}>
+                <Text style={S.tableCell}>
+                  {Number(line.unit_price || 0).toLocaleString("en-IN")}
+                </Text>
+              </View>
+              <View style={[S.colTotal, { alignItems: "flex-end" }]}>
+                <Text style={[S.tableCell, { fontFamily: "Helvetica-Bold" }]}>
+                  {Number(line.total || 0).toLocaleString("en-IN")}
+                </Text>
+              </View>
             </View>
 
             {line.custom_note ? (
@@ -583,11 +583,10 @@ export function POPdfDocument({ po }: { po: POData }) {
             <Text style={S.totalsValue}>{subtotal.toLocaleString("en-IN")}</Text>
           </View>
         )}
-
         {pfAmount > 0 && (
           <View style={[S.totalsRow, { borderTopWidth: 0 }]}>
             <Text style={S.totalsLabel}>
-              Packing &amp; Forwarding
+              Packing & Forwarding
               {dispatch.pf_mode === "percent" ? ` (${dispatch.pf_value}%)` : ""}
             </Text>
             <Text style={S.totalsValue}>{pfAmount.toLocaleString("en-IN")}</Text>
@@ -616,10 +615,7 @@ export function POPdfDocument({ po }: { po: POData }) {
               style={ri < dispatchRows.length - 1 ? S.dispatchRow : S.dispatchRowLast}
             >
               {row.map((cell, ci) => (
-                <View
-                  key={ci}
-                  style={ci === 0 ? S.dispatchCell : S.dispatchCellLast}
-                >
+                <View key={ci} style={ci === 0 ? S.dispatchCell : S.dispatchCellLast}>
                   {cell.label ? (
                     <Text style={S.dispatchLabel}>{cell.label}</Text>
                   ) : null}
