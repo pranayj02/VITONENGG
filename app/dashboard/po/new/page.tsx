@@ -18,6 +18,7 @@ import {
 import type { Item, Vendor, LineItem } from "@/lib/types";
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import { POPdfDocument } from "@/components/POPdf";
+import { useRouter, useSearchParams } from "next/navigation";
 
 interface LineItemWithNote extends LineItem {
   custom_note: string;
@@ -560,6 +561,9 @@ export default function NewPOPage() {
   const [error, setError] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
+  const searchParams = useSearchParams();
+  const editId = searchParams.get("id");
+
 
   const selectedVendor = vendors.find((v) => v.id === selectedVendorId) ?? null;
 
@@ -594,6 +598,24 @@ export default function NewPOPage() {
       setPoNumber(`VEPL/PUR/${nextSerial}/${currentFY}`);
       setFyLabel(currentFY);
       setFySerial(nextSerial);
+      if (editId) {
+  const { data: existingPO } = await supabase
+    .from("purchase_orders")
+    .select("*, vendors(*)")
+    .eq("id", editId)
+    .single();
+  if (existingPO) {
+    const po = existingPO as any;
+    setSelectedVendorId(po.vendor_id);
+    setLineItems(po.line_items ?? []);
+    setNotes(po.notes ?? "");
+    setPoNumber(po.po_number);
+    if (po.dispatch_meta) setDispatch(po.dispatch_meta);
+    setDeliveryAddress(po.vendors?.delivery_address ?? po.vendors?.address ?? "");
+    setDeliveryGstin(po.vendors?.delivery_gstin ?? po.vendors?.gstin ?? "");
+  }
+}
+
     }
 
     init();
@@ -723,22 +745,22 @@ export default function NewPOPage() {
 
     const supabase = createClient();
 
-    const { data, error: saveErr } = await supabase
-      .from("purchase_orders")
-      .insert({
-        po_number: poNumber,
-        vendor_id: selectedVendorId,
-        status,
-        line_items: lineItems,
-        subtotal,
-        total: grandTotal,
-        notes: notes.trim() || null,
-        dispatch_meta: dispatch,
-        fy_label: fyLabel,
-        fy_serial: fySerial,
-      })
-      .select("id")
-      .single();
+    const payload = {
+  po_number: poNumber,
+  vendor_id: selectedVendorId,
+  status,
+  line_items: lineItems,
+  subtotal,
+  total: grandTotal,
+  notes: notes.trim() || null,
+  dispatch_meta: dispatch,
+  fy_label: fyLabel,
+  fy_serial: fySerial,
+};
+
+const { data, error: saveErr } = editId
+  ? await supabase.from("purchase_orders").update(payload).eq("id", editId).select("id").single()
+  : await supabase.from("purchase_orders").insert(payload).select("id").single();
 
     if (saveErr) {
       setError(saveErr.message);
@@ -818,7 +840,9 @@ export default function NewPOPage() {
   return (
     <div className="p-6 lg:p-8 max-w-5xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-white text-2xl font-bold">New Purchase Order</h1>
+        <h1 className="text-white text-2xl font-bold">
+        {editId ? "Edit Purchase Order" : "New Purchase Order"}
+        </h1>
         <p className="text-gray-500 text-sm mt-1">
           PO No: <span className="text-orange-400 font-mono font-semibold">{poNumber}</span>
         </p>
@@ -1260,7 +1284,7 @@ export default function NewPOPage() {
             disabled={saving}
             className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-semibold px-8 py-3 rounded-xl text-sm flex items-center gap-2 shadow-lg shadow-orange-500/20"
           >
-            <FileText size={15} /> {saving ? "Creating PO..." : "Create PO"}
+            <FileText size={15} /> {s{saving ? (editId ? "Saving..." : "Creating PO...") : (editId ? "Save Changes" : "Create PO")}
           </button>
         </div>
       </div>
