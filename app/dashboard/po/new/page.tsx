@@ -22,6 +22,9 @@ interface DispatchMeta {
   place_of_delivery: string;
   inspection: string;
   taxes: string;
+  payment_date: string;
+  quot_no?: string;
+  quot_date?: string;
   pf_mode: "nil" | "percent" | "fixed";
   pf_value: number;
 }
@@ -32,6 +35,7 @@ const DEFAULT_DISPATCH: DispatchMeta = {
   place_of_delivery: "At Ambernath Works",
   inspection: "By VITON",
   taxes: "At Actual",
+  payment_date: "",
   pf_mode: "nil",
   pf_value: 0,
 };
@@ -75,10 +79,7 @@ function PODocument({
           <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ fontSize: "17px", fontWeight: "900", color: "#111", letterSpacing: "0.3px" }}>VITON ENGINEERS PVT. LTD.</div>
             <div style={{ fontSize: "10px", color: "#555", marginTop: "3px", lineHeight: "1.5" }}>
-              WORKS: B401, ADDL. Ambernath MIDC, Anand Nagar, Opp. Hali Pad, Ambernath East, Dist. Thane - 421506
-            </div>
-            <div style={{ fontSize: "10px", color: "#555" }}>
-              OFFICE: 701, 7th Floor, Swastik Disa Corporate Park, LBS Marg, Ghatkopar W, Mumbai - 400086
+              WORKS: B40/1, ADDL. Ambernath MIDC, Anand Nagar, Opp. Hali Pad, Ambernath East, Dist. Thane - 421506
             </div>
             <div style={{ fontSize: "10px", color: "#555", marginTop: "2px" }}>
               Tel: 08779301215 / 9769639388&nbsp;&nbsp;|&nbsp;&nbsp;Email: info@vitonvalves.com&nbsp;&nbsp;|&nbsp;&nbsp;GSTIN: <strong>27AACCV7755N1ZK</strong>
@@ -86,11 +87,11 @@ function PODocument({
           </div>
         </div>
         <div style={{ textAlign: "right", flexShrink: 0, marginLeft: "24px" }}>
-          <div style={{ border: "2px solid #5060AB", borderRadius: "8px", padding: "8px 16px", display: "inline-block", minWidth: "210px" }}>
-            <div style={{ fontSize: "14px", fontWeight: "800", color: "#5060AB", textTransform: "uppercase", letterSpacing: "1px", textAlign: "center" }}>
+          <div style={{ border: "2px solid #5060AB", borderRadius: "8px", padding: "6px 16px 8px 16px", display: "inline-block", minWidth: "210px" }}>
+            <div style={{ fontSize: "14px", fontWeight: "800", color: "#fff", background: "#5060AB", borderRadius: "4px", textTransform: "uppercase", letterSpacing: "1px", textAlign: "center", padding: "4px 6px" }}>
               Purchase Order
             </div>
-            <div style={{ fontSize: "12px", fontWeight: "700", color: "#666", fontFamily: "monospace", marginTop: "4px", textAlign: "center" }}>
+            <div style={{ fontSize: "11px", fontWeight: "500", color: "#666", fontFamily: "monospace", marginTop: "6px", textAlign: "center" }}>
               {poNumber}
             </div>
           </div>
@@ -227,7 +228,7 @@ function PODocument({
           ],
           [
             { label: "PAYMENT TERMS", value: vendor?.payment_terms ?? "60 Days" },
-            { label: "", value: "" },
+            { label: "PAYMENT DATE", value: dispatch.payment_date || "—" },
           ],
         ].map((row, ri) => (
           <div key={ri} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderBottom: ri < 3 ? "1px solid #e5e5e5" : "none" }}>
@@ -239,17 +240,6 @@ function PODocument({
             ))}
           </div>
         ))}
-      </div>
-
-      {/* Signature */}
-      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "28px" }}>
-        <div style={{ textAlign: "center", minWidth: "200px" }}>
-          <div style={{ height: "40px" }}></div>
-          <div style={{ borderTop: "1px solid #aaa", paddingTop: "6px" }}>
-            <div style={{ fontWeight: "700", fontSize: "11px" }}>For VITON ENGINEERS PVT. LTD.</div>
-            <div style={{ color: "#888", fontSize: "10px", marginTop: "2px" }}>Authorised Signatory</div>
-          </div>
-        </div>
       </div>
 
       {/* Disclaimer */}
@@ -287,6 +277,8 @@ function POPreviewModal({
     line_items: lineItems,
     dispatch_meta: dispatch,
     vendors: vendor,
+    quot_no: quotNo || null,
+    quot_date: quotDate || null,
   };
 
   return (
@@ -349,6 +341,7 @@ export default function NewPOPage() {
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [itemQty, setItemQty] = useState(1);
   const [itemPrice, setItemPrice] = useState(0);
+  const [lastPrice, setLastPrice] = useState<number | null>(null);
   const [itemNote, setItemNote] = useState("");
   const [notes, setNotes] = useState("");
   const [poNumber, setPoNumber] = useState("");
@@ -395,7 +388,7 @@ export default function NewPOPage() {
         .limit(1)
         .maybeSingle();
 
-      const nextSerial = ((maxRow as { fy_serial?: number } | null)?.fy_serial ?? 169) + 1;
+      const nextSerial = ((maxRow as { fy_serial?: number } | null)?.fy_serial ?? 0) + 1;
       setFyLabel(currentFY);
       setFySerial(nextSerial);
 
@@ -411,6 +404,10 @@ export default function NewPOPage() {
           setLineItems(po.line_items ?? []);
           setNotes(po.notes ?? "");
           setPoNumber(po.po_number);
+          setFyLabel(po.fy_label ?? currentFY);
+          setFySerial(po.fy_serial ?? nextSerial);
+          setQuotNo(po.quot_no ?? po.dispatch_meta?.quot_no ?? "");
+          setQuotDate(po.quot_date ?? po.dispatch_meta?.quot_date ?? "");
           if (po.dispatch_meta) setDispatch(po.dispatch_meta);
           setDeliveryAddress(po.vendors?.delivery_address ?? po.vendors?.address ?? "");
           setDeliveryGstin(po.vendors?.delivery_gstin ?? po.vendors?.gstin ?? "");
@@ -462,8 +459,13 @@ export default function NewPOPage() {
     const { data } = await supabase.from("vendor_items").select("last_price").eq("item_id", itemId).eq("vendor_id", vendorId).maybeSingle();
     if (data) {
       const row = data as unknown as { last_price: number };
-      if (row.last_price) setItemPrice(row.last_price);
+      if (row.last_price) {
+        setItemPrice(row.last_price);
+        setLastPrice(row.last_price);
+        return;
+      }
     }
+    setLastPrice(null);
   }
 
   function selectItem(item: Item) {
@@ -472,6 +474,7 @@ export default function NewPOPage() {
     setShowSearch(false);
     setItemQty(1);
     setItemPrice(0);
+    setLastPrice(null);
     setItemNote("");
     if (selectedVendorId) fetchLastPrice(item.id, selectedVendorId);
   }
@@ -501,6 +504,21 @@ export default function NewPOPage() {
     setLineItems((prev) => prev.map((l, i) => i === idx ? { ...l, custom_note: note } : l));
   }
 
+  function updateLineItem(idx: number, field: "quantity" | "unit_price", value: number) {
+    const safeValue = Number.isFinite(value) ? value : 0;
+    setLineItems((prev) =>
+      prev.map((line, i) =>
+        i === idx
+          ? {
+              ...line,
+              [field]: safeValue,
+              total: (field === "quantity" ? safeValue : line.quantity) * (field === "unit_price" ? safeValue : line.unit_price),
+            }
+          : line
+      )
+    );
+  }
+
   function removeLineItem(idx: number) {
     setLineItems((prev) => prev.filter((_, i) => i !== idx));
   }
@@ -525,26 +543,42 @@ export default function NewPOPage() {
       subtotal,
       total: grandTotal,
       notes: notes.trim() || null,
-      dispatch_meta: dispatch,
+      dispatch_meta: {
+        ...dispatch,
+        quot_no: quotNo.trim() || "",
+        quot_date: quotDate || "",
+      },
       fy_label: fyLabel,
       fy_serial: fySerial,
     };
 
     const { data, error: saveErr } = editId
-      ? await supabase.from("purchase_orders").update(payload).eq("id", editId).select("id").single()
+      ? await supabase
+          .from("purchase_orders")
+          .update({
+            po_number: payload.po_number,
+            vendor_id: payload.vendor_id,
+            status: payload.status,
+            line_items: payload.line_items,
+            subtotal: payload.subtotal,
+            total: payload.total,
+            notes: payload.notes,
+            dispatch_meta: payload.dispatch_meta,
+          })
+          .eq("id", editId)
+          .select("id")
+          .single()
       : await supabase.from("purchase_orders").insert(payload).select("id").single();
 
     if (saveErr) { setError(saveErr.message); setSaving(false); return; }
 
-    if (deliveryAddress || deliveryGstin) {
-      await supabase
-        .from("vendors")
-        .update({
-          delivery_address: deliveryAddress || null,
-          delivery_gstin: deliveryGstin || null,
-        })
-        .eq("id", selectedVendorId);
-    }
+    await supabase
+      .from("vendors")
+      .update({
+        delivery_address: deliveryAddress.trim() || null,
+        delivery_gstin: deliveryGstin.trim() || null,
+      })
+      .eq("id", selectedVendorId);
 
     const row = data as unknown as { id: string };
     setSavedPoId(row.id);
@@ -575,6 +609,14 @@ export default function NewPOPage() {
             <a href="/dashboard/history" className="bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold px-5 py-2.5 rounded-xl text-sm">
               View History
             </a>
+            {editId && (
+              <a
+                href={`/dashboard/history?updated=1&po=${encodeURIComponent(poNumber)}`}
+                className="bg-green-500/20 hover:bg-green-500 text-green-300 hover:text-white border border-green-500/40 font-semibold px-5 py-2.5 rounded-xl text-sm"
+              >
+                Back to History (with update notice)
+              </a>
+            )}
           </div>
         </div>
         {showPreview && (
@@ -660,8 +702,8 @@ export default function NewPOPage() {
 
           {selectedVendor && (
             <div className="mt-3 grid grid-cols-1 gap-3">
-              <div>
-                <label className="text-xs text-gray-500 mb-1 block">Delivery Address</label>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Other Party Delivery Address</label>
                 <textarea
                   value={deliveryAddress}
                   onChange={(e) => setDeliveryAddress(e.target.value)}
@@ -671,7 +713,7 @@ export default function NewPOPage() {
                 />
               </div>
               <div>
-                <label className="text-xs text-gray-500 mb-1 block">Delivery GSTIN</label>
+                <label className="text-xs text-gray-500 mb-1 block">Other Party GSTIN (Delivery GSTIN)</label>
                 <input
                   value={deliveryGstin}
                   onChange={(e) => setDeliveryGstin(e.target.value)}
@@ -737,7 +779,13 @@ export default function NewPOPage() {
                 </div>
                 <div>
                   <label className="block text-gray-500 text-xs mb-1.5">
-                    Unit Price (Rs.) {itemPrice > 0 && <span className="text-green-400 ml-1">↑ last price</span>}
+                    Unit Price (Rs.){" "}
+                    {lastPrice !== null && (
+                      <span className="text-green-400 ml-1">
+                        Last: Rs. {lastPrice.toLocaleString("en-IN")}
+                        {itemPrice > lastPrice ? " (higher)" : itemPrice < lastPrice ? " (lower)" : " (same)"}
+                      </span>
+                    )}
                   </label>
                   <input type="number" min="0" step="0.01" value={itemPrice} onChange={(e) => setItemPrice(Number(e.target.value))}
                     className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500" />
@@ -794,8 +842,30 @@ export default function NewPOPage() {
                           <p className="text-orange-400 font-mono text-xs font-semibold">{line.serial_id}</p>
                           <p className="text-white text-sm">{line.name}</p>
                         </td>
-                        <td className="px-5 py-3 text-white align-top">{line.quantity} {line.unit}</td>
-                        <td className="px-5 py-3 text-right text-gray-300 align-top">Rs. {Number(line.unit_price || 0).toLocaleString("en-IN")}</td>
+                        <td className="px-5 py-3 text-white align-top">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min="1"
+                              value={line.quantity}
+                              onChange={(e) => updateLineItem(i, "quantity", Number(e.target.value))}
+                              className="w-20 bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-white text-xs focus:outline-none focus:ring-1 focus:ring-orange-500"
+                            />
+                            <span>{line.unit}</span>
+                          </div>
+                        </td>
+                        <td className="px-5 py-3 text-right text-gray-300 align-top">
+                          <div className="flex justify-end">
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={line.unit_price}
+                              onChange={(e) => updateLineItem(i, "unit_price", Number(e.target.value))}
+                              className="w-28 bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-white text-xs text-right focus:outline-none focus:ring-1 focus:ring-orange-500"
+                            />
+                          </div>
+                        </td>
                         <td className="px-5 py-3 text-right text-white font-semibold align-top">Rs. {Number(line.total || 0).toLocaleString("en-IN")}</td>
                         <td className="px-4 py-3 align-top">
                           <button onClick={() => removeLineItem(i)} className="text-gray-600 hover:text-red-400 transition-colors p-1">
@@ -862,6 +932,7 @@ export default function NewPOPage() {
                 { label: "Mode of Dispatch", key: "mode_of_dispatch" as const, placeholder: "e.g. Falcon Bus / By Road" },
                 { label: "Place of Delivery", key: "place_of_delivery" as const, placeholder: "e.g. At Ambernath Works" },
                 { label: "Taxes", key: "taxes" as const, placeholder: "e.g. At Actual / Inclusive" },
+                { label: "Payment Date", key: "payment_date" as const, placeholder: "e.g. 45 days from invoice / 31-03-2027" },
               ].map((f) => (
                 <div key={f.key} className="mt-4">
                   <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">{f.label}</label>

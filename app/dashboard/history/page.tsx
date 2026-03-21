@@ -6,7 +6,7 @@ import {
   Search, X, Trash2, Download, Printer, Pencil,
 } from "lucide-react";
 import type { PurchaseOrder, Vendor, LineItem } from "@/lib/types";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import { POPdfDocument } from "@/components/POPdf";
 
@@ -18,7 +18,7 @@ function exportToExcel(po: POWithVendor) {
   const date = new Date(po.created_at).toLocaleDateString("en-IN");
   const rows: string[][] = [];
   rows.push(["VITON ENGINEERS PVT. LTD."]);
-  rows.push(["B401, ADDL. Ambernath MIDC, Ambernath East, Dist. Thane - 421506"]);
+  rows.push(["B40/1, ADDL. Ambernath MIDC, Ambernath East, Dist. Thane - 421506"]);
   rows.push([]);
   rows.push(["Purchase Order No.", po.po_number, "", "Date:", date]);
   rows.push(["Vendor:", vendorName]);
@@ -80,6 +80,7 @@ function HistoryPODocument({ po }: { po: POWithVendor }) {
     mode_of_dispatch?: string;
     place_of_delivery?: string;
     taxes?: string;
+    payment_date?: string;
     pf_mode?: string;
     pf_value?: number;
   } | null;
@@ -116,7 +117,7 @@ function HistoryPODocument({ po }: { po: POWithVendor }) {
     ],
     [
       { label: "PAYMENT TERMS", value: paymentTerms },
-      { label: "", value: "" },
+      { label: "PAYMENT DATE", value: dispatch?.payment_date || "—" },
     ],
   ];
 
@@ -137,10 +138,7 @@ function HistoryPODocument({ po }: { po: POWithVendor }) {
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: "17px", fontWeight: "900", color: "#111" }}>VITON ENGINEERS PVT. LTD.</div>
             <div style={{ fontSize: "10px", color: "#555", marginTop: "3px", lineHeight: "1.5" }}>
-              WORKS: B401, ADDL. Ambernath MIDC, Anand Nagar, Opp. Hali Pad, Ambernath East, Dist. Thane - 421506
-            </div>
-            <div style={{ fontSize: "10px", color: "#555" }}>
-              OFFICE: 701, 7th Floor, Swastik Disa Corporate Park, LBS Marg, Ghatkopar W, Mumbai - 400086
+              WORKS: B40/1, ADDL. Ambernath MIDC, Anand Nagar, Opp. Hali Pad, Ambernath East, Dist. Thane - 421506
             </div>
             <div style={{ fontSize: "10px", color: "#555", marginTop: "2px" }}>
               Tel: 08779301215 / 9769639388&nbsp;&nbsp;|&nbsp;&nbsp;Email: info@vitonvalves.com&nbsp;&nbsp;|&nbsp;&nbsp;GSTIN:{" "}
@@ -150,11 +148,11 @@ function HistoryPODocument({ po }: { po: POWithVendor }) {
         </div>
 
         <div style={{ textAlign: "right", flexShrink: 0, marginLeft: "24px" }}>
-          <div style={{ border: "2px solid #5060AB", borderRadius: "8px", padding: "8px 16px", display: "inline-block", minWidth: "210px" }}>
-            <div style={{ fontSize: "14px", fontWeight: "800", color: "#5060AB", textTransform: "uppercase", letterSpacing: "1px", textAlign: "center" }}>
+          <div style={{ border: "2px solid #5060AB", borderRadius: "8px", padding: "6px 16px 8px 16px", display: "inline-block", minWidth: "210px" }}>
+            <div style={{ fontSize: "14px", fontWeight: "800", color: "#fff", background: "#5060AB", borderRadius: "4px", textTransform: "uppercase", letterSpacing: "1px", textAlign: "center", padding: "4px 6px" }}>
               Purchase Order
             </div>
-            <div style={{ fontSize: "12px", fontWeight: "700", color: "#666", fontFamily: "monospace", marginTop: "4px", textAlign: "center" }}>
+            <div style={{ fontSize: "11px", fontWeight: "500", color: "#666", fontFamily: "monospace", marginTop: "6px", textAlign: "center" }}>
               {po.po_number}
             </div>
           </div>
@@ -281,17 +279,6 @@ function HistoryPODocument({ po }: { po: POWithVendor }) {
         </div>
       )}
 
-      {/* Signature */}
-      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "28px" }}>
-        <div style={{ textAlign: "center", minWidth: "200px" }}>
-          <div style={{ height: "40px" }}></div>
-          <div style={{ borderTop: "1px solid #aaa", paddingTop: "6px" }}>
-            <div style={{ fontWeight: "700", fontSize: "11px" }}>For VITON ENGINEERS PVT. LTD.</div>
-            <div style={{ color: "#888", fontSize: "10px", marginTop: "2px" }}>Authorised Signatory</div>
-          </div>
-        </div>
-      </div>
-
       {/* Disclaimer */}
       <div style={{ marginTop: "14px", textAlign: "center", fontSize: "10px", color: "#777" }}>
         This is a computer generated Purchase Order and does not require a signature.
@@ -301,6 +288,7 @@ function HistoryPODocument({ po }: { po: POWithVendor }) {
 }
 
 export default function HistoryPage() {
+  const searchParams = useSearchParams();
   const [pos, setPos] = useState<POWithVendor[]>([]);
   const [filtered, setFiltered] = useState<POWithVendor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -309,6 +297,8 @@ export default function HistoryPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [printPO, setPrintPO] = useState<POWithVendor | null>(null);
+  const [showUpdatedToast, setShowUpdatedToast] = useState(false);
+  const [updatedPoNumber, setUpdatedPoNumber] = useState("");
   const router = useRouter();
 
   async function load() {
@@ -324,6 +314,13 @@ export default function HistoryPage() {
   }
 
   useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    const wasUpdated = searchParams.get("updated") === "1";
+    const po = searchParams.get("po") ?? "";
+    setShowUpdatedToast(wasUpdated);
+    setUpdatedPoNumber(po);
+  }, [searchParams]);
 
   useEffect(() => {
     if (!search.trim()) { setFiltered(pos); return; }
@@ -391,6 +388,20 @@ export default function HistoryPage() {
             </div>
             <HistoryPODocument po={printPO} />
           </div>
+        </div>
+      )}
+
+      {showUpdatedToast && (
+        <div className="mb-4 bg-green-500/10 border border-green-500/30 rounded-xl p-3 text-green-300 text-sm flex items-center justify-between gap-3">
+          <span>
+            PO updated successfully{updatedPoNumber ? `: ${updatedPoNumber}` : ""}.
+          </span>
+          <button
+            onClick={() => setShowUpdatedToast(false)}
+            className="text-green-200 hover:text-white"
+          >
+            <X size={14} />
+          </button>
         </div>
       )}
 
@@ -463,6 +474,11 @@ export default function HistoryPage() {
             const date = new Date(po.created_at).toLocaleDateString("en-IN", {
               day: "2-digit", month: "short", year: "numeric",
             });
+            const updatedDate = po.updated_at
+              ? new Date(po.updated_at).toLocaleDateString("en-IN", {
+                  day: "2-digit", month: "short", year: "numeric",
+                })
+              : null;
 
             return (
               <div
@@ -480,7 +496,8 @@ export default function HistoryPage() {
                     <div className="min-w-0">
                       <p className="text-white font-semibold font-mono text-sm">{po.po_number}</p>
                       <p className="text-gray-500 text-xs mt-0.5">
-                        {po.vendors?.name ?? "Unknown Vendor"} · {date}
+                        {po.vendors?.name ?? "Unknown Vendor"} · Created: {date}
+                        {updatedDate ? ` · Updated: ${updatedDate}` : ""}
                       </p>
                     </div>
                   </div>

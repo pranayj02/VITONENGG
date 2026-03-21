@@ -14,6 +14,7 @@ interface DispatchMeta {
   place_of_delivery: string;
   inspection: string;
   taxes: string;
+  payment_date?: string;
   pf_mode: "nil" | "percent" | "fixed";
   pf_value: number;
 }
@@ -46,7 +47,7 @@ interface POData {
   total: number;
   notes?: string | null;
   line_items: LineItem[];
-  dispatch_meta: DispatchMeta;
+  dispatch_meta?: DispatchMeta | Record<string, unknown> | null;
   vendors?: VendorData | null;
   quot_no?: string | null;
   quot_date?: string | null;
@@ -119,24 +120,28 @@ const S = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: BRAND,
     borderRadius: 5,
-    paddingVertical: 7,
+    paddingVertical: 4,
     paddingHorizontal: 14,
     alignItems: "center",
     minWidth: 160,
   },
   poBoxTitle: {
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: "Helvetica-Bold",
-    color: BRAND,
+    color: "#ffffff",
+    backgroundColor: BRAND,
+    width: "100%",
+    textAlign: "center",
+    paddingVertical: 4,
+    borderRadius: 3,
     textTransform: "uppercase",
     letterSpacing: 0.8,
-    textAlign: "center",
   },
   poBoxNumber: {
-    fontSize: 8,
-    fontFamily: "Helvetica-Bold",
+    fontSize: 7,
+    fontFamily: "Helvetica",
     color: "#666666",
-    marginTop: 3,
+    marginTop: 5,
     textAlign: "center",
   },
   poBoxDate: {
@@ -406,7 +411,17 @@ const S = StyleSheet.create({
 
 export function POPdfDocument({ po }: { po: POData }) {
   const vendor = po.vendors ?? null;
-  const dispatch = po.dispatch_meta;
+  const rawDispatch = po.dispatch_meta as Partial<DispatchMeta> | null | undefined;
+  const dispatch: DispatchMeta = {
+    mode_of_dispatch: rawDispatch?.mode_of_dispatch ?? "",
+    delivery: rawDispatch?.delivery ?? "",
+    place_of_delivery: rawDispatch?.place_of_delivery ?? "",
+    inspection: rawDispatch?.inspection ?? "",
+    taxes: rawDispatch?.taxes ?? "",
+    payment_date: rawDispatch?.payment_date ?? "",
+    pf_mode: rawDispatch?.pf_mode === "percent" || rawDispatch?.pf_mode === "fixed" ? rawDispatch.pf_mode : "nil",
+    pf_value: typeof rawDispatch?.pf_value === "number" ? rawDispatch.pf_value : 0,
+  };
   const lineItems = po.line_items ?? [];
   const subtotal = po.subtotal ?? 0;
   const pfAmount = computePF(subtotal, dispatch);
@@ -442,7 +457,7 @@ export function POPdfDocument({ po }: { po: POData }) {
     ],
     [
       { label: "PAYMENT TERMS", value: paymentTerms },
-      { label: "", value: "" },
+      { label: "PAYMENT DATE", value: dispatch.payment_date || "—" },
     ],
   ];
 
@@ -457,11 +472,8 @@ export function POPdfDocument({ po }: { po: POData }) {
             <View style={{ flex: 1 }}>
               <Text style={S.companyName}>VITON ENGINEERS PVT. LTD.</Text>
               <Text style={S.companyDetail}>
-                WORKS: B401, ADDL. Ambernath MIDC, Anand Nagar, Opp. Hali Pad,{"\n"}
+                WORKS: B40/1, ADDL. Ambernath MIDC, Anand Nagar, Opp. Hali Pad,{"\n"}
                 Ambernath East, Dist. Thane - 421506
-              </Text>
-              <Text style={S.companyDetail}>
-                OFFICE: 701, 7th Floor, Swastik Disa Corporate Park, LBS Marg, Ghatkopar W, Mumbai - 400086
               </Text>
               <Text style={S.companyDetail}>
                 Tel: 08779301215 / 9769639388  |  Email: info@vitonvalves.com  |  GSTIN:{" "}
@@ -618,17 +630,6 @@ export function POPdfDocument({ po }: { po: POData }) {
               ))}
             </View>
           ))}
-        </View>
-
-        {/* ── Signature ── */}
-        <View style={S.signatureBlock}>
-          <View style={S.signatureInner}>
-            <View style={S.signatureSpace} />
-            <View style={S.signatureLine}>
-              <Text style={S.signatureCompany}>For VITON ENGINEERS PVT. LTD.</Text>
-              <Text style={S.signatureRole}>Authorised Signatory</Text>
-            </View>
-          </View>
         </View>
 
         {/* ── Disclaimer ── */}
