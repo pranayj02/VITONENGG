@@ -1,240 +1,640 @@
-import { Document, Page, Text, View, StyleSheet, Image } from "@react-pdf/renderer";
+import React from "react";
+import {
+  Document,
+  Page,
+  Text,
+  View,
+  StyleSheet,
+  Image,
+} from "@react-pdf/renderer";
 
-const S = StyleSheet.create({
-  page: { fontSize: 8, fontFamily: "Helvetica", padding: 36, color: "#000" },
-  bold: { fontWeight: "bold" },
-  tableHeaderRow: { flexDirection: "row", backgroundColor: "#5060AB", paddingVertical: 6, paddingHorizontal: 4 },
-  tableRow: { flexDirection: "row", borderBottomWidth: 0.5, borderColor: "#ddd", paddingVertical: 5, paddingHorizontal: 4, minHeight: 18 },
-  tableRowAlt: { flexDirection: "row", backgroundColor: "#fafafa", borderBottomWidth: 0.5, borderColor: "#ddd", paddingVertical: 5, paddingHorizontal: 4, minHeight: 18 },
-  noteRow: { flexDirection: "row", paddingLeft: 4, paddingBottom: 5, paddingHorizontal: 4 },
-  totalsBlock: { flexDirection: "row", justifyContent: "flex-end", marginTop: 3 },
-  totalLabel: { width: "25%", textAlign: "right", paddingRight: 6, color: "#555" },
-  totalValue: { width: "14%", textAlign: "right" },
-});
+interface DispatchMeta {
+  mode_of_dispatch: string;
+  delivery: string;
+  place_of_delivery: string;
+  inspection: string;
+  taxes: string;
+  pf_mode: "nil" | "percent" | "fixed";
+  pf_value: number;
+}
 
-const C = {
-  sr:     "5%",
-  serial: "20%",
-  desc:   "37%",
-  qty:    "10%",
-  rate:   "14%",
-  total:  "14%",
-};
-
-type VendorData = {
+interface LineItem {
+  serial_id: string;
   name: string;
+  quantity: number;
+  unit: string;
+  unit_price: number;
+  total: number;
+  custom_note?: string;
+}
+
+interface VendorData {
+  name?: string;
   address?: string | null;
+  delivery_address?: string | null;
   gstin?: string | null;
+  delivery_gstin?: string | null;
   contact_name?: string | null;
   contact_phone?: string | null;
   payment_terms?: string | null;
-};
+}
 
-type LineItemData = {
-  name: string;
-  serial_id?: string;
-  quantity: number;
-  unit?: string;
-  unit_price?: number;
-  total?: number;
-  custom_note?: string;
-};
-
-type DispatchData = {
-  delivery?: string;
-  inspection?: string;
-  mode_of_dispatch?: string;
-  place_of_delivery?: string;
-  taxes?: string;
-  pf_mode?: string;
-  pf_value?: number;
-};
-
-type POData = {
+interface POData {
   po_number: string;
   created_at: string;
   subtotal: number;
   total: number;
   notes?: string | null;
-  line_items: LineItemData[] | unknown;
-  dispatch_meta?: DispatchData | Record<string, string> | null;
+  line_items: LineItem[];
+  dispatch_meta: DispatchMeta;
   vendors?: VendorData | null;
-};
+  quot_no?: string | null;
+  quot_date?: string | null;
+}
+
+function computePF(subtotal: number, meta: DispatchMeta): number {
+  if (meta.pf_mode === "nil" || meta.pf_value <= 0) return 0;
+  if (meta.pf_mode === "percent") return Math.round((subtotal * meta.pf_value) / 100);
+  return meta.pf_value;
+}
+
+const BRAND = "#5060AB";
+const LIGHT_BG = "#f8f8f8";
+const BORDER = "#e5e5e5";
+const TEXT_DARK = "#111111";
+const TEXT_MID = "#555555";
+const TEXT_LIGHT = "#999999";
+
+const S = StyleSheet.create({
+  page: {
+    fontFamily: "Helvetica",
+    fontSize: 8,
+    color: TEXT_DARK,
+    paddingTop: 28,
+    paddingBottom: 28,
+    paddingLeft: 32,
+    paddingRight: 32,
+    backgroundColor: "#ffffff",
+  },
+
+  // ── Letterhead ──────────────────────────────────────────────────
+  letterhead: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    paddingBottom: 10,
+    borderBottomWidth: 2.5,
+    borderBottomColor: BRAND,
+    marginBottom: 10,
+  },
+  letterheadLeft: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    flex: 1,
+  },
+  logo: {
+    width: 44,
+    height: 44,
+    marginRight: 10,
+  },
+  companyName: {
+    fontSize: 13,
+    fontFamily: "Helvetica-Bold",
+    color: TEXT_DARK,
+    marginBottom: 2,
+  },
+  companyDetail: {
+    fontSize: 7,
+    color: TEXT_MID,
+    lineHeight: 1.5,
+  },
+  companyDetailBold: {
+    fontSize: 7,
+    color: TEXT_MID,
+    fontFamily: "Helvetica-Bold",
+  },
+
+  // ── PO Box (top right) ──────────────────────────────────────────
+  poBox: {
+    borderWidth: 1.5,
+    borderColor: BRAND,
+    borderRadius: 5,
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    alignItems: "center",
+    minWidth: 160,
+  },
+  poBoxTitle: {
+    fontSize: 11,
+    fontFamily: "Helvetica-Bold",
+    color: BRAND,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    textAlign: "center",
+  },
+  poBoxNumber: {
+    fontSize: 8,
+    fontFamily: "Helvetica-Bold",
+    color: "#666666",
+    marginTop: 3,
+    textAlign: "center",
+  },
+  poBoxDate: {
+    fontSize: 7,
+    color: "#666666",
+    marginTop: 5,
+    textAlign: "right",
+  },
+
+  // ── To + Meta Row ───────────────────────────────────────────────
+  metaRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 10,
+  },
+  metaCard: {
+    flex: 1,
+    backgroundColor: LIGHT_BG,
+    borderWidth: 0.5,
+    borderColor: BORDER,
+    borderRadius: 4,
+    padding: 8,
+  },
+  metaCardLabel: {
+    fontSize: 6,
+    fontFamily: "Helvetica-Bold",
+    color: "#aaaaaa",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    marginBottom: 4,
+  },
+  vendorName: {
+    fontSize: 10,
+    fontFamily: "Helvetica-Bold",
+    color: TEXT_DARK,
+    marginBottom: 2,
+  },
+  vendorDetail: {
+    fontSize: 7,
+    color: TEXT_MID,
+    lineHeight: 1.5,
+  },
+  vendorDetailBold: {
+    fontSize: 7,
+    fontFamily: "Helvetica-Bold",
+    color: "#444444",
+    marginTop: 4,
+  },
+  metaTableRow: {
+    flexDirection: "row",
+    marginBottom: 4,
+  },
+  metaTableLabel: {
+    fontSize: 7,
+    color: "#888888",
+    width: "45%",
+  },
+  metaTableValue: {
+    fontSize: 7,
+    fontFamily: "Helvetica-Bold",
+    color: TEXT_DARK,
+    flex: 1,
+  },
+
+  // ── Items Table ─────────────────────────────────────────────────
+  tableHeader: {
+    flexDirection: "row",
+    backgroundColor: BRAND,
+    paddingVertical: 5,
+    paddingHorizontal: 4,
+  },
+  tableHeaderCell: {
+    fontSize: 7,
+    fontFamily: "Helvetica-Bold",
+    color: "#ffffff",
+  },
+  tableRow: {
+    flexDirection: "row",
+    borderBottomWidth: 0.5,
+    borderBottomColor: "#ebebeb",
+    paddingVertical: 5,
+    paddingHorizontal: 4,
+    minHeight: 16,
+  },
+  tableRowAlt: {
+    backgroundColor: "#fafafa",
+  },
+  tableCell: {
+    fontSize: 7,
+    color: TEXT_DARK,
+  },
+  tableCellMono: {
+    fontSize: 7,
+    fontFamily: "Helvetica-Bold",
+    color: "#3a4a8a",
+  },
+  tableCellLight: {
+    fontSize: 7,
+    color: "#666666",
+  },
+  noteRow: {
+    flexDirection: "row",
+    paddingBottom: 5,
+    paddingHorizontal: 4,
+  },
+  noteText: {
+    fontSize: 7,
+    color: "#666666",
+    fontStyle: "italic",
+    flex: 1,
+  },
+
+  // column widths
+  colSr: { width: 22 },
+  colSerial: { width: 90 },
+  colDesc: { flex: 1 },
+  colQty: { width: 36, textAlign: "center" },
+  colUnit: { width: 34, textAlign: "center" },
+  colRate: { width: 60, textAlign: "right" },
+  colTotal: { width: 68, textAlign: "right" },
+
+  // ── Totals ──────────────────────────────────────────────────────
+  totalsRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    borderTopWidth: 0.5,
+    borderTopColor: "#dddddd",
+    paddingTop: 4,
+    paddingBottom: 4,
+    paddingHorizontal: 4,
+  },
+  totalsLabel: {
+    fontSize: 7,
+    color: TEXT_MID,
+    width: 120,
+    textAlign: "right",
+    paddingRight: 6,
+  },
+  totalsValue: {
+    fontSize: 7,
+    color: TEXT_DARK,
+    width: 68,
+    textAlign: "right",
+  },
+  grandTotalRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    backgroundColor: BRAND,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+  },
+  grandTotalLabel: {
+    fontSize: 8,
+    fontFamily: "Helvetica-Bold",
+    color: "#ffffff",
+    width: 120,
+    textAlign: "right",
+    paddingRight: 6,
+    letterSpacing: 0.5,
+  },
+  grandTotalValue: {
+    fontSize: 9,
+    fontFamily: "Helvetica-Bold",
+    color: "#ffffff",
+    width: 68,
+    textAlign: "right",
+  },
+
+  // ── Notes ───────────────────────────────────────────────────────
+  notesBox: {
+    marginTop: 8,
+    padding: 8,
+    backgroundColor: "#f0f2ff",
+    borderWidth: 0.5,
+    borderColor: "#c7ccee",
+    borderRadius: 4,
+  },
+  notesLabel: {
+    fontSize: 7,
+    fontFamily: "Helvetica-Bold",
+    color: BRAND,
+    marginBottom: 3,
+  },
+  notesText: {
+    fontSize: 7,
+    color: "#444444",
+    lineHeight: 1.6,
+  },
+
+  // ── Dispatch Footer Table ────────────────────────────────────────
+  dispatchTable: {
+    marginTop: 10,
+    borderWidth: 0.5,
+    borderColor: "#dddddd",
+    borderRadius: 4,
+  },
+  dispatchRow: {
+    flexDirection: "row",
+    borderBottomWidth: 0.5,
+    borderBottomColor: "#e5e5e5",
+  },
+  dispatchRowLast: {
+    flexDirection: "row",
+  },
+  dispatchCell: {
+    flex: 1,
+    padding: 5,
+    borderRightWidth: 0.5,
+    borderRightColor: "#e5e5e5",
+  },
+  dispatchCellLast: {
+    flex: 1,
+    padding: 5,
+  },
+  dispatchLabel: {
+    fontSize: 6,
+    color: TEXT_LIGHT,
+    marginBottom: 1,
+  },
+  dispatchValue: {
+    fontSize: 7,
+    fontFamily: "Helvetica-Bold",
+    color: TEXT_DARK,
+  },
+
+  // ── Signature ───────────────────────────────────────────────────
+  signatureBlock: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginTop: 24,
+  },
+  signatureInner: {
+    alignItems: "center",
+    minWidth: 160,
+  },
+  signatureSpace: {
+    height: 32,
+  },
+  signatureLine: {
+    borderTopWidth: 0.5,
+    borderTopColor: "#aaaaaa",
+    width: "100%",
+    paddingTop: 4,
+    alignItems: "center",
+  },
+  signatureCompany: {
+    fontSize: 7,
+    fontFamily: "Helvetica-Bold",
+    color: TEXT_DARK,
+    textAlign: "center",
+  },
+  signatureRole: {
+    fontSize: 6,
+    color: "#888888",
+    marginTop: 2,
+    textAlign: "center",
+  },
+
+  // ── Disclaimer ──────────────────────────────────────────────────
+  disclaimer: {
+    marginTop: 10,
+    textAlign: "center",
+    fontSize: 6.5,
+    color: "#777777",
+  },
+});
 
 export function POPdfDocument({ po }: { po: POData }) {
-  const dispatch = (po.dispatch_meta ?? {}) as DispatchData;
-  const lineItems = (po.line_items ?? []) as LineItemData[];
-  const vendor = po.vendors;
-  const pfAmount = po.total - po.subtotal;
-  const pfLabel = pfAmount > 0
-    ? dispatch.pf_mode === "percent"
-      ? `Rs. ${pfAmount.toLocaleString("en-IN")} (${dispatch.pf_value}%)`
-      : `Rs. ${pfAmount.toLocaleString("en-IN")}`
-    : "Nil";
+  const vendor = po.vendors ?? null;
+  const dispatch = po.dispatch_meta;
+  const lineItems = po.line_items ?? [];
+  const subtotal = po.subtotal ?? 0;
+  const pfAmount = computePF(subtotal, dispatch);
+  const grandTotal = po.total ?? 0;
+
+  const displayAddress = vendor?.delivery_address || vendor?.address || null;
+  const displayGstin = vendor?.delivery_gstin || vendor?.gstin || null;
+  const paymentTerms = vendor?.payment_terms ?? "60 Days";
 
   const date = new Date(po.created_at).toLocaleDateString("en-IN", {
-    day: "2-digit", month: "2-digit", year: "numeric",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
   });
+
+  const pfDisplay =
+    dispatch.pf_mode === "nil"
+      ? "Nil"
+      : `Rs. ${pfAmount.toLocaleString("en-IN")}${dispatch.pf_mode === "percent" ? ` (${dispatch.pf_value}%)` : ""}`;
+
+  const dispatchRows = [
+    [
+      { label: "DELIVERY", value: dispatch.delivery || "—" },
+      { label: "INSPECTION", value: dispatch.inspection || "—" },
+    ],
+    [
+      { label: "MODE OF DESPATCH", value: dispatch.mode_of_dispatch || "—" },
+      { label: "PACKING & FORWARDING", value: pfDisplay },
+    ],
+    [
+      { label: "PLACE OF DELIVERY", value: dispatch.place_of_delivery || "—" },
+      { label: "TAXES", value: dispatch.taxes || "—" },
+    ],
+    [
+      { label: "PAYMENT TERMS", value: paymentTerms },
+      { label: "", value: "" },
+    ],
+  ];
 
   return (
     <Document>
       <Page size="A4" style={S.page}>
 
         {/* ── Letterhead ── */}
-        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: 10, borderBottomWidth: 3, borderBottomColor: "#5060AB", marginBottom: 12 }}>
-          {/* Left: logo + address — strictly 60% wide */}
-          <View style={{ flexDirection: "row", alignItems: "flex-start", width: "60%" }}>
-            <Image
-              src="https://vitonvalves.vercel.app/Logo.JPG"
-              style={{ width: 46, height: 46, marginRight: 8, flexShrink: 0 }}
-            />
+        <View style={S.letterhead}>
+          <View style={S.letterheadLeft}>
+            <Image src="/Logo.JPG" style={S.logo} />
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 13, fontWeight: "bold", color: "#111" }}>VITON ENGINEERS PVT. LTD.</Text>
-              <Text style={{ fontSize: 6.5, color: "#555", marginTop: 3, lineHeight: 1.5 }}>
-                WORKS: B401, ADDL. Ambernath MIDC, Anand Nagar,{"\n"}Opp. Hali Pad, Ambernath East, Dist. Thane - 421506
+              <Text style={S.companyName}>VITON ENGINEERS PVT. LTD.</Text>
+              <Text style={S.companyDetail}>
+                WORKS: B401, ADDL. Ambernath MIDC, Anand Nagar, Opp. Hali Pad,{"\n"}
+                Ambernath East, Dist. Thane - 421506
               </Text>
-              <Text style={{ fontSize: 6.5, color: "#555", lineHeight: 1.5 }}>
-                OFFICE: 701, 7th Floor, Swastik Disa Corporate Park,{"\n"}LBS Marg, Ghatkopar W, Mumbai - 400086
+              <Text style={S.companyDetail}>
+                OFFICE: 701, 7th Floor, Swastik Disa Corporate Park, LBS Marg, Ghatkopar W, Mumbai - 400086
               </Text>
-              <Text style={{ fontSize: 6.5, color: "#555", marginTop: 2 }}>
-                Tel: 08779301215 / 9769639388
-              </Text>
-              <Text style={{ fontSize: 6.5, color: "#555" }}>
-                Email: info@vitonvalves.com  |  GSTIN: 27AACCV7755N1ZK
+              <Text style={S.companyDetail}>
+                Tel: 08779301215 / 9769639388  |  Email: info@vitonvalves.com  |  GSTIN:{" "}
+                <Text style={S.companyDetailBold}>27AACCV7755N1ZK</Text>
               </Text>
             </View>
           </View>
-          {/* Right: PO number box — 36% wide, won't bleed */}
-          <View style={{ width: "36%", alignItems: "flex-end" }}>
-            <View style={{ borderWidth: 2, borderColor: "#5060AB", borderRadius: 5, padding: "6 12", alignItems: "center" }}>
-              <Text style={{ fontSize: 7, color: "#999", textTransform: "uppercase", letterSpacing: 1.5 }}>Purchase Order</Text>
-              <Text style={{ fontSize: 12, fontWeight: "bold", color: "#5060AB", marginTop: 2 }}>{po.po_number}</Text>
+
+          <View style={{ alignItems: "flex-end" }}>
+            <View style={S.poBox}>
+              <Text style={S.poBoxTitle}>Purchase Order</Text>
+              <Text style={S.poBoxNumber}>{po.po_number}</Text>
             </View>
-            <Text style={{ fontSize: 8, color: "#666", marginTop: 5 }}>Date: {date}</Text>
+            <Text style={S.poBoxDate}>Date: {date}</Text>
           </View>
         </View>
 
-        {/* ── Vendor + Meta ── */}
-        <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 12 }}>
-          <View style={{ width: "48%", backgroundColor: "#f8f8f8", borderWidth: 1, borderColor: "#e5e5e5", borderRadius: 4, padding: "8 10" }}>
-            <Text style={{ fontSize: 7, color: "#aaa", fontWeight: "bold", textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>TO</Text>
-            <Text style={{ fontSize: 11, fontWeight: "bold", color: "#111" }}>{vendor?.name ?? "—"}</Text>
-            {vendor?.address ? <Text style={{ fontSize: 7, color: "#555", marginTop: 3, lineHeight: 1.5 }}>{vendor.address}</Text> : null}
-            {vendor?.gstin ? <Text style={{ fontSize: 7, color: "#555", marginTop: 2 }}>GSTIN: {vendor.gstin}</Text> : null}
-            {vendor?.contact_name ? <Text style={{ fontSize: 7, color: "#444", marginTop: 5 }}>Kind Attn: {vendor.contact_name}</Text> : null}
-            {vendor?.contact_phone ? <Text style={{ fontSize: 7, color: "#555" }}>Tel: {vendor.contact_phone}</Text> : null}
-          </View>
-          <View style={{ width: "48%", backgroundColor: "#f8f8f8", borderWidth: 1, borderColor: "#e5e5e5", borderRadius: 4, padding: "8 10" }}>
-            <Text style={{ fontSize: 7, color: "#888" }}>
-              Payment Terms:{" "}<Text style={{ fontWeight: "bold", color: "#111" }}>{vendor?.payment_terms ?? "60 Days"}</Text>
-            </Text>
-          </View>
-        </View>
+        {/* ── To + Meta ── */}
+        <View style={S.metaRow}>
+          {/* Left: Vendor */}
+          <View style={S.metaCard}>
+            <Text style={S.metaCardLabel}>To</Text>
+            <Text style={S.vendorName}>{vendor?.name ?? "—"}</Text>
 
-        {/* ── Items Table Header ── */}
-        <View style={S.tableHeaderRow}>
-          <Text style={{ width: C.sr,     color: "#fff", fontWeight: "bold", fontSize: 7 }}>SR.</Text>
-          <Text style={{ width: C.serial, color: "#fff", fontWeight: "bold", fontSize: 7 }}>SERIAL ID</Text>
-          <Text style={{ width: C.desc,   color: "#fff", fontWeight: "bold", fontSize: 7 }}>PARTICULARS</Text>
-          <Text style={{ width: C.qty,    color: "#fff", fontWeight: "bold", fontSize: 7, textAlign: "right" }}>QTY.</Text>
-          <Text style={{ width: C.rate,   color: "#fff", fontWeight: "bold", fontSize: 7, textAlign: "right" }}>RATE (Rs.)</Text>
-          <Text style={{ width: C.total,  color: "#fff", fontWeight: "bold", fontSize: 7, textAlign: "right" }}>TOTAL (Rs.)</Text>
-        </View>
+            {displayAddress ? (
+              <Text style={S.vendorDetail}>{displayAddress}</Text>
+            ) : null}
 
-        {/* ── Line Items ── */}
-        {lineItems.map((item, i) => (
-          <View key={i}>
-            <View style={i % 2 === 0 ? S.tableRow : S.tableRowAlt}>
-              <Text style={{ width: C.sr, color: "#999", fontSize: 7 }}>{i + 1}</Text>
-              <View style={{ width: C.serial }}>
-                <Text style={{ fontSize: 6.5, color: "#3a4a8a", fontWeight: "bold", backgroundColor: "#eef0fa", padding: "1 3", borderRadius: 2 }}>
-                  {item.serial_id ?? ""}
-                </Text>
+            {displayGstin ? (
+              <Text style={S.vendorDetail}>GSTIN: {displayGstin}</Text>
+            ) : null}
+
+            {vendor?.contact_name ? (
+              <Text style={S.vendorDetailBold}>
+                Kind Attn: {vendor.contact_name}
+              </Text>
+            ) : null}
+
+            {vendor?.contact_phone ? (
+              <Text style={S.vendorDetail}>Tel: {vendor.contact_phone}</Text>
+            ) : null}
+          </View>
+
+          {/* Right: Quot details only */}
+          <View style={S.metaCard}>
+            {po.quot_no ? (
+              <View style={S.metaTableRow}>
+                <Text style={S.metaTableLabel}>Your Quot. No.</Text>
+                <Text style={S.metaTableValue}>{po.quot_no}</Text>
               </View>
-              <Text style={{ width: C.desc, fontSize: 7.5, color: "#111" }}>{item.name}</Text>
-              <Text style={{ width: C.qty, textAlign: "right", fontSize: 7 }}>{item.quantity} {item.unit ?? ""}</Text>
-              <Text style={{ width: C.rate, textAlign: "right", fontSize: 7 }}>{item.unit_price ? item.unit_price.toLocaleString("en-IN") : "—"}</Text>
-              <Text style={{ width: C.total, textAlign: "right", fontSize: 7, fontWeight: "bold" }}>{item.total ? item.total.toLocaleString("en-IN") : "—"}</Text>
-            </View>
-            {item.custom_note ? (
-              <View style={[S.noteRow, { backgroundColor: i % 2 === 0 ? "#fff" : "#fafafa" }]}>
-                <Text style={{ width: C.sr }} />
-                <Text style={{ width: C.serial }} />
-                <Text style={{ fontSize: 7.5, color: "#555", fontStyle: "italic" }}>
-                  Note: {item.custom_note}
+            ) : null}
+
+            {po.quot_date ? (
+              <View style={S.metaTableRow}>
+                <Text style={S.metaTableLabel}>Your Quot. Date</Text>
+                <Text style={S.metaTableValue}>
+                  {new Date(po.quot_date).toLocaleDateString("en-IN")}
                 </Text>
               </View>
             ) : null}
           </View>
+        </View>
+
+        {/* ── Items Table Header ── */}
+        <View style={S.tableHeader}>
+          <Text style={[S.tableHeaderCell, S.colSr]}>Sr.</Text>
+          <Text style={[S.tableHeaderCell, S.colSerial]}>Serial ID</Text>
+          <Text style={[S.tableHeaderCell, S.colDesc]}>Particulars</Text>
+          <Text style={[S.tableHeaderCell, S.colQty, { textAlign: "center" }]}>Qty.</Text>
+          <Text style={[S.tableHeaderCell, S.colUnit, { textAlign: "center" }]}>Unit</Text>
+          <Text style={[S.tableHeaderCell, S.colRate, { textAlign: "right" }]}>Rate Rs.</Text>
+          <Text style={[S.tableHeaderCell, S.colTotal, { textAlign: "right" }]}>Total Rs.</Text>
+        </View>
+
+        {/* ── Items Rows ── */}
+        {lineItems.map((line, i) => (
+          <React.Fragment key={i}>
+            <View style={[S.tableRow, i % 2 !== 0 ? S.tableRowAlt : {}]}>
+              <Text style={[S.tableCellLight, S.colSr]}>{i + 1}</Text>
+              <Text style={[S.tableCellMono, S.colSerial]}>{line.serial_id}</Text>
+              <Text style={[S.tableCell, S.colDesc]}>{line.name}</Text>
+              <Text style={[S.tableCell, S.colQty, { textAlign: "center" }]}>{line.quantity}</Text>
+              <Text style={[S.tableCellLight, S.colUnit, { textAlign: "center" }]}>{line.unit}</Text>
+              <Text style={[S.tableCell, S.colRate, { textAlign: "right" }]}>
+                {Number(line.unit_price || 0).toLocaleString("en-IN")}
+              </Text>
+              <Text style={[S.tableCell, S.colTotal, { textAlign: "right", fontFamily: "Helvetica-Bold" }]}>
+                {Number(line.total || 0).toLocaleString("en-IN")}
+              </Text>
+            </View>
+
+            {line.custom_note ? (
+              <View style={[S.noteRow, i % 2 !== 0 ? S.tableRowAlt : {}]}>
+                <View style={S.colSr} />
+                <View style={{ flex: 1 }}>
+                  <Text style={S.noteText}>Note: {line.custom_note}</Text>
+                </View>
+              </View>
+            ) : null}
+          </React.Fragment>
         ))}
 
-        {/* ── Totals ── */}
+        {/* ── Subtotal + P&F ── */}
         {pfAmount > 0 && (
-          <>
-            <View style={[S.totalsBlock, { marginTop: 6, borderTopWidth: 0.5, borderTopColor: "#ddd", paddingTop: 4 }]}>
-              <Text style={S.totalLabel}>Subtotal</Text>
-              <Text style={S.totalValue}>{po.subtotal.toLocaleString("en-IN")}</Text>
-            </View>
-            <View style={[S.totalsBlock, { marginTop: 2 }]}>
-              <Text style={S.totalLabel}>
-                Packing & Forwarding{dispatch.pf_mode === "percent" ? ` (${dispatch.pf_value}%)` : ""}
-              </Text>
-              <Text style={S.totalValue}>{pfAmount.toLocaleString("en-IN")}</Text>
-            </View>
-          </>
-        )}
-        <View style={{ flexDirection: "row", justifyContent: "flex-end", marginTop: 4 }}>
-          <View style={{ backgroundColor: "#5060AB", flexDirection: "row", paddingVertical: 7, paddingHorizontal: 8, borderRadius: 3 }}>
-            <Text style={{ fontSize: 9, fontWeight: "bold", color: "#fff", textAlign: "right", width: 120, paddingRight: 8, letterSpacing: 1 }}>TOTAL</Text>
-            <Text style={{ fontSize: 9, fontWeight: "bold", color: "#fff", textAlign: "right", width: 80 }}>Rs. {po.total.toLocaleString("en-IN")}</Text>
+          <View style={S.totalsRow}>
+            <Text style={S.totalsLabel}>Subtotal</Text>
+            <Text style={S.totalsValue}>{subtotal.toLocaleString("en-IN")}</Text>
           </View>
+        )}
+
+        {pfAmount > 0 && (
+          <View style={[S.totalsRow, { borderTopWidth: 0 }]}>
+            <Text style={S.totalsLabel}>
+              Packing &amp; Forwarding
+              {dispatch.pf_mode === "percent" ? ` (${dispatch.pf_value}%)` : ""}
+            </Text>
+            <Text style={S.totalsValue}>{pfAmount.toLocaleString("en-IN")}</Text>
+          </View>
+        )}
+
+        {/* ── Grand Total ── */}
+        <View style={S.grandTotalRow}>
+          <Text style={S.grandTotalLabel}>TOTAL</Text>
+          <Text style={S.grandTotalValue}>Rs. {grandTotal.toLocaleString("en-IN")}</Text>
         </View>
 
         {/* ── Notes ── */}
         {po.notes ? (
-          <View style={{ marginTop: 10, padding: "8 10", backgroundColor: "#f0f2ff", borderWidth: 1, borderColor: "#c7ccee", borderRadius: 4 }}>
-            <Text style={{ fontWeight: "bold", color: "#5060AB", marginBottom: 3, fontSize: 8 }}>Notes:</Text>
-            <Text style={{ color: "#444", lineHeight: 1.6, fontSize: 7.5 }}>{po.notes}</Text>
+          <View style={S.notesBox}>
+            <Text style={S.notesLabel}>Notes:</Text>
+            <Text style={S.notesText}>{po.notes}</Text>
           </View>
         ) : null}
 
-        {/* ── Dispatch Table (grid like the HTML preview) ── */}
-        <View style={{ marginTop: 12, borderWidth: 1, borderColor: "#ddd", borderRadius: 4 }}>
-          {/* Row 1 */}
-          <View style={{ flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "#e5e5e5" }}>
-            <View style={{ width: "50%", padding: "5 8", borderRightWidth: 1, borderRightColor: "#e5e5e5" }}>
-              <Text><Text style={{ color: "#999", fontSize: 7 }}>DELIVERY: </Text><Text style={{ fontWeight: "bold", fontSize: 7 }}>{dispatch.delivery ?? "Urgent"}</Text></Text>
+        {/* ── Dispatch Footer Table ── */}
+        <View style={S.dispatchTable}>
+          {dispatchRows.map((row, ri) => (
+            <View
+              key={ri}
+              style={ri < dispatchRows.length - 1 ? S.dispatchRow : S.dispatchRowLast}
+            >
+              {row.map((cell, ci) => (
+                <View
+                  key={ci}
+                  style={ci === 0 ? S.dispatchCell : S.dispatchCellLast}
+                >
+                  {cell.label ? (
+                    <Text style={S.dispatchLabel}>{cell.label}</Text>
+                  ) : null}
+                  {cell.value ? (
+                    <Text style={S.dispatchValue}>{cell.value}</Text>
+                  ) : null}
+                </View>
+              ))}
             </View>
-            <View style={{ width: "50%", padding: "5 8" }}>
-              <Text><Text style={{ color: "#999", fontSize: 7 }}>INSPECTION: </Text><Text style={{ fontWeight: "bold", fontSize: 7 }}>{dispatch.inspection ?? "By VITON"}</Text></Text>
-            </View>
-          </View>
-          {/* Row 2 */}
-          <View style={{ flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "#e5e5e5" }}>
-            <View style={{ width: "50%", padding: "5 8", borderRightWidth: 1, borderRightColor: "#e5e5e5" }}>
-              <Text><Text style={{ color: "#999", fontSize: 7 }}>MODE OF DESPATCH: </Text><Text style={{ fontWeight: "bold", fontSize: 7 }}>{dispatch.mode_of_dispatch || "—"}</Text></Text>
-            </View>
-            <View style={{ width: "50%", padding: "5 8" }}>
-              <Text><Text style={{ color: "#999", fontSize: 7 }}>PACKING & FORWARDING: </Text><Text style={{ fontWeight: "bold", fontSize: 7 }}>{pfLabel}</Text></Text>
-            </View>
-          </View>
-          {/* Row 3 */}
-          <View style={{ flexDirection: "row" }}>
-            <View style={{ width: "50%", padding: "5 8", borderRightWidth: 1, borderRightColor: "#e5e5e5" }}>
-              <Text><Text style={{ color: "#999", fontSize: 7 }}>PLACE OF DELIVERY: </Text><Text style={{ fontWeight: "bold", fontSize: 7 }}>{dispatch.place_of_delivery ?? "At Ambernath Works"}</Text></Text>
-            </View>
-            <View style={{ width: "50%", padding: "5 8" }}>
-              <Text><Text style={{ color: "#999", fontSize: 7 }}>TAXES: </Text><Text style={{ fontWeight: "bold", fontSize: 7 }}>{dispatch.taxes ?? "At Actual"}</Text></Text>
+          ))}
+        </View>
+
+        {/* ── Signature ── */}
+        <View style={S.signatureBlock}>
+          <View style={S.signatureInner}>
+            <View style={S.signatureSpace} />
+            <View style={S.signatureLine}>
+              <Text style={S.signatureCompany}>For VITON ENGINEERS PVT. LTD.</Text>
+              <Text style={S.signatureRole}>Authorised Signatory</Text>
             </View>
           </View>
         </View>
 
-        {/* ── Signature (bottom right, after dispatch table) ── */}
-        <View style={{ alignItems: "flex-end", marginTop: 36 }}>
-          <Text style={{ fontWeight: "bold", fontSize: 8 }}>FOR VITON ENGINEERS PVT. LTD.</Text>
-          <Text style={{ marginTop: 32, color: "#aaa", fontSize: 8 }}>______________________________</Text>
-          <Text style={{ fontSize: 7, color: "#888", marginTop: 3 }}>Authorised Signatory</Text>
-        </View>
+        {/* ── Disclaimer ── */}
+        <Text style={S.disclaimer}>
+          This is a computer generated Purchase Order and does not require a signature.
+        </Text>
 
       </Page>
     </Document>
