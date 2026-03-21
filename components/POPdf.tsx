@@ -115,7 +115,7 @@ const S = StyleSheet.create({
     fontFamily: "Helvetica-Bold",
   },
 
-  // ── PO Box (top right) ──────────────────────────────────────────
+  // ── PO Box ──────────────────────────────────────────────────────
   poBox: {
     borderWidth: 1.5,
     borderColor: BRAND,
@@ -125,7 +125,6 @@ const S = StyleSheet.create({
     alignItems: "center",
     minWidth: 160,
   },
-  // FIX: wrapper View carries the background, not the Text
   poBoxTitleWrap: {
     backgroundColor: BRAND,
     width: "100%",
@@ -237,35 +236,31 @@ const S = StyleSheet.create({
     fontSize: 7,
     color: TEXT_DARK,
   },
+  // FIX: smaller font + overflow hidden stops serial ID bleeding
   tableCellMono: {
-    fontSize: 7,
-    fontFamily: "Helvetica-Bold",
+    fontSize: 6.5,
+    fontFamily: "Helvetica",
     color: "#3a4a8a",
   },
   tableCellLight: {
     fontSize: 7,
     color: "#666666",
   },
-  noteRow: {
-    flexDirection: "row",
-    paddingBottom: 5,
-    paddingHorizontal: 4,
-  },
+  // FIX: note row text style
   noteText: {
     fontSize: 7,
     color: "#666666",
     fontStyle: "italic",
-    flex: 1,
   },
 
-  // FIX: column widths now on View wrappers, not Text directly
-  colSr: { width: 22 },
-  colSerial: { width: 90 },
-  colDesc: { flex: 1 },
-  colQty: { width: 36 },
-  colUnit: { width: 34 },
-  colRate: { width: 60 },
-  colTotal: { width: 68 },
+  // FIX: column widths — overflow hidden on serial column is the key
+  colSr:     { width: 22, flexShrink: 0 },
+  colSerial: { width: 100, flexShrink: 0, overflow: "hidden" },
+  colDesc:   { flex: 1 },
+  colQty:    { width: 34, flexShrink: 0 },
+  colUnit:   { width: 32, flexShrink: 0 },
+  colRate:   { width: 58, flexShrink: 0 },
+  colTotal:  { width: 66, flexShrink: 0 },
 
   // ── Totals ──────────────────────────────────────────────────────
   totalsRow: {
@@ -287,7 +282,7 @@ const S = StyleSheet.create({
   totalsValue: {
     fontSize: 7,
     color: TEXT_DARK,
-    width: 68,
+    width: 66,
     textAlign: "right",
   },
   grandTotalRow: {
@@ -310,7 +305,7 @@ const S = StyleSheet.create({
     fontSize: 9,
     fontFamily: "Helvetica-Bold",
     color: "#ffffff",
-    width: 68,
+    width: 66,
     textAlign: "right",
   },
 
@@ -460,7 +455,6 @@ export function POPdfDocument({ po }: { po: POData }) {
           </View>
 
           <View style={{ alignItems: "flex-end" }}>
-            {/* FIX: View wrapper carries backgroundColor, not Text */}
             <View style={S.poBox}>
               <View style={S.poBoxTitleWrap}>
                 <Text style={S.poBoxTitle}>Purchase Order</Text>
@@ -508,8 +502,7 @@ export function POPdfDocument({ po }: { po: POData }) {
           </View>
         </View>
 
-        {/* ── Items Table Header ── */}
-        {/* FIX: all columns use View wrappers so widths are respected */}
+        {/* ── Table Header ── */}
         <View style={S.tableHeader}>
           <View style={S.colSr}>
             <Text style={S.tableHeaderCell}>Sr.</Text>
@@ -534,13 +527,14 @@ export function POPdfDocument({ po }: { po: POData }) {
           </View>
         </View>
 
-        {/* ── Items Rows ── */}
+        {/* ── Table Rows ── */}
         {lineItems.map((line, i) => (
           <React.Fragment key={i}>
             <View style={[S.tableRow, i % 2 !== 0 ? S.tableRowAlt : {}]}>
               <View style={S.colSr}>
                 <Text style={S.tableCellLight}>{i + 1}</Text>
               </View>
+              {/* FIX: overflow hidden on this View clips the serial ID */}
               <View style={S.colSerial}>
                 <Text style={S.tableCellMono}>{line.serial_id}</Text>
               </View>
@@ -565,11 +559,14 @@ export function POPdfDocument({ po }: { po: POData }) {
               </View>
             </View>
 
+            {/* FIX: note row now has BOTH colSr and colSerial spacers
+                so note text aligns under Particulars, not Serial ID */}
             {line.custom_note ? (
-              <View style={[S.noteRow, i % 2 !== 0 ? S.tableRowAlt : {}]}>
+              <View style={[S.tableRow, { paddingTop: 0, borderTopWidth: 0 }, i % 2 !== 0 ? S.tableRowAlt : {}]}>
                 <View style={S.colSr} />
+                <View style={S.colSerial} />
                 <View style={{ flex: 1 }}>
-                  <Text style={S.noteText}>Note: {line.custom_note}</Text>
+                  <Text style={S.noteText}>↳ {line.custom_note}</Text>
                 </View>
               </View>
             ) : null}
