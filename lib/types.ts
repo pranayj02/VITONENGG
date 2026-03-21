@@ -30,6 +30,8 @@ export interface Vendor {
   contact_phone: string | null;
   contact_email: string | null;
   payment_terms: string | null;
+  delivery_address?: string | null;
+  delivery_gstin?: string | null;
 }
 
 export interface PurchaseOrder {
@@ -42,7 +44,12 @@ export interface PurchaseOrder {
   total: number;
   notes: string | null;
   dispatch_meta: Record<string, unknown> | null;
+  fy_label?: string | null;
+  fy_serial?: number | null;
+  quot_no?: string | null;
+  quot_date?: string | null;
   created_at: string;
+  updated_at?: string | null;
 }
 
 export interface Invoice {

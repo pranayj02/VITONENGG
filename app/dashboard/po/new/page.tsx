@@ -1,6 +1,8 @@
 "use client";
+
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase";
+import { getCurrentFY } from "@/lib/fy";
 import {
   Search, Plus, Trash2, FileText, Save, X,
   CheckCircle, Printer, ChevronDown, ChevronUp,
@@ -8,6 +10,7 @@ import {
 import type { Item, Vendor, LineItem } from "@/lib/types";
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import { POPdfDocument } from "@/components/POPdf";
+import { useSearchParams } from "next/navigation";
 
 interface LineItemWithNote extends LineItem {
   custom_note: string;
@@ -19,6 +22,9 @@ interface DispatchMeta {
   place_of_delivery: string;
   inspection: string;
   taxes: string;
+  payment_date: string;
+  quot_no?: string;
+  quot_date?: string;
   pf_mode: "nil" | "percent" | "fixed";
   pf_value: number;
 }
@@ -29,6 +35,7 @@ const DEFAULT_DISPATCH: DispatchMeta = {
   place_of_delivery: "At Ambernath Works",
   inspection: "By VITON",
   taxes: "At Actual",
+  payment_date: "",
   pf_mode: "nil",
   pf_value: 0,
 };
@@ -62,20 +69,17 @@ function PODocument({
     >
       {/* Letterhead */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: "14px", borderBottom: "3px solid #5060AB", marginBottom: "14px" }}>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", minWidth: 0, flex: 1 }}>
           <img
             src="/Logo.JPG"
             alt="Viton Engineers"
             style={{ width: "52px", height: "52px", objectFit: "contain", flexShrink: 0 }}
             crossOrigin="anonymous"
           />
-          <div>
+          <div style={{ minWidth: 0, flex: 1 }}>
             <div style={{ fontSize: "17px", fontWeight: "900", color: "#111", letterSpacing: "0.3px" }}>VITON ENGINEERS PVT. LTD.</div>
             <div style={{ fontSize: "10px", color: "#555", marginTop: "3px", lineHeight: "1.5" }}>
-              WORKS: B401, ADDL. Ambernath MIDC, Anand Nagar, Opp. Hali Pad, Ambernath East, Dist. Thane - 421506
-            </div>
-            <div style={{ fontSize: "10px", color: "#555" }}>
-              OFFICE: 701, 7th Floor, Swastik Disa Corporate Park, LBS Marg, Ghatkopar W, Mumbai - 400086
+              WORKS: B40/1, ADDL. Ambernath MIDC, Anand Nagar, Opp. Hali Pad, Ambernath East, Dist. Thane - 421506
             </div>
             <div style={{ fontSize: "10px", color: "#555", marginTop: "2px" }}>
               Tel: 08779301215 / 9769639388&nbsp;&nbsp;|&nbsp;&nbsp;Email: info@vitonvalves.com&nbsp;&nbsp;|&nbsp;&nbsp;GSTIN: <strong>27AACCV7755N1ZK</strong>
@@ -83,31 +87,48 @@ function PODocument({
           </div>
         </div>
         <div style={{ textAlign: "right", flexShrink: 0, marginLeft: "24px" }}>
-          <div style={{ border: "2px solid #5060AB", borderRadius: "8px", padding: "8px 16px", display: "inline-block" }}>
-            <div style={{ fontSize: "9px", color: "#999", textTransform: "uppercase", letterSpacing: "1.5px" }}>Purchase Order</div>
-            <div style={{ fontSize: "15px", fontWeight: "bold", color: "#5060AB", fontFamily: "monospace", marginTop: "2px" }}>{poNumber}</div>
+          <div style={{ border: "2px solid #5060AB", borderRadius: "8px", padding: "6px 16px 8px 16px", display: "inline-block", minWidth: "210px" }}>
+            <div style={{ fontSize: "14px", fontWeight: "800", color: "#fff", background: "#5060AB", borderRadius: "4px", textTransform: "uppercase", letterSpacing: "1px", textAlign: "center", padding: "4px 6px" }}>
+              Purchase Order
+            </div>
+            <div style={{ fontSize: "11px", fontWeight: "500", color: "#666", fontFamily: "monospace", marginTop: "6px", textAlign: "center" }}>
+              {poNumber}
+            </div>
           </div>
           <div style={{ fontSize: "10px", color: "#666", marginTop: "6px" }}>Date: {date}</div>
         </div>
       </div>
 
-      {/* To + PO Meta */}
+      {/* To + Meta */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "14px" }}>
         <div style={{ background: "#f8f8f8", border: "1px solid #e5e5e5", borderRadius: "6px", padding: "10px 12px" }}>
           <div style={{ fontSize: "9px", color: "#aaa", fontWeight: "700", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "5px" }}>To</div>
           <div style={{ fontWeight: "700", fontSize: "13px", color: "#111" }}>{vendor?.name ?? "—"}</div>
-          {vendor?.address && <div style={{ color: "#555", marginTop: "3px", fontSize: "11px", lineHeight: "1.4" }}>{vendor.address}</div>}
-          {vendor?.gstin && <div style={{ color: "#555", fontSize: "11px", marginTop: "2px" }}>GSTIN: {vendor.gstin}</div>}
-          {vendor?.contact_name && <div style={{ color: "#444", marginTop: "6px", fontSize: "11px" }}>Kind Attn: <strong>{vendor.contact_name}</strong></div>}
-          {vendor?.contact_phone && <div style={{ color: "#555", fontSize: "11px" }}>Tel: {vendor.contact_phone}</div>}
+          {(vendor?.delivery_address || vendor?.address) && (
+            <div style={{ color: "#555", marginTop: "3px", fontSize: "11px", lineHeight: "1.4", whiteSpace: "pre-wrap" }}>
+              {vendor?.delivery_address || vendor?.address}
+            </div>
+          )}
+          {(vendor?.delivery_gstin || vendor?.gstin) && (
+            <div style={{ color: "#555", fontSize: "11px", marginTop: "2px" }}>
+              GSTIN: {vendor?.delivery_gstin || vendor?.gstin}
+            </div>
+          )}
+          {vendor?.contact_name && (
+            <div style={{ color: "#444", marginTop: "6px", fontSize: "11px" }}>
+              Kind Attn: <strong>{vendor.contact_name}</strong>
+            </div>
+          )}
+          {vendor?.contact_phone && (
+            <div style={{ color: "#555", fontSize: "11px" }}>Tel: {vendor.contact_phone}</div>
+          )}
         </div>
         <div style={{ background: "#f8f8f8", border: "1px solid #e5e5e5", borderRadius: "6px", padding: "10px 12px" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11px" }}>
             <tbody>
               {[
-                ...(quotNo ? [["Your Quot. No.", quotNo]] : []),
-                ...(quotDate ? [["Your Quot. Date", new Date(quotDate).toLocaleDateString("en-IN")]] : []),
-                ["Payment Terms", vendor?.payment_terms ?? "60 Days"],
+                ...(quotNo ? [["Your Quot. No.", quotNo] as [string, string]] : []),
+                ...(quotDate ? [["Your Quot. Date", new Date(quotDate).toLocaleDateString("en-IN")] as [string, string]] : []),
               ].map(([label, val]) => (
                 <tr key={label}>
                   <td style={{ color: "#888", paddingBottom: "5px", width: "45%" }}>{label}</td>
@@ -126,7 +147,7 @@ function PODocument({
             {["Sr.", "Serial ID", "Particulars", "Qty.", "Unit", "Rate Rs.", "Total Rs."].map((h, i) => (
               <th key={h} style={{
                 padding: "7px 8px", color: "white", fontWeight: "700",
-                textAlign: i < 3 ? "left" : (i >= 5 ? "right" : "center"),
+                textAlign: i < 3 ? "left" : i >= 5 ? "right" : "center",
                 width: ["32px", "110px", "auto", "50px", "44px", "80px", "90px"][i],
               }}>{h}</th>
             ))}
@@ -141,14 +162,14 @@ function PODocument({
                 <td style={{ padding: "7px 8px", color: "#111", verticalAlign: "top" }}>{line.name}</td>
                 <td style={{ padding: "7px 8px", textAlign: "center", verticalAlign: "top" }}>{line.quantity}</td>
                 <td style={{ padding: "7px 8px", textAlign: "center", color: "#666", verticalAlign: "top" }}>{line.unit}</td>
-                <td style={{ padding: "7px 8px", textAlign: "right", verticalAlign: "top" }}>{line.unit_price.toLocaleString("en-IN")}</td>
-                <td style={{ padding: "7px 8px", textAlign: "right", fontWeight: "700", verticalAlign: "top" }}>{line.total.toLocaleString("en-IN")}</td>
+                <td style={{ padding: "7px 8px", textAlign: "right", verticalAlign: "top" }}>{Number(line.unit_price || 0).toLocaleString("en-IN")}</td>
+                <td style={{ padding: "7px 8px", textAlign: "right", fontWeight: "700", verticalAlign: "top" }}>{Number(line.total || 0).toLocaleString("en-IN")}</td>
               </tr>
               {line.custom_note && (
                 <tr style={{ background: i % 2 === 0 ? "#fff" : "#fafafa", borderBottom: "1px solid #ebebeb" }}>
                   <td></td>
-                  <td colSpan={6} style={{ padding: "1px 8px 7px 8px", color: "#666", fontSize: "10px", fontStyle: "italic" }}>
-                    ↳ {line.custom_note}
+                  <td colSpan={6} style={{ padding: "1px 8px 7px 8px", color: "#666", fontSize: "11px", fontStyle: "italic" }}>
+                    Note: {line.custom_note}
                   </td>
                 </tr>
               )}
@@ -198,42 +219,37 @@ function PODocument({
             { label: "MODE OF DESPATCH", value: dispatch.mode_of_dispatch || "—" },
             {
               label: "PACKING & FORWARDING",
-              value: dispatch.pf_mode === "nil"
-                ? "Nil"
-                : `Rs. ${pfAmount.toLocaleString("en-IN")}${dispatch.pf_mode === "percent" ? ` (${dispatch.pf_value}%)` : ""}`,
+              value: dispatch.pf_mode === "nil" ? "Nil" : `Rs. ${pfAmount.toLocaleString("en-IN")}${dispatch.pf_mode === "percent" ? ` (${dispatch.pf_value}%)` : ""}`,
             },
           ],
           [
             { label: "PLACE OF DELIVERY", value: dispatch.place_of_delivery },
             { label: "TAXES", value: dispatch.taxes },
           ],
+          [
+            { label: "PAYMENT TERMS", value: vendor?.payment_terms ?? "60 Days" },
+            { label: "PAYMENT DATE", value: dispatch.payment_date || "—" },
+          ],
         ].map((row, ri) => (
-          <div key={ri} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderBottom: ri < 2 ? "1px solid #e5e5e5" : "none" }}>
+          <div key={ri} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderBottom: ri < 3 ? "1px solid #e5e5e5" : "none" }}>
             {row.map((cell, ci) => (
               <div key={ci} style={{ padding: "6px 10px", borderRight: ci === 0 ? "1px solid #e5e5e5" : "none" }}>
-                <span style={{ color: "#999" }}>{cell.label}: </span>
-                <span style={{ fontWeight: "700", color: "#111" }}>{cell.value}</span>
+                <span style={{ color: "#999" }}>{cell.label ? `${cell.label}: ` : ""}</span>
+                <span style={{ fontWeight: "700", color: "#111" }}>{cell.value || ""}</span>
               </div>
             ))}
           </div>
         ))}
       </div>
 
-      {/* Signature */}
-      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "28px" }}>
-        <div style={{ textAlign: "center", minWidth: "200px" }}>
-          <div style={{ height: "40px" }}></div>
-          <div style={{ borderTop: "1px solid #aaa", paddingTop: "6px" }}>
-            <div style={{ fontWeight: "700", fontSize: "11px" }}>For VITON ENGINEERS PVT. LTD.</div>
-            <div style={{ color: "#888", fontSize: "10px", marginTop: "2px" }}>Authorised Signatory</div>
-          </div>
-        </div>
+      {/* Disclaimer */}
+      <div style={{ marginTop: "14px", textAlign: "center", fontSize: "10px", color: "#777" }}>
+        This is a computer generated Purchase Order and does not require a signature.
       </div>
     </div>
   );
 }
 
-// ✅ FIXED: poData is now constructed from props. No more window.print() or CSS hack.
 function POPreviewModal({
   poNumber, vendor, lineItems, subtotal, pfAmount, grandTotal,
   notes, dispatch, onClose, quotNo, quotDate,
@@ -261,26 +277,21 @@ function POPreviewModal({
     line_items: lineItems,
     dispatch_meta: dispatch,
     vendors: vendor,
+    quot_no: quotNo || null,
+    quot_date: quotDate || null,
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-50 flex items-start justify-center p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl w-full max-w-3xl my-4 shadow-2xl overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white sticky top-0 z-10">
-          <h2 className="font-bold text-gray-900 text-lg">Purchase Order Preview</h2>
-          <div className="flex gap-2">
-            <PDFDownloadLink
-                document={<POPdfDocument po={poData} />}
-                fileName={`${poNumber.replace(/\//g, "-")}.pdf`}
-                className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-all"
-              >
-                <Printer size={15} /> Download PDF
-              </PDFDownloadLink>
-            <button onClick={onClose} className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 transition-all">
-              <X size={18} />
-            </button>
-          </div>
-        </div>
+    <>
+      <style>{`
+        @media print {
+          body > * { display: none !important; }
+          .po-print-wrapper { display: block !important; position: fixed; top: 0; left: 0; width: 100%; z-index: 9999; background: white; padding: 0; margin: 0; }
+          .po-print-wrapper * { visibility: visible !important; }
+        }
+        .po-print-wrapper { display: none; }
+      `}</style>
+      <div className="po-print-wrapper">
         <PODocument
           poNumber={poNumber} vendor={vendor} lineItems={lineItems}
           subtotal={subtotal} pfAmount={pfAmount} grandTotal={grandTotal}
@@ -288,11 +299,39 @@ function POPreviewModal({
           quotNo={quotNo} quotDate={quotDate}
         />
       </div>
-    </div>
+      <div className="fixed inset-0 bg-black/80 z-50 flex items-start justify-center p-4 overflow-y-auto">
+        <div className="bg-white rounded-2xl w-full max-w-3xl my-4 shadow-2xl overflow-hidden">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white sticky top-0 z-10">
+            <h2 className="font-bold text-gray-900 text-lg">Purchase Order Preview</h2>
+            <div className="flex gap-2">
+              <PDFDownloadLink
+                document={<POPdfDocument po={poData} />}
+                fileName={`${poNumber.replace(/\//g, "-")}.pdf`}
+                className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-all"
+              >
+                <Printer size={15} /> Download PDF
+              </PDFDownloadLink>
+              <button onClick={onClose} className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 transition-all">
+                <X size={18} />
+              </button>
+            </div>
+          </div>
+          <PODocument
+            poNumber={poNumber} vendor={vendor} lineItems={lineItems}
+            subtotal={subtotal} pfAmount={pfAmount} grandTotal={grandTotal}
+            notes={notes} dispatch={dispatch} date={today}
+            quotNo={quotNo} quotDate={quotDate}
+          />
+        </div>
+      </div>
+    </>
   );
 }
 
 export default function NewPOPage() {
+  const searchParams = useSearchParams();
+  const editId = searchParams.get("id");
+
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [selectedVendorId, setSelectedVendorId] = useState("");
   const [lineItems, setLineItems] = useState<LineItemWithNote[]>([]);
@@ -302,6 +341,7 @@ export default function NewPOPage() {
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [itemQty, setItemQty] = useState(1);
   const [itemPrice, setItemPrice] = useState(0);
+  const [lastPrice, setLastPrice] = useState<number | null>(null);
   const [itemNote, setItemNote] = useState("");
   const [notes, setNotes] = useState("");
   const [poNumber, setPoNumber] = useState("");
@@ -311,12 +351,25 @@ export default function NewPOPage() {
   const [savedPoId, setSavedPoId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [showDispatch, setShowDispatch] = useState(false);
+  const [fyLabel, setFyLabel] = useState("");
+  const [fySerial, setFySerial] = useState(0);
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [deliveryGstin, setDeliveryGstin] = useState("");
   const [error, setError] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
   const selectedVendor = vendors.find((v) => v.id === selectedVendorId) ?? null;
-  const subtotal = lineItems.reduce((s, l) => s + l.total, 0);
+
+  const previewVendor: Vendor | null = selectedVendor
+    ? {
+        ...selectedVendor,
+        delivery_address: deliveryAddress || selectedVendor.delivery_address || selectedVendor.address || null,
+        delivery_gstin: deliveryGstin || selectedVendor.delivery_gstin || selectedVendor.gstin || null,
+      }
+    : null;
+
+  const subtotal = lineItems.reduce((s, l) => s + Number(l.total || 0), 0);
   const pfAmount = computePF(subtotal, dispatch);
   const grandTotal = subtotal + pfAmount;
 
@@ -325,12 +378,56 @@ export default function NewPOPage() {
       const supabase = createClient();
       const { data: vData } = await supabase.from("vendors").select("*").order("name");
       setVendors((vData ?? []) as unknown as Vendor[]);
-      const { count } = await supabase.from("purchase_orders").select("*", { count: "exact", head: true });
-      const nextNum = 170 + (count ?? 0);
-      setPoNumber(`VEPL/PUR/${nextNum}/25-26`);
+
+      const currentFY = getCurrentFY();
+      const { data: maxRow } = await supabase
+        .from("purchase_orders")
+        .select("fy_serial")
+        .eq("fy_label", currentFY)
+        .order("fy_serial", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const nextSerial = ((maxRow as { fy_serial?: number } | null)?.fy_serial ?? 0) + 1;
+      setFyLabel(currentFY);
+      setFySerial(nextSerial);
+
+      if (editId) {
+        const { data: existingPO } = await supabase
+          .from("purchase_orders")
+          .select("*, vendors(*)")
+          .eq("id", editId)
+          .single();
+        if (existingPO) {
+          const po = existingPO as any;
+          setSelectedVendorId(po.vendor_id);
+          setLineItems(po.line_items ?? []);
+          setNotes(po.notes ?? "");
+          setPoNumber(po.po_number);
+          setFyLabel(po.fy_label ?? currentFY);
+          setFySerial(po.fy_serial ?? nextSerial);
+          setQuotNo(po.quot_no ?? po.dispatch_meta?.quot_no ?? "");
+          setQuotDate(po.quot_date ?? po.dispatch_meta?.quot_date ?? "");
+          if (po.dispatch_meta) setDispatch(po.dispatch_meta);
+          setDeliveryAddress(po.vendors?.delivery_address ?? po.vendors?.address ?? "");
+          setDeliveryGstin(po.vendors?.delivery_gstin ?? po.vendors?.gstin ?? "");
+        }
+      } else {
+        setPoNumber(`VEPL/PUR/${nextSerial}/${currentFY}`);
+      }
     }
     init();
-  }, []);
+  }, [editId]);
+
+  useEffect(() => {
+    if (selectedVendor) {
+      setDeliveryAddress(selectedVendor.delivery_address ?? selectedVendor.address ?? "");
+      setDeliveryGstin(selectedVendor.delivery_gstin ?? selectedVendor.gstin ?? "");
+    } else {
+      setDeliveryAddress("");
+      setDeliveryGstin("");
+    }
+  }, [selectedVendor]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -362,8 +459,13 @@ export default function NewPOPage() {
     const { data } = await supabase.from("vendor_items").select("last_price").eq("item_id", itemId).eq("vendor_id", vendorId).maybeSingle();
     if (data) {
       const row = data as unknown as { last_price: number };
-      if (row.last_price) setItemPrice(row.last_price);
+      if (row.last_price) {
+        setItemPrice(row.last_price);
+        setLastPrice(row.last_price);
+        return;
+      }
     }
+    setLastPrice(null);
   }
 
   function selectItem(item: Item) {
@@ -372,6 +474,7 @@ export default function NewPOPage() {
     setShowSearch(false);
     setItemQty(1);
     setItemPrice(0);
+    setLastPrice(null);
     setItemNote("");
     if (selectedVendorId) fetchLastPrice(item.id, selectedVendorId);
   }
@@ -401,6 +504,21 @@ export default function NewPOPage() {
     setLineItems((prev) => prev.map((l, i) => i === idx ? { ...l, custom_note: note } : l));
   }
 
+  function updateLineItem(idx: number, field: "quantity" | "unit_price", value: number) {
+    const safeValue = Number.isFinite(value) ? value : 0;
+    setLineItems((prev) =>
+      prev.map((line, i) =>
+        i === idx
+          ? {
+              ...line,
+              [field]: safeValue,
+              total: (field === "quantity" ? safeValue : line.quantity) * (field === "unit_price" ? safeValue : line.unit_price),
+            }
+          : line
+      )
+    );
+  }
+
   function removeLineItem(idx: number) {
     setLineItems((prev) => prev.filter((_, i) => i !== idx));
   }
@@ -414,22 +532,54 @@ export default function NewPOPage() {
     if (lineItems.length === 0) { setError("Add at least one item to the PO."); return; }
     setSaving(true);
     setError("");
+
     const supabase = createClient();
-    const { data, error: saveErr } = await supabase
-      .from("purchase_orders")
-      .insert({
-        po_number: poNumber,
-        vendor_id: selectedVendorId,
-        status,
-        line_items: lineItems,
-        subtotal,
-        total: grandTotal,
-        notes: notes.trim() || null,
-        dispatch_meta: dispatch,
-      })
-      .select("id")
-      .single();
+
+    const payload = {
+      po_number: poNumber,
+      vendor_id: selectedVendorId,
+      status,
+      line_items: lineItems,
+      subtotal,
+      total: grandTotal,
+      notes: notes.trim() || null,
+      dispatch_meta: {
+        ...dispatch,
+        quot_no: quotNo.trim() || "",
+        quot_date: quotDate || "",
+      },
+      fy_label: fyLabel,
+      fy_serial: fySerial,
+    };
+
+    const { data, error: saveErr } = editId
+      ? await supabase
+          .from("purchase_orders")
+          .update({
+            po_number: payload.po_number,
+            vendor_id: payload.vendor_id,
+            status: payload.status,
+            line_items: payload.line_items,
+            subtotal: payload.subtotal,
+            total: payload.total,
+            notes: payload.notes,
+            dispatch_meta: payload.dispatch_meta,
+          })
+          .eq("id", editId)
+          .select("id")
+          .single()
+      : await supabase.from("purchase_orders").insert(payload).select("id").single();
+
     if (saveErr) { setError(saveErr.message); setSaving(false); return; }
+
+    await supabase
+      .from("vendors")
+      .update({
+        delivery_address: deliveryAddress.trim() || null,
+        delivery_gstin: deliveryGstin.trim() || null,
+      })
+      .eq("id", selectedVendorId);
+
     const row = data as unknown as { id: string };
     setSavedPoId(row.id);
     setSaving(false);
@@ -442,14 +592,16 @@ export default function NewPOPage() {
           <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle size={32} className="text-green-400" />
           </div>
-          <h2 className="text-white text-xl font-bold mb-1">PO Created!</h2>
+          <h2 className="text-white text-xl font-bold mb-1">
+            {editId ? "PO Updated!" : "PO Created!"}
+          </h2>
           <p className="text-gray-400 text-sm font-mono mb-6">{poNumber}</p>
           <div className="flex flex-wrap gap-3 justify-center">
             <button
               onClick={() => setShowPreview(true)}
               className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-5 py-2.5 rounded-xl text-sm flex items-center gap-2"
             >
-              <Printer size={15} /> Preview &amp; Download PDF
+              <Printer size={15} /> Preview and Print
             </button>
             <a href="/dashboard/po/new" className="bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold px-5 py-2.5 rounded-xl text-sm flex items-center gap-2">
               <Plus size={15} /> New PO
@@ -457,11 +609,19 @@ export default function NewPOPage() {
             <a href="/dashboard/history" className="bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold px-5 py-2.5 rounded-xl text-sm">
               View History
             </a>
+            {editId && (
+              <a
+                href={`/dashboard/history?updated=1&po=${encodeURIComponent(poNumber)}`}
+                className="bg-green-500/20 hover:bg-green-500 text-green-300 hover:text-white border border-green-500/40 font-semibold px-5 py-2.5 rounded-xl text-sm"
+              >
+                Back to History (with update notice)
+              </a>
+            )}
           </div>
         </div>
         {showPreview && (
           <POPreviewModal
-            poNumber={poNumber} vendor={selectedVendor} lineItems={lineItems}
+            poNumber={poNumber} vendor={previewVendor} lineItems={lineItems}
             subtotal={subtotal} pfAmount={pfAmount} grandTotal={grandTotal}
             notes={notes} dispatch={dispatch} onClose={() => setShowPreview(false)}
             quotNo={quotNo} quotDate={quotDate}
@@ -474,7 +634,9 @@ export default function NewPOPage() {
   return (
     <div className="p-6 lg:p-8 max-w-5xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-white text-2xl font-bold">New Purchase Order</h1>
+        <h1 className="text-white text-2xl font-bold">
+          {editId ? "Edit Purchase Order" : "New Purchase Order"}
+        </h1>
         <p className="text-gray-500 text-sm mt-1">
           PO No: <span className="text-orange-400 font-mono font-semibold">{poNumber}</span>
         </p>
@@ -494,7 +656,7 @@ export default function NewPOPage() {
               <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Select Vendor *</label>
               <select
                 value={selectedVendorId}
-                onChange={(e) => { setSelectedVendorId(e.target.value); }}
+                onChange={(e) => setSelectedVendorId(e.target.value)}
                 className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
                 <option value="">— select vendor —</option>
@@ -528,12 +690,37 @@ export default function NewPOPage() {
               />
             </div>
           </div>
+
           {selectedVendor && (
             <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
               {selectedVendor.address && <span>{selectedVendor.address}</span>}
               {selectedVendor.contact_name && <span>{selectedVendor.contact_name}</span>}
               {selectedVendor.contact_phone && <span>{selectedVendor.contact_phone}</span>}
               {selectedVendor.gstin && <span className="font-mono">GST: {selectedVendor.gstin}</span>}
+            </div>
+          )}
+
+          {selectedVendor && (
+            <div className="mt-3 grid grid-cols-1 gap-3">
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Other Party Delivery Address</label>
+                <textarea
+                  value={deliveryAddress}
+                  onChange={(e) => setDeliveryAddress(e.target.value)}
+                  placeholder="Enter delivery address (saved for next time)"
+                  rows={2}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Other Party GSTIN (Delivery GSTIN)</label>
+                <input
+                  value={deliveryGstin}
+                  onChange={(e) => setDeliveryGstin(e.target.value)}
+                  placeholder="GST number at delivery location"
+                  className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
             </div>
           )}
         </div>
@@ -592,7 +779,13 @@ export default function NewPOPage() {
                 </div>
                 <div>
                   <label className="block text-gray-500 text-xs mb-1.5">
-                    Unit Price (Rs.) {itemPrice > 0 && <span className="text-green-400 ml-1">↑ last price</span>}
+                    Unit Price (Rs.){" "}
+                    {lastPrice !== null && (
+                      <span className="text-green-400 ml-1">
+                        Last: Rs. {lastPrice.toLocaleString("en-IN")}
+                        {itemPrice > lastPrice ? " (higher)" : itemPrice < lastPrice ? " (lower)" : " (same)"}
+                      </span>
+                    )}
                   </label>
                   <input type="number" min="0" step="0.01" value={itemPrice} onChange={(e) => setItemPrice(Number(e.target.value))}
                     className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500" />
@@ -603,7 +796,7 @@ export default function NewPOPage() {
                 <input
                   value={itemNote}
                   onChange={(e) => setItemNote(e.target.value)}
-                  placeholder="e.g. IGC Practice B test to be carried out. DPT with certificate in VEPL name."
+                  placeholder="e.g. IGC Practice B test to be carried out."
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
@@ -649,9 +842,31 @@ export default function NewPOPage() {
                           <p className="text-orange-400 font-mono text-xs font-semibold">{line.serial_id}</p>
                           <p className="text-white text-sm">{line.name}</p>
                         </td>
-                        <td className="px-5 py-3 text-white align-top">{line.quantity} {line.unit}</td>
-                        <td className="px-5 py-3 text-right text-gray-300 align-top">Rs. {line.unit_price.toLocaleString("en-IN")}</td>
-                        <td className="px-5 py-3 text-right text-white font-semibold align-top">Rs. {line.total.toLocaleString("en-IN")}</td>
+                        <td className="px-5 py-3 text-white align-top">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min="1"
+                              value={line.quantity}
+                              onChange={(e) => updateLineItem(i, "quantity", Number(e.target.value))}
+                              className="w-20 bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-white text-xs focus:outline-none focus:ring-1 focus:ring-orange-500"
+                            />
+                            <span>{line.unit}</span>
+                          </div>
+                        </td>
+                        <td className="px-5 py-3 text-right text-gray-300 align-top">
+                          <div className="flex justify-end">
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={line.unit_price}
+                              onChange={(e) => updateLineItem(i, "unit_price", Number(e.target.value))}
+                              className="w-28 bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-white text-xs text-right focus:outline-none focus:ring-1 focus:ring-orange-500"
+                            />
+                          </div>
+                        </td>
+                        <td className="px-5 py-3 text-right text-white font-semibold align-top">Rs. {Number(line.total || 0).toLocaleString("en-IN")}</td>
                         <td className="px-4 py-3 align-top">
                           <button onClick={() => removeLineItem(i)} className="text-gray-600 hover:text-red-400 transition-colors p-1">
                             <Trash2 size={14} />
@@ -683,7 +898,7 @@ export default function NewPOPage() {
                   {pfAmount > 0 && (
                     <tr>
                       <td colSpan={4} className="px-5 py-2 text-right text-gray-400 text-sm">
-                        P&F {dispatch.pf_mode === "percent" ? `(${dispatch.pf_value}%)` : ""}
+                        P&amp;F {dispatch.pf_mode === "percent" ? `(${dispatch.pf_value}%)` : ""}
                       </td>
                       <td className="px-5 py-2 text-right text-gray-300">Rs. {pfAmount.toLocaleString("en-IN")}</td>
                       <td></td>
@@ -717,6 +932,7 @@ export default function NewPOPage() {
                 { label: "Mode of Dispatch", key: "mode_of_dispatch" as const, placeholder: "e.g. Falcon Bus / By Road" },
                 { label: "Place of Delivery", key: "place_of_delivery" as const, placeholder: "e.g. At Ambernath Works" },
                 { label: "Taxes", key: "taxes" as const, placeholder: "e.g. At Actual / Inclusive" },
+                { label: "Payment Date", key: "payment_date" as const, placeholder: "e.g. 45 days from invoice / 31-03-2027" },
               ].map((f) => (
                 <div key={f.key} className="mt-4">
                   <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">{f.label}</label>
@@ -752,7 +968,7 @@ export default function NewPOPage() {
                 </div>
                 {pfAmount > 0 && (
                   <p className="text-orange-400 text-xs mt-1.5 font-mono">
-                    P&F = Rs. {pfAmount.toLocaleString("en-IN")} → Total = Rs. {grandTotal.toLocaleString("en-IN")}
+                    P&amp;F = Rs. {pfAmount.toLocaleString("en-IN")} → Total = Rs. {grandTotal.toLocaleString("en-IN")}
                   </p>
                 )}
               </div>
@@ -767,7 +983,7 @@ export default function NewPOPage() {
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
-            placeholder="e.g. Material TC to be provided along with supply. Serial Nos to be hard-punched on body/bonnet."
+            placeholder="e.g. Material TC to be provided along with supply."
             className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none"
           />
         </div>
@@ -793,14 +1009,18 @@ export default function NewPOPage() {
             disabled={saving}
             className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-semibold px-8 py-3 rounded-xl text-sm flex items-center gap-2 shadow-lg shadow-orange-500/20"
           >
-            <FileText size={15} /> {saving ? "Creating PO..." : "Create PO"}
+            <FileText size={15} />
+            {saving
+              ? (editId ? "Saving..." : "Creating PO...")
+              : (editId ? "Save Changes" : "Create PO")
+            }
           </button>
         </div>
       </div>
 
       {showPreview && (
         <POPreviewModal
-          poNumber={poNumber} vendor={selectedVendor} lineItems={lineItems}
+          poNumber={poNumber} vendor={previewVendor} lineItems={lineItems}
           subtotal={subtotal} pfAmount={pfAmount} grandTotal={grandTotal}
           notes={notes} dispatch={dispatch} onClose={() => setShowPreview(false)}
           quotNo={quotNo} quotDate={quotDate}
