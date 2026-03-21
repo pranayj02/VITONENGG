@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase";
+import { getCurrentFY } from "@/lib/fy";
 import {
   Search, Plus, Trash2, FileText, Save, X,
   CheckCircle, Printer, ChevronDown, ChevronUp,
@@ -311,6 +312,8 @@ export default function NewPOPage() {
   const [savedPoId, setSavedPoId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [showDispatch, setShowDispatch] = useState(false);
+  const [fyLabel, setFyLabel] = useState("");
+  const [fySerial, setFySerial] = useState(0);
   const [error, setError] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
@@ -325,9 +328,18 @@ export default function NewPOPage() {
       const supabase = createClient();
       const { data: vData } = await supabase.from("vendors").select("*").order("name");
       setVendors((vData ?? []) as unknown as Vendor[]);
-      const { count } = await supabase.from("purchase_orders").select("*", { count: "exact", head: true });
-      const nextNum = 170 + (count ?? 0);
-      setPoNumber(`VEPL/PUR/${nextNum}/25-26`);
+      const fyLabel = getCurrentFY();
+      const { data: maxRow } = await supabase
+        .from("purchase_orders")
+        .select("fy_serial")
+        .eq("fy_label", fyLabel)
+        .order("fy_serial", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const nextSerial = (maxRow?.fy_serial ?? 169) + 1;
+      setPoNumber(`VEPL/PUR/${nextSerial}/${fyLabel}`);
+      setFyLabel(fyLabel);
+      setFySerial(nextSerial);
     }
     init();
   }, []);
@@ -426,6 +438,8 @@ export default function NewPOPage() {
         total: grandTotal,
         notes: notes.trim() || null,
         dispatch_meta: dispatch,
+        fy_label: fyLabel,
+        fy_serial: fySerial,
       })
       .select("id")
       .single();
