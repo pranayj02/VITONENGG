@@ -1,10 +1,19 @@
 "use client";
+
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase";
 import { getCurrentFY } from "@/lib/fy";
 import {
-  Search, Plus, Trash2, FileText, Save, X,
-  CheckCircle, Printer, ChevronDown, ChevronUp,
+  Search,
+  Plus,
+  Trash2,
+  FileText,
+  Save,
+  X,
+  CheckCircle,
+  Printer,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import type { Item, Vendor, LineItem } from "@/lib/types";
 import { PDFDownloadLink } from "@react-pdf/renderer";
@@ -41,8 +50,17 @@ function computePF(subtotal: number, meta: DispatchMeta): number {
 }
 
 function PODocument({
-  poNumber, vendor, lineItems, subtotal, pfAmount, grandTotal,
-  notes, dispatch, date, quotNo, quotDate,
+  poNumber,
+  vendor,
+  lineItems,
+  subtotal,
+  pfAmount,
+  grandTotal,
+  notes,
+  dispatch,
+  date,
+  quotNo,
+  quotDate,
 }: {
   poNumber: string;
   vendor: Vendor | null;
@@ -61,17 +79,28 @@ function PODocument({
       className="po-preview-document bg-white text-gray-900"
       style={{ fontFamily: "Arial, sans-serif", fontSize: "12px", padding: "28px 32px" }}
     >
-      {/* Letterhead */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: "14px", borderBottom: "3px solid #5060AB", marginBottom: "14px" }}>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          paddingBottom: "14px",
+          borderBottom: "3px solid #5060AB",
+          marginBottom: "14px",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", minWidth: 0, flex: 1 }}>
           <img
             src="/Logo.JPG"
             alt="Viton Engineers"
             style={{ width: "52px", height: "52px", objectFit: "contain", flexShrink: 0 }}
             crossOrigin="anonymous"
           />
-          <div>
-            <div style={{ fontSize: "17px", fontWeight: "900", color: "#111", letterSpacing: "0.3px" }}>VITON ENGINEERS PVT. LTD.</div>
+
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontSize: "17px", fontWeight: "900", color: "#111", letterSpacing: "0.3px" }}>
+              VITON ENGINEERS PVT. LTD.
+            </div>
             <div style={{ fontSize: "10px", color: "#555", marginTop: "3px", lineHeight: "1.5" }}>
               WORKS: B401, ADDL. Ambernath MIDC, Anand Nagar, Opp. Hali Pad, Ambernath East, Dist. Thane - 421506
             </div>
@@ -79,36 +108,112 @@ function PODocument({
               OFFICE: 701, 7th Floor, Swastik Disa Corporate Park, LBS Marg, Ghatkopar W, Mumbai - 400086
             </div>
             <div style={{ fontSize: "10px", color: "#555", marginTop: "2px" }}>
-              Tel: 08779301215 / 9769639388&nbsp;&nbsp;|&nbsp;&nbsp;Email: info@vitonvalves.com&nbsp;&nbsp;|&nbsp;&nbsp;GSTIN: <strong>27AACCV7755N1ZK</strong>
+              Tel: 08779301215 / 9769639388&nbsp;&nbsp;|&nbsp;&nbsp;Email: info@vitonvalves.com&nbsp;&nbsp;|&nbsp;&nbsp;GSTIN:{" "}
+              <strong>27AACCV7755N1ZK</strong>
             </div>
           </div>
         </div>
+
         <div style={{ textAlign: "right", flexShrink: 0, marginLeft: "24px" }}>
-          <div style={{ border: "2px solid #5060AB", borderRadius: "8px", padding: "8px 16px", display: "inline-block" }}>
-            <div style={{ fontSize: "9px", color: "#999", textTransform: "uppercase", letterSpacing: "1.5px" }}>Purchase Order</div>
-            <div style={{ fontSize: "15px", fontWeight: "bold", color: "#5060AB", fontFamily: "monospace", marginTop: "2px" }}>{poNumber}</div>
+          <div
+            style={{
+              border: "2px solid #5060AB",
+              borderRadius: "8px",
+              padding: "8px 16px",
+              display: "inline-block",
+              minWidth: "210px",
+            }}
+          >
+            <div
+              style={{
+                fontSize: "14px",
+                fontWeight: "800",
+                color: "#5060AB",
+                textTransform: "uppercase",
+                letterSpacing: "1px",
+                textAlign: "center",
+              }}
+            >
+              Purchase Order
+            </div>
+            <div
+              style={{
+                fontSize: "12px",
+                fontWeight: "700",
+                color: "#666",
+                fontFamily: "monospace",
+                marginTop: "4px",
+                textAlign: "center",
+              }}
+            >
+              {poNumber}
+            </div>
           </div>
           <div style={{ fontSize: "10px", color: "#666", marginTop: "6px" }}>Date: {date}</div>
         </div>
       </div>
 
-      {/* To + PO Meta */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "14px" }}>
-        <div style={{ background: "#f8f8f8", border: "1px solid #e5e5e5", borderRadius: "6px", padding: "10px 12px" }}>
-          <div style={{ fontSize: "9px", color: "#aaa", fontWeight: "700", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "5px" }}>To</div>
+        <div
+          style={{
+            background: "#f8f8f8",
+            border: "1px solid #e5e5e5",
+            borderRadius: "6px",
+            padding: "10px 12px",
+          }}
+        >
+          <div
+            style={{
+              fontSize: "9px",
+              color: "#aaa",
+              fontWeight: "700",
+              textTransform: "uppercase",
+              letterSpacing: "1px",
+              marginBottom: "5px",
+            }}
+          >
+            To
+          </div>
           <div style={{ fontWeight: "700", fontSize: "13px", color: "#111" }}>{vendor?.name ?? "—"}</div>
-          {vendor?.address && <div style={{ color: "#555", marginTop: "3px", fontSize: "11px", lineHeight: "1.4" }}>{vendor.address}</div>}
-          {vendor?.gstin && <div style={{ color: "#555", fontSize: "11px", marginTop: "2px" }}>GSTIN: {vendor.gstin}</div>}
-          {vendor?.contact_name && <div style={{ color: "#444", marginTop: "6px", fontSize: "11px" }}>Kind Attn: <strong>{vendor.contact_name}</strong></div>}
-          {vendor?.contact_phone && <div style={{ color: "#555", fontSize: "11px" }}>Tel: {vendor.contact_phone}</div>}
+
+          {(vendor?.delivery_address || vendor?.address) && (
+            <div style={{ color: "#555", marginTop: "3px", fontSize: "11px", lineHeight: "1.4", whiteSpace: "pre-wrap" }}>
+              {vendor?.delivery_address || vendor?.address}
+            </div>
+          )}
+
+          {(vendor?.delivery_gstin || vendor?.gstin) && (
+            <div style={{ color: "#555", fontSize: "11px", marginTop: "2px" }}>
+              GSTIN: {vendor?.delivery_gstin || vendor?.gstin}
+            </div>
+          )}
+
+          {vendor?.contact_name && (
+            <div style={{ color: "#444", marginTop: "6px", fontSize: "11px" }}>
+              Kind Attn: <strong>{vendor.contact_name}</strong>
+            </div>
+          )}
+
+          {vendor?.contact_phone && (
+            <div style={{ color: "#555", fontSize: "11px" }}>Tel: {vendor.contact_phone}</div>
+          )}
         </div>
-        <div style={{ background: "#f8f8f8", border: "1px solid #e5e5e5", borderRadius: "6px", padding: "10px 12px" }}>
+
+        <div
+          style={{
+            background: "#f8f8f8",
+            border: "1px solid #e5e5e5",
+            borderRadius: "6px",
+            padding: "10px 12px",
+          }}
+        >
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11px" }}>
             <tbody>
               {[
-                ...(quotNo ? [["Your Quot. No.", quotNo]] : []),
-                ...(quotDate ? [["Your Quot. Date", new Date(quotDate).toLocaleDateString("en-IN")]] : []),
-                ["Payment Terms", vendor?.payment_terms ?? "60 Days"],
+                ...(quotNo ? [["Your Quot. No.", quotNo] as [string, string]] : []),
+                ...(quotDate
+                  ? [["Your Quot. Date", new Date(quotDate).toLocaleDateString("en-IN")] as [string, string]]
+                  : []),
               ].map(([label, val]) => (
                 <tr key={label}>
                   <td style={{ color: "#888", paddingBottom: "5px", width: "45%" }}>{label}</td>
@@ -120,49 +225,88 @@ function PODocument({
         </div>
       </div>
 
-      {/* Items Table */}
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11px" }}>
         <thead>
           <tr style={{ background: "#5060AB" }}>
             {["Sr.", "Serial ID", "Particulars", "Qty.", "Unit", "Rate Rs.", "Total Rs."].map((h, i) => (
-              <th key={h} style={{
-                padding: "7px 8px", color: "white", fontWeight: "700",
-                textAlign: i < 3 ? "left" : (i >= 5 ? "right" : "center"),
-                width: ["32px", "110px", "auto", "50px", "44px", "80px", "90px"][i],
-              }}>{h}</th>
+              <th
+                key={h}
+                style={{
+                  padding: "7px 8px",
+                  color: "white",
+                  fontWeight: "700",
+                  textAlign: i < 3 ? "left" : i >= 5 ? "right" : "center",
+                  width: ["32px", "110px", "auto", "50px", "44px", "80px", "90px"][i],
+                }}
+              >
+                {h}
+              </th>
             ))}
           </tr>
         </thead>
+
         <tbody>
           {lineItems.map((line, i) => (
             <React.Fragment key={i}>
-              <tr style={{ background: i % 2 === 0 ? "#fff" : "#fafafa", borderBottom: line.custom_note ? "none" : "1px solid #ebebeb" }}>
+              <tr
+                style={{
+                  background: i % 2 === 0 ? "#fff" : "#fafafa",
+                  borderBottom: line.custom_note ? "none" : "1px solid #ebebeb",
+                }}
+              >
                 <td style={{ padding: "7px 8px", color: "#999", verticalAlign: "top" }}>{i + 1}</td>
-                <td style={{ padding: "7px 8px", fontFamily: "monospace", fontSize: "10px", color: "#3a4a8a", fontWeight: "700", verticalAlign: "top" }}>{line.serial_id}</td>
+                <td
+                  style={{
+                    padding: "7px 8px",
+                    fontFamily: "monospace",
+                    fontSize: "10px",
+                    color: "#3a4a8a",
+                    fontWeight: "700",
+                    verticalAlign: "top",
+                  }}
+                >
+                  {line.serial_id}
+                </td>
                 <td style={{ padding: "7px 8px", color: "#111", verticalAlign: "top" }}>{line.name}</td>
                 <td style={{ padding: "7px 8px", textAlign: "center", verticalAlign: "top" }}>{line.quantity}</td>
-                <td style={{ padding: "7px 8px", textAlign: "center", color: "#666", verticalAlign: "top" }}>{line.unit}</td>
-                <td style={{ padding: "7px 8px", textAlign: "right", verticalAlign: "top" }}>{line.unit_price.toLocaleString("en-IN")}</td>
-                <td style={{ padding: "7px 8px", textAlign: "right", fontWeight: "700", verticalAlign: "top" }}>{line.total.toLocaleString("en-IN")}</td>
+                <td style={{ padding: "7px 8px", textAlign: "center", color: "#666", verticalAlign: "top" }}>
+                  {line.unit}
+                </td>
+                <td style={{ padding: "7px 8px", textAlign: "right", verticalAlign: "top" }}>
+                  {Number(line.unit_price || 0).toLocaleString("en-IN")}
+                </td>
+                <td style={{ padding: "7px 8px", textAlign: "right", fontWeight: "700", verticalAlign: "top" }}>
+                  {Number(line.total || 0).toLocaleString("en-IN")}
+                </td>
               </tr>
+
               {line.custom_note && (
-                <tr style={{ background: i % 2 === 0 ? "#fff" : "#fafafa", borderBottom: "1px solid #ebebeb" }}>
+                <tr
+                  style={{
+                    background: i % 2 === 0 ? "#fff" : "#fafafa",
+                    borderBottom: "1px solid #ebebeb",
+                  }}
+                >
                   <td></td>
-                  <td colSpan={6} style={{ padding: "1px 8px 7px 8px", color: "#666", fontSize: "10px", fontStyle: "italic" }}>
-                    ↳ {line.custom_note}
+                  <td colSpan={6} style={{ padding: "1px 8px 7px 8px", color: "#666", fontSize: "11px", fontStyle: "italic" }}>
+                    Note: {line.custom_note}
                   </td>
                 </tr>
               )}
             </React.Fragment>
           ))}
         </tbody>
+
         <tfoot>
           {pfAmount > 0 && (
             <tr style={{ borderTop: "1px solid #ddd" }}>
-              <td colSpan={6} style={{ padding: "6px 8px", textAlign: "right", color: "#555" }}>Subtotal</td>
+              <td colSpan={6} style={{ padding: "6px 8px", textAlign: "right", color: "#555" }}>
+                Subtotal
+              </td>
               <td style={{ padding: "6px 8px", textAlign: "right" }}>{subtotal.toLocaleString("en-IN")}</td>
             </tr>
           )}
+
           {pfAmount > 0 && (
             <tr style={{ borderTop: "1px solid #ddd" }}>
               <td colSpan={6} style={{ padding: "6px 8px", textAlign: "right", color: "#555" }}>
@@ -171,8 +315,11 @@ function PODocument({
               <td style={{ padding: "6px 8px", textAlign: "right" }}>{pfAmount.toLocaleString("en-IN")}</td>
             </tr>
           )}
+
           <tr style={{ background: "#5060AB", color: "white" }}>
-            <td colSpan={6} style={{ padding: "9px 8px", textAlign: "right", fontWeight: "700", letterSpacing: "1px" }}>TOTAL</td>
+            <td colSpan={6} style={{ padding: "9px 8px", textAlign: "right", fontWeight: "700", letterSpacing: "1px" }}>
+              TOTAL
+            </td>
             <td style={{ padding: "9px 8px", textAlign: "right", fontWeight: "700", fontSize: "13px" }}>
               Rs.&nbsp;{grandTotal.toLocaleString("en-IN")}
             </td>
@@ -180,16 +327,31 @@ function PODocument({
         </tfoot>
       </table>
 
-      {/* Notes */}
       {notes && (
-        <div style={{ margin: "12px 0 0 0", padding: "10px 12px", background: "#f0f2ff", border: "1px solid #c7ccee", borderRadius: "6px", fontSize: "11px" }}>
+        <div
+          style={{
+            margin: "12px 0 0 0",
+            padding: "10px 12px",
+            background: "#f0f2ff",
+            border: "1px solid #c7ccee",
+            borderRadius: "6px",
+            fontSize: "11px",
+          }}
+        >
           <div style={{ fontWeight: "700", marginBottom: "4px", color: "#5060AB" }}>Notes:</div>
           <div style={{ color: "#444", whiteSpace: "pre-wrap", lineHeight: "1.6" }}>{notes}</div>
         </div>
       )}
 
-      {/* Dispatch Footer */}
-      <div style={{ marginTop: "14px", border: "1px solid #ddd", borderRadius: "6px", overflow: "hidden", fontSize: "10px" }}>
+      <div
+        style={{
+          marginTop: "14px",
+          border: "1px solid #ddd",
+          borderRadius: "6px",
+          overflow: "hidden",
+          fontSize: "10px",
+        }}
+      >
         {[
           [
             { label: "DELIVERY", value: dispatch.delivery },
@@ -199,28 +361,45 @@ function PODocument({
             { label: "MODE OF DESPATCH", value: dispatch.mode_of_dispatch || "—" },
             {
               label: "PACKING & FORWARDING",
-              value: dispatch.pf_mode === "nil"
-                ? "Nil"
-                : `Rs. ${pfAmount.toLocaleString("en-IN")}${dispatch.pf_mode === "percent" ? ` (${dispatch.pf_value}%)` : ""}`,
+              value:
+                dispatch.pf_mode === "nil"
+                  ? "Nil"
+                  : `Rs. ${pfAmount.toLocaleString("en-IN")}${dispatch.pf_mode === "percent" ? ` (${dispatch.pf_value}%)` : ""}`,
             },
           ],
           [
             { label: "PLACE OF DELIVERY", value: dispatch.place_of_delivery },
             { label: "TAXES", value: dispatch.taxes },
           ],
+          [
+            { label: "PAYMENT TERMS", value: vendor?.payment_terms ?? "60 Days" },
+            { label: "", value: "" },
+          ],
         ].map((row, ri) => (
-          <div key={ri} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderBottom: ri < 2 ? "1px solid #e5e5e5" : "none" }}>
+          <div
+            key={ri}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              borderBottom: ri < 3 ? "1px solid #e5e5e5" : "none",
+            }}
+          >
             {row.map((cell, ci) => (
-              <div key={ci} style={{ padding: "6px 10px", borderRight: ci === 0 ? "1px solid #e5e5e5" : "none" }}>
-                <span style={{ color: "#999" }}>{cell.label}: </span>
-                <span style={{ fontWeight: "700", color: "#111" }}>{cell.value}</span>
+              <div
+                key={ci}
+                style={{
+                  padding: "6px 10px",
+                  borderRight: ci === 0 ? "1px solid #e5e5e5" : "none",
+                }}
+              >
+                <span style={{ color: "#999" }}>{cell.label ? `${cell.label}: ` : ""}</span>
+                <span style={{ fontWeight: "700", color: "#111" }}>{cell.value || ""}</span>
               </div>
             ))}
           </div>
         ))}
       </div>
 
-      {/* Signature */}
       <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "28px" }}>
         <div style={{ textAlign: "center", minWidth: "200px" }}>
           <div style={{ height: "40px" }}></div>
@@ -230,14 +409,26 @@ function PODocument({
           </div>
         </div>
       </div>
+
+      <div style={{ marginTop: "14px", textAlign: "center", fontSize: "10px", color: "#777" }}>
+        This is a computer generated Purchase Order and does not require a signature.
+      </div>
     </div>
   );
 }
 
-// ✅ FIXED: poData is now constructed from props. No more window.print() or CSS hack.
 function POPreviewModal({
-  poNumber, vendor, lineItems, subtotal, pfAmount, grandTotal,
-  notes, dispatch, onClose, quotNo, quotDate,
+  poNumber,
+  vendor,
+  lineItems,
+  subtotal,
+  pfAmount,
+  grandTotal,
+  notes,
+  dispatch,
+  onClose,
+  quotNo,
+  quotDate,
 }: {
   poNumber: string;
   vendor: Vendor | null;
@@ -251,7 +442,11 @@ function POPreviewModal({
   quotNo: string;
   quotDate: string;
 }) {
-  const today = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const today = new Date().toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 
   const poData = {
     po_number: poNumber,
@@ -265,31 +460,77 @@ function POPreviewModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-50 flex items-start justify-center p-4 overflow-y-auto">
-      <div className="bg-white rounded-2xl w-full max-w-3xl my-4 shadow-2xl overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white sticky top-0 z-10">
-          <h2 className="font-bold text-gray-900 text-lg">Purchase Order Preview</h2>
-          <div className="flex gap-2">
-            <PDFDownloadLink
+    <>
+      <style>{`
+        @media print {
+          body > * { display: none !important; }
+          .po-print-wrapper {
+            display: block !important;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 9999;
+            background: white;
+            padding: 0;
+            margin: 0;
+          }
+          .po-print-wrapper * { visibility: visible !important; }
+        }
+        .po-print-wrapper { display: none; }
+      `}</style>
+
+      <div className="po-print-wrapper">
+        <PODocument
+          poNumber={poNumber}
+          vendor={vendor}
+          lineItems={lineItems}
+          subtotal={subtotal}
+          pfAmount={pfAmount}
+          grandTotal={grandTotal}
+          notes={notes}
+          dispatch={dispatch}
+          date={today}
+          quotNo={quotNo}
+          quotDate={quotDate}
+        />
+      </div>
+
+      <div className="fixed inset-0 bg-black/80 z-50 flex items-start justify-center p-4 overflow-y-auto">
+        <div className="bg-white rounded-2xl w-full max-w-3xl my-4 shadow-2xl overflow-hidden">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white sticky top-0 z-10">
+            <h2 className="font-bold text-gray-900 text-lg">Purchase Order Preview</h2>
+            <div className="flex gap-2">
+              <PDFDownloadLink
                 document={<POPdfDocument po={poData} />}
                 fileName={`${poNumber.replace(/\//g, "-")}.pdf`}
                 className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-all"
               >
                 <Printer size={15} /> Download PDF
               </PDFDownloadLink>
-            <button onClick={onClose} className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 transition-all">
-              <X size={18} />
-            </button>
+
+              <button onClick={onClose} className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 transition-all">
+                <X size={18} />
+              </button>
+            </div>
           </div>
+
+          <PODocument
+            poNumber={poNumber}
+            vendor={vendor}
+            lineItems={lineItems}
+            subtotal={subtotal}
+            pfAmount={pfAmount}
+            grandTotal={grandTotal}
+            notes={notes}
+            dispatch={dispatch}
+            date={today}
+            quotNo={quotNo}
+            quotDate={quotDate}
+          />
         </div>
-        <PODocument
-          poNumber={poNumber} vendor={vendor} lineItems={lineItems}
-          subtotal={subtotal} pfAmount={pfAmount} grandTotal={grandTotal}
-          notes={notes} dispatch={dispatch} date={today}
-          quotNo={quotNo} quotDate={quotDate}
-        />
       </div>
-    </div>
+    </>
   );
 }
 
@@ -321,13 +562,16 @@ export default function NewPOPage() {
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
   const selectedVendor = vendors.find((v) => v.id === selectedVendorId) ?? null;
-  useEffect(() => {
-  if (selectedVendor) {
-    setDeliveryAddress(selectedVendor.delivery_address ?? "");
-    setDeliveryGstin(selectedVendor.delivery_gstin ?? "");
-    }
-  }, [selectedVendor]);
-  const subtotal = lineItems.reduce((s, l) => s + l.total, 0);
+
+  const previewVendor: Vendor | null = selectedVendor
+    ? {
+        ...selectedVendor,
+        delivery_address: deliveryAddress || selectedVendor.delivery_address || selectedVendor.address || null,
+        delivery_gstin: deliveryGstin || selectedVendor.delivery_gstin || selectedVendor.gstin || null,
+      }
+    : null;
+
+  const subtotal = lineItems.reduce((s, l) => s + Number(l.total || 0), 0);
   const pfAmount = computePF(subtotal, dispatch);
   const grandTotal = subtotal + pfAmount;
 
@@ -336,21 +580,34 @@ export default function NewPOPage() {
       const supabase = createClient();
       const { data: vData } = await supabase.from("vendors").select("*").order("name");
       setVendors((vData ?? []) as unknown as Vendor[]);
-      const fyLabel = getCurrentFY();
+
+      const currentFY = getCurrentFY();
       const { data: maxRow } = await supabase
         .from("purchase_orders")
         .select("fy_serial")
-        .eq("fy_label", fyLabel)
+        .eq("fy_label", currentFY)
         .order("fy_serial", { ascending: false })
         .limit(1)
         .maybeSingle();
-      const nextSerial = (maxRow?.fy_serial ?? 169) + 1;
-      setPoNumber(`VEPL/PUR/${nextSerial}/${fyLabel}`);
-      setFyLabel(fyLabel);
+
+      const nextSerial = ((maxRow as { fy_serial?: number } | null)?.fy_serial ?? 169) + 1;
+      setPoNumber(`VEPL/PUR/${nextSerial}/${currentFY}`);
+      setFyLabel(currentFY);
       setFySerial(nextSerial);
     }
+
     init();
   }, []);
+
+  useEffect(() => {
+    if (selectedVendor) {
+      setDeliveryAddress(selectedVendor.delivery_address ?? selectedVendor.address ?? "");
+      setDeliveryGstin(selectedVendor.delivery_gstin ?? selectedVendor.gstin ?? "");
+    } else {
+      setDeliveryAddress("");
+      setDeliveryGstin("");
+    }
+  }, [selectedVendor]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -358,14 +615,25 @@ export default function NewPOPage() {
         setShowSearch(false);
       }
     }
+
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const searchItems = useCallback(async (q: string) => {
-    if (!q.trim()) { setSearchResults([]); setShowSearch(false); return; }
+    if (!q.trim()) {
+      setSearchResults([]);
+      setShowSearch(false);
+      return;
+    }
+
     const supabase = createClient();
-    const { data } = await supabase.from("items").select("*").or(`serial_id.ilike.%${q}%,name.ilike.%${q}%`).limit(8);
+    const { data } = await supabase
+      .from("items")
+      .select("*")
+      .or(`serial_id.ilike.%${q}%,name.ilike.%${q}%`)
+      .limit(8);
+
     const rows = (data ?? []) as unknown as Item[];
     setSearchResults(rows);
     setShowSearch(rows.length > 0);
@@ -378,8 +646,15 @@ export default function NewPOPage() {
 
   async function fetchLastPrice(itemId: string, vendorId: string) {
     if (!itemId || !vendorId) return;
+
     const supabase = createClient();
-    const { data } = await supabase.from("vendor_items").select("last_price").eq("item_id", itemId).eq("vendor_id", vendorId).maybeSingle();
+    const { data } = await supabase
+      .from("vendor_items")
+      .select("last_price")
+      .eq("item_id", itemId)
+      .eq("vendor_id", vendorId)
+      .maybeSingle();
+
     if (data) {
       const row = data as unknown as { last_price: number };
       if (row.last_price) setItemPrice(row.last_price);
@@ -393,11 +668,13 @@ export default function NewPOPage() {
     setItemQty(1);
     setItemPrice(0);
     setItemNote("");
+
     if (selectedVendorId) fetchLastPrice(item.id, selectedVendorId);
   }
 
   function addLineItem() {
     if (!selectedItem) return;
+
     const line: LineItemWithNote = {
       item_id: selectedItem.id,
       serial_id: selectedItem.serial_id,
@@ -409,6 +686,7 @@ export default function NewPOPage() {
       total: itemQty * itemPrice,
       custom_note: itemNote.trim(),
     };
+
     setLineItems((prev) => [...prev, line]);
     setSelectedItem(null);
     setSearchQuery("");
@@ -418,7 +696,7 @@ export default function NewPOPage() {
   }
 
   function updateLineNote(idx: number, note: string) {
-    setLineItems((prev) => prev.map((l, i) => i === idx ? { ...l, custom_note: note } : l));
+    setLineItems((prev) => prev.map((l, i) => (i === idx ? { ...l, custom_note: note } : l)));
   }
 
   function removeLineItem(idx: number) {
@@ -430,11 +708,21 @@ export default function NewPOPage() {
   }
 
   async function handleSave(status: string) {
-    if (!selectedVendorId) { setError("Please select a vendor first."); return; }
-    if (lineItems.length === 0) { setError("Add at least one item to the PO."); return; }
+    if (!selectedVendorId) {
+      setError("Please select a vendor first.");
+      return;
+    }
+
+    if (lineItems.length === 0) {
+      setError("Add at least one item to the PO.");
+      return;
+    }
+
     setSaving(true);
     setError("");
+
     const supabase = createClient();
+
     const { data, error: saveErr } = await supabase
       .from("purchase_orders")
       .insert({
@@ -451,20 +739,25 @@ export default function NewPOPage() {
       })
       .select("id")
       .single();
-    if (saveErr) { setError(saveErr.message); setSaving(false); return; }
+
+    if (saveErr) {
+      setError(saveErr.message);
+      setSaving(false);
+      return;
+    }
+
+    if (deliveryAddress || deliveryGstin) {
+      await supabase
+        .from("vendors")
+        .update({
+          delivery_address: deliveryAddress || null,
+          delivery_gstin: deliveryGstin || null,
+        })
+        .eq("id", selectedVendorId);
+    }
+
     const row = data as unknown as { id: string };
     setSavedPoId(row.id);
-    if (deliveryAddress || deliveryGstin) {
-  const supabase2 = createClient();
-  await supabase2
-    .from("vendors")
-    .update({
-      delivery_address: deliveryAddress || null,
-      delivery_gstin: deliveryGstin || null,
-    })
-    .eq("id", selectedVendorId);
-}
-
     setSaving(false);
   }
 
@@ -475,29 +768,47 @@ export default function NewPOPage() {
           <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle size={32} className="text-green-400" />
           </div>
+
           <h2 className="text-white text-xl font-bold mb-1">PO Created!</h2>
           <p className="text-gray-400 text-sm font-mono mb-6">{poNumber}</p>
+
           <div className="flex flex-wrap gap-3 justify-center">
             <button
               onClick={() => setShowPreview(true)}
               className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-5 py-2.5 rounded-xl text-sm flex items-center gap-2"
             >
-              <Printer size={15} /> Preview &amp; Download PDF
+              <Printer size={15} /> Preview and Print
             </button>
-            <a href="/dashboard/po/new" className="bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold px-5 py-2.5 rounded-xl text-sm flex items-center gap-2">
+
+            <a
+              href="/dashboard/po/new"
+              className="bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold px-5 py-2.5 rounded-xl text-sm flex items-center gap-2"
+            >
               <Plus size={15} /> New PO
             </a>
-            <a href="/dashboard/history" className="bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold px-5 py-2.5 rounded-xl text-sm">
+
+            <a
+              href="/dashboard/history"
+              className="bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold px-5 py-2.5 rounded-xl text-sm"
+            >
               View History
             </a>
           </div>
         </div>
+
         {showPreview && (
           <POPreviewModal
-            poNumber={poNumber} vendor={selectedVendor} lineItems={lineItems}
-            subtotal={subtotal} pfAmount={pfAmount} grandTotal={grandTotal}
-            notes={notes} dispatch={dispatch} onClose={() => setShowPreview(false)}
-            quotNo={quotNo} quotDate={quotDate}
+            poNumber={poNumber}
+            vendor={previewVendor}
+            lineItems={lineItems}
+            subtotal={subtotal}
+            pfAmount={pfAmount}
+            grandTotal={grandTotal}
+            notes={notes}
+            dispatch={dispatch}
+            onClose={() => setShowPreview(false)}
+            quotNo={quotNo}
+            quotDate={quotDate}
           />
         )}
       </div>
@@ -514,36 +825,51 @@ export default function NewPOPage() {
       </div>
 
       {error && (
-        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6 text-red-400 text-sm">{error}</div>
+        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6 text-red-400 text-sm">
+          {error}
+        </div>
       )}
 
       <div className="grid gap-5">
-
-        {/* Vendor */}
         <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
           <h2 className="text-white font-semibold mb-4">Vendor</h2>
+
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Select Vendor *</label>
+              <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">
+                Select Vendor *
+              </label>
               <select
                 value={selectedVendorId}
-                onChange={(e) => { setSelectedVendorId(e.target.value); }}
+                onChange={(e) => {
+                  setSelectedVendorId(e.target.value);
+                }}
                 className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
               >
                 <option value="">— select vendor —</option>
-                {vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
+                {vendors.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.name}
+                  </option>
+                ))}
               </select>
             </div>
+
             <div>
-              <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">PO Number</label>
+              <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">
+                PO Number
+              </label>
               <input
                 value={poNumber}
                 onChange={(e) => setPoNumber(e.target.value)}
                 className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-orange-500"
               />
             </div>
+
             <div>
-              <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Vendor Quot. No. (optional)</label>
+              <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">
+                Vendor Quot. No. (optional)
+              </label>
               <input
                 value={quotNo}
                 onChange={(e) => setQuotNo(e.target.value)}
@@ -551,8 +877,11 @@ export default function NewPOPage() {
                 className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500"
               />
             </div>
+
             <div>
-              <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Vendor Quot. Date (optional)</label>
+              <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">
+                Vendor Quot. Date (optional)
+              </label>
               <input
                 type="date"
                 value={quotDate}
@@ -561,6 +890,7 @@ export default function NewPOPage() {
               />
             </div>
           </div>
+
           {selectedVendor && (
             <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
               {selectedVendor.address && <span>{selectedVendor.address}</span>}
@@ -568,44 +898,49 @@ export default function NewPOPage() {
               {selectedVendor.contact_phone && <span>{selectedVendor.contact_phone}</span>}
               {selectedVendor.gstin && <span className="font-mono">GST: {selectedVendor.gstin}</span>}
             </div>
-      {selectedVendor && (
-  <div className="mt-3 grid grid-cols-1 gap-3">
-    <div>
-      <label className="text-xs text-gray-500 mb-1 block">Delivery Address</label>
-      <textarea
-        value={deliveryAddress}
-        onChange={(e) => setDeliveryAddress(e.target.value)}
-        placeholder="Enter delivery address (saved for next time)"
-        rows={2}
-        className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500"
-      />
-    </div>
-    <div>
-      <label className="text-xs text-gray-500 mb-1 block">Delivery GSTIN</label>
-      <input
-        value={deliveryGstin}
-        onChange={(e) => setDeliveryGstin(e.target.value)}
-        placeholder="GST number at delivery location"
-        className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500"
-      />
-    </div>
-  </div>
-)}
+          )}
 
+          {selectedVendor && (
+            <div className="mt-3 grid grid-cols-1 gap-3">
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Delivery Address</label>
+                <textarea
+                  value={deliveryAddress}
+                  onChange={(e) => setDeliveryAddress(e.target.value)}
+                  placeholder="Enter delivery address (saved for next time)"
+                  rows={2}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Delivery GSTIN</label>
+                <input
+                  value={deliveryGstin}
+                  onChange={(e) => setDeliveryGstin(e.target.value)}
+                  placeholder="GST number at delivery location"
+                  className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+            </div>
           )}
         </div>
 
-        {/* Item Search */}
         <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
           <h2 className="text-white font-semibold mb-4">Add Items</h2>
+
           <div className="relative" ref={searchContainerRef}>
             <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 z-10" />
             <input
               value={searchQuery}
-              onChange={(e) => { setSearchQuery(e.target.value); setSelectedItem(null); }}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setSelectedItem(null);
+              }}
               placeholder="Search by serial ID or item name..."
               className="w-full bg-gray-800 border border-gray-700 rounded-xl pl-10 pr-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
+
             {showSearch && searchResults.length > 0 && (
               <div className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-xl overflow-hidden z-50 shadow-2xl">
                 {searchResults.map((item) => (
@@ -618,7 +953,9 @@ export default function NewPOPage() {
                       <p className="text-orange-400 font-mono text-xs font-semibold">{item.serial_id}</p>
                       <p className="text-white text-sm mt-0.5">{item.name}</p>
                     </div>
-                    <span className="text-gray-500 text-xs ml-4 flex-shrink-0 bg-gray-700 px-2 py-0.5 rounded-lg">{item.unit}</span>
+                    <span className="text-gray-500 text-xs ml-4 flex-shrink-0 bg-gray-700 px-2 py-0.5 rounded-lg">
+                      {item.unit}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -631,30 +968,56 @@ export default function NewPOPage() {
                 <div>
                   <p className="text-orange-400 font-mono text-xs font-semibold">{selectedItem.serial_id}</p>
                   <p className="text-white font-medium mt-0.5">{selectedItem.name}</p>
-                  {selectedItem.description && <p className="text-gray-500 text-xs mt-1">{selectedItem.description}</p>}
+                  {selectedItem.description && (
+                    <p className="text-gray-500 text-xs mt-1">{selectedItem.description}</p>
+                  )}
                 </div>
-                <button onClick={() => { setSelectedItem(null); setSearchQuery(""); }} className="text-gray-500 hover:text-white ml-3">
+
+                <button
+                  onClick={() => {
+                    setSelectedItem(null);
+                    setSearchQuery("");
+                  }}
+                  className="text-gray-500 hover:text-white ml-3"
+                >
                   <X size={16} />
                 </button>
               </div>
+
               <div className="grid grid-cols-3 gap-3 mb-3">
                 <div>
                   <label className="block text-gray-500 text-xs mb-1.5">Quantity</label>
-                  <input type="number" min="1" value={itemQty} onChange={(e) => setItemQty(Number(e.target.value))}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                  <input
+                    type="number"
+                    min="1"
+                    value={itemQty}
+                    onChange={(e) => setItemQty(Number(e.target.value))}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  />
                 </div>
+
                 <div>
                   <label className="block text-gray-500 text-xs mb-1.5">Unit</label>
-                  <div className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-gray-400 text-sm">{selectedItem.unit}</div>
+                  <div className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-gray-400 text-sm">
+                    {selectedItem.unit}
+                  </div>
                 </div>
+
                 <div>
                   <label className="block text-gray-500 text-xs mb-1.5">
                     Unit Price (Rs.) {itemPrice > 0 && <span className="text-green-400 ml-1">↑ last price</span>}
                   </label>
-                  <input type="number" min="0" step="0.01" value={itemPrice} onChange={(e) => setItemPrice(Number(e.target.value))}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={itemPrice}
+                    onChange={(e) => setItemPrice(Number(e.target.value))}
+                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  />
                 </div>
               </div>
+
               <div className="mb-4">
                 <label className="block text-gray-500 text-xs mb-1.5">Custom note for this line item (optional)</label>
                 <input
@@ -664,11 +1027,19 @@ export default function NewPOPage() {
                   className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
+
               <div className="flex items-center justify-between">
                 <p className="text-gray-400 text-sm">
-                  Line Total: <span className="text-white font-bold text-base">Rs. {(itemQty * itemPrice).toLocaleString("en-IN")}</span>
+                  Line Total:{" "}
+                  <span className="text-white font-bold text-base">
+                    Rs. {(itemQty * itemPrice).toLocaleString("en-IN")}
+                  </span>
                 </p>
-                <button onClick={addLineItem} className="bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-5 py-2.5 rounded-xl flex items-center gap-2">
+
+                <button
+                  onClick={addLineItem}
+                  className="bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-5 py-2.5 rounded-xl flex items-center gap-2"
+                >
                   <Plus size={15} /> Add to PO
                 </button>
               </div>
@@ -676,7 +1047,6 @@ export default function NewPOPage() {
           )}
         </div>
 
-        {/* Line Items Table */}
         {lineItems.length > 0 && (
           <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-800 flex items-center justify-between">
@@ -685,6 +1055,7 @@ export default function NewPOPage() {
                 {lineItems.length} item{lineItems.length > 1 ? "s" : ""}
               </span>
             </div>
+
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -697,6 +1068,7 @@ export default function NewPOPage() {
                     <th className="px-4 py-3"></th>
                   </tr>
                 </thead>
+
                 <tbody>
                   {lineItems.map((line, i) => (
                     <React.Fragment key={i}>
@@ -706,15 +1078,25 @@ export default function NewPOPage() {
                           <p className="text-orange-400 font-mono text-xs font-semibold">{line.serial_id}</p>
                           <p className="text-white text-sm">{line.name}</p>
                         </td>
-                        <td className="px-5 py-3 text-white align-top">{line.quantity} {line.unit}</td>
-                        <td className="px-5 py-3 text-right text-gray-300 align-top">Rs. {line.unit_price.toLocaleString("en-IN")}</td>
-                        <td className="px-5 py-3 text-right text-white font-semibold align-top">Rs. {line.total.toLocaleString("en-IN")}</td>
+                        <td className="px-5 py-3 text-white align-top">
+                          {line.quantity} {line.unit}
+                        </td>
+                        <td className="px-5 py-3 text-right text-gray-300 align-top">
+                          Rs. {Number(line.unit_price || 0).toLocaleString("en-IN")}
+                        </td>
+                        <td className="px-5 py-3 text-right text-white font-semibold align-top">
+                          Rs. {Number(line.total || 0).toLocaleString("en-IN")}
+                        </td>
                         <td className="px-4 py-3 align-top">
-                          <button onClick={() => removeLineItem(i)} className="text-gray-600 hover:text-red-400 transition-colors p-1">
+                          <button
+                            onClick={() => removeLineItem(i)}
+                            className="text-gray-600 hover:text-red-400 transition-colors p-1"
+                          >
                             <Trash2 size={14} />
                           </button>
                         </td>
                       </tr>
+
                       <tr className="border-b border-gray-800/30">
                         <td></td>
                         <td colSpan={5} className="px-5 pb-3 pt-1">
@@ -729,26 +1111,39 @@ export default function NewPOPage() {
                     </React.Fragment>
                   ))}
                 </tbody>
+
                 <tfoot>
                   {pfAmount > 0 && (
                     <tr className="border-t border-gray-700">
-                      <td colSpan={4} className="px-5 py-2 text-right text-gray-400 text-sm">Subtotal</td>
-                      <td className="px-5 py-2 text-right text-gray-300">Rs. {subtotal.toLocaleString("en-IN")}</td>
+                      <td colSpan={4} className="px-5 py-2 text-right text-gray-400 text-sm">
+                        Subtotal
+                      </td>
+                      <td className="px-5 py-2 text-right text-gray-300">
+                        Rs. {subtotal.toLocaleString("en-IN")}
+                      </td>
                       <td></td>
                     </tr>
                   )}
+
                   {pfAmount > 0 && (
                     <tr>
                       <td colSpan={4} className="px-5 py-2 text-right text-gray-400 text-sm">
-                        P&F {dispatch.pf_mode === "percent" ? `(${dispatch.pf_value}%)` : ""}
+                        P&amp;F {dispatch.pf_mode === "percent" ? `(${dispatch.pf_value}%)` : ""}
                       </td>
-                      <td className="px-5 py-2 text-right text-gray-300">Rs. {pfAmount.toLocaleString("en-IN")}</td>
+                      <td className="px-5 py-2 text-right text-gray-300">
+                        Rs. {pfAmount.toLocaleString("en-IN")}
+                      </td>
                       <td></td>
                     </tr>
                   )}
+
                   <tr className="border-t-2 border-gray-700">
-                    <td colSpan={4} className="px-5 py-4 text-right text-gray-400 font-semibold text-sm">Grand Total</td>
-                    <td className="px-5 py-4 text-right text-white font-bold text-xl">Rs. {grandTotal.toLocaleString("en-IN")}</td>
+                    <td colSpan={4} className="px-5 py-4 text-right text-gray-400 font-semibold text-sm">
+                      Grand Total
+                    </td>
+                    <td className="px-5 py-4 text-right text-white font-bold text-xl">
+                      Rs. {grandTotal.toLocaleString("en-IN")}
+                    </td>
                     <td></td>
                   </tr>
                 </tfoot>
@@ -757,15 +1152,19 @@ export default function NewPOPage() {
           </div>
         )}
 
-        {/* Dispatch & Delivery */}
         <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
           <button
             onClick={() => setShowDispatch(!showDispatch)}
             className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-800/50 transition-colors"
           >
-            <h2 className="text-white font-semibold">Dispatch, Delivery &amp; Terms</h2>
-            {showDispatch ? <ChevronUp size={18} className="text-gray-500" /> : <ChevronDown size={18} className="text-gray-500" />}
+            <h2 className="text-white font-semibold">Dispatch, Delivery & Terms</h2>
+            {showDispatch ? (
+              <ChevronUp size={18} className="text-gray-500" />
+            ) : (
+              <ChevronDown size={18} className="text-gray-500" />
+            )}
           </button>
+
           {showDispatch && (
             <div className="px-6 pb-6 pt-0 border-t border-gray-800 grid sm:grid-cols-2 gap-4">
               {[
@@ -776,7 +1175,9 @@ export default function NewPOPage() {
                 { label: "Taxes", key: "taxes" as const, placeholder: "e.g. At Actual / Inclusive" },
               ].map((f) => (
                 <div key={f.key} className="mt-4">
-                  <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">{f.label}</label>
+                  <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">
+                    {f.label}
+                  </label>
                   <input
                     value={dispatch[f.key] as string}
                     onChange={(e) => setDispatchField(f.key, e.target.value)}
@@ -785,8 +1186,11 @@ export default function NewPOPage() {
                   />
                 </div>
               ))}
+
               <div className="mt-4">
-                <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Packing &amp; Forwarding</label>
+                <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">
+                  Packing & Forwarding
+                </label>
                 <div className="flex gap-2">
                   <select
                     value={dispatch.pf_mode}
@@ -797,9 +1201,12 @@ export default function NewPOPage() {
                     <option value="percent">Percentage (%)</option>
                     <option value="fixed">Fixed Amount (Rs.)</option>
                   </select>
+
                   {dispatch.pf_mode !== "nil" && (
                     <input
-                      type="number" min="0" step="0.1"
+                      type="number"
+                      min="0"
+                      step="0.1"
                       value={dispatch.pf_value}
                       onChange={(e) => setDispatchField("pf_value", Number(e.target.value))}
                       placeholder={dispatch.pf_mode === "percent" ? "e.g. 1.5" : "e.g. 500"}
@@ -807,9 +1214,10 @@ export default function NewPOPage() {
                     />
                   )}
                 </div>
+
                 {pfAmount > 0 && (
                   <p className="text-orange-400 text-xs mt-1.5 font-mono">
-                    P&F = Rs. {pfAmount.toLocaleString("en-IN")} → Total = Rs. {grandTotal.toLocaleString("en-IN")}
+                    P&amp;F = Rs. {pfAmount.toLocaleString("en-IN")} → Total = Rs. {grandTotal.toLocaleString("en-IN")}
                   </p>
                 )}
               </div>
@@ -817,9 +1225,10 @@ export default function NewPOPage() {
           )}
         </div>
 
-        {/* Notes */}
         <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
-          <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">General Notes / Terms</label>
+          <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">
+            General Notes / Terms
+          </label>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
@@ -829,7 +1238,6 @@ export default function NewPOPage() {
           />
         </div>
 
-        {/* Actions */}
         <div className="flex flex-wrap gap-3 pb-10">
           <button
             onClick={() => setShowPreview(true)}
@@ -838,6 +1246,7 @@ export default function NewPOPage() {
           >
             <Printer size={15} /> Preview
           </button>
+
           <button
             onClick={() => handleSave("draft")}
             disabled={saving}
@@ -845,6 +1254,7 @@ export default function NewPOPage() {
           >
             <Save size={15} /> Save Draft
           </button>
+
           <button
             onClick={() => handleSave("confirmed")}
             disabled={saving}
@@ -857,10 +1267,17 @@ export default function NewPOPage() {
 
       {showPreview && (
         <POPreviewModal
-          poNumber={poNumber} vendor={selectedVendor} lineItems={lineItems}
-          subtotal={subtotal} pfAmount={pfAmount} grandTotal={grandTotal}
-          notes={notes} dispatch={dispatch} onClose={() => setShowPreview(false)}
-          quotNo={quotNo} quotDate={quotDate}
+          poNumber={poNumber}
+          vendor={previewVendor}
+          lineItems={lineItems}
+          subtotal={subtotal}
+          pfAmount={pfAmount}
+          grandTotal={grandTotal}
+          notes={notes}
+          dispatch={dispatch}
+          onClose={() => setShowPreview(false)}
+          quotNo={quotNo}
+          quotDate={quotDate}
         />
       )}
     </div>
