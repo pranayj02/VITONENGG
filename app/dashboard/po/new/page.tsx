@@ -728,60 +728,60 @@ export default function NewPOPage() {
   function setDispatchField<K extends keyof DispatchMeta>(key: K, value: DispatchMeta[K]) {
     setDispatch((d) => ({ ...d, [key]: value }));
   }
-
-  async function handleSave(status: string) {
-    if (!selectedVendorId) {
-      setError("Please select a vendor first.");
-      return;
-    }
-
-    if (lineItems.length === 0) {
-      setError("Add at least one item to the PO.");
-      return;
-    }
-
-    setSaving(true);
-    setError("");
-
-    const supabase = createClient();
-
-    const payload = {
-  po_number: poNumber,
-  vendor_id: selectedVendorId,
-  status,
-  line_items: lineItems,
-  subtotal,
-  total: grandTotal,
-  notes: notes.trim() || null,
-  dispatch_meta: dispatch,
-  fy_label: fyLabel,
-  fy_serial: fySerial,
-};
-
-const { data, error: saveErr } = editId
-  ? await supabase.from("purchase_orders").update(payload).eq("id", editId).select("id").single()
-  : await supabase.from("purchase_orders").insert(payload).select("id").single();
-
-    if (saveErr) {
-      setError(saveErr.message);
-      setSaving(false);
-      return;
-    }
-
-    if (deliveryAddress || deliveryGstin) {
-      await supabase
-        .from("vendors")
-        .update({
-          delivery_address: deliveryAddress || null,
-          delivery_gstin: deliveryGstin || null,
-        })
-        .eq("id", selectedVendorId);
-    }
-
-    const row = data as unknown as { id: string };
-    setSavedPoId(row.id);
-    setSaving(false);
+async function handleSave(status: string) {
+  if (!selectedVendorId) {
+    setError("Please select a vendor first.");
+    return;
   }
+
+  if (lineItems.length === 0) {
+    setError("Add at least one item to the PO.");
+    return;
+  }
+
+  setSaving(true);
+  setError("");
+
+  const supabase = createClient();
+
+  const payload = {
+    po_number: poNumber,
+    vendor_id: selectedVendorId,
+    status,
+    line_items: lineItems,
+    subtotal,
+    total: grandTotal,
+    notes: notes.trim() || null,
+    dispatch_meta: dispatch,
+    fy_label: fyLabel,
+    fy_serial: fySerial,
+  };
+
+  const { data, error: saveErr } = editId
+    ? await supabase.from("purchase_orders").update(payload).eq("id", editId).select("id").single()
+    : await supabase.from("purchase_orders").insert(payload).select("id").single();
+
+  if (saveErr) {
+    setError(saveErr.message);
+    setSaving(false);
+    return;
+  }
+
+  if (deliveryAddress || deliveryGstin) {
+    await supabase
+      .from("vendors")
+      .update({
+        delivery_address: deliveryAddress || null,
+        delivery_gstin: deliveryGstin || null,
+      })
+      .eq("id", selectedVendorId);
+  }
+
+  const row = data as unknown as { id: string };
+  setSavedPoId(row.id);
+  setSaving(false);
+}
+
 
   if (savedPoId) {
     return (
