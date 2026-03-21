@@ -30,6 +30,8 @@ export interface Vendor {
   contact_phone: string | null;
   contact_email: string | null;
   payment_terms: string | null;
+  delivery_address?: string | null;
+  delivery_gstin?: string | null;
 }
 
 export interface PurchaseOrder {
