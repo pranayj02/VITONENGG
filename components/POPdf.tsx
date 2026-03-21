@@ -566,7 +566,7 @@ export function POPdfDocument({ po }: { po: POData }) {
                 <View style={S.colSr} />
                 <View style={S.colSerial} />
                 <View style={{ flex: 1 }}>
-                  <Text style={S.noteText}>↳ {line.custom_note}</Text>
+                  <Text style={S.noteText}>Note: {line.custom_note}</Text>
                 </View>
               </View>
             ) : null}
