@@ -15,6 +15,7 @@ interface DispatchMeta {
   inspection: string;
   taxes: string;
   payment_date?: string;
+  payment_terms?: string;   // ← added
   pf_mode: "nil" | "percent" | "fixed";
   pf_value: number;
 }
@@ -236,7 +237,6 @@ const S = StyleSheet.create({
     fontSize: 7,
     color: TEXT_DARK,
   },
-  // FIX: smaller font + overflow hidden stops serial ID bleeding
   tableCellMono: {
     fontSize: 6.5,
     fontFamily: "Helvetica",
@@ -246,14 +246,12 @@ const S = StyleSheet.create({
     fontSize: 7,
     color: "#666666",
   },
-  // FIX: note row text style
   noteText: {
     fontSize: 7,
     color: "#666666",
     fontStyle: "italic",
   },
 
-  // FIX: column widths — overflow hidden on serial column is the key
   colSr:     { width: 22, flexShrink: 0 },
   colSerial: { width: 100, flexShrink: 0, overflow: "hidden" },
   colDesc:   { flex: 1 },
@@ -385,6 +383,7 @@ export function POPdfDocument({ po }: { po: POData }) {
     inspection: rawDispatch?.inspection ?? "",
     taxes: rawDispatch?.taxes ?? "",
     payment_date: rawDispatch?.payment_date ?? "",
+    payment_terms: rawDispatch?.payment_terms,   // ← added
     pf_mode:
       rawDispatch?.pf_mode === "percent" || rawDispatch?.pf_mode === "fixed"
         ? rawDispatch.pf_mode
@@ -398,7 +397,9 @@ export function POPdfDocument({ po }: { po: POData }) {
 
   const displayAddress = vendor?.delivery_address || vendor?.address || null;
   const displayGstin = vendor?.delivery_gstin || vendor?.gstin || null;
-  const paymentTerms = vendor?.payment_terms ?? "60 Days";
+
+  // ← updated: prefer per-PO override in dispatch_meta, fall back to vendor default
+  const paymentTerms = dispatch.payment_terms ?? vendor?.payment_terms ?? "60 Days";
 
   const date = new Date(po.created_at).toLocaleDateString("en-IN", {
     day: "2-digit",
@@ -534,7 +535,6 @@ export function POPdfDocument({ po }: { po: POData }) {
               <View style={S.colSr}>
                 <Text style={S.tableCellLight}>{i + 1}</Text>
               </View>
-              {/* FIX: overflow hidden on this View clips the serial ID */}
               <View style={S.colSerial}>
                 <Text style={S.tableCellMono}>{line.serial_id}</Text>
               </View>
@@ -559,8 +559,6 @@ export function POPdfDocument({ po }: { po: POData }) {
               </View>
             </View>
 
-            {/* FIX: note row now has BOTH colSr and colSerial spacers
-                so note text aligns under Particulars, not Serial ID */}
             {line.custom_note ? (
               <View style={[S.tableRow, { paddingTop: 0, borderTopWidth: 0 }, i % 2 !== 0 ? S.tableRowAlt : {}]}>
                 <View style={S.colSr} />
