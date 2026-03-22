@@ -46,9 +46,10 @@ function computePF(subtotal: number, meta: DispatchMeta): number {
   return meta.pf_value;
 }
 
+// ── PODocument (screen preview) ──────────────────────────────────────────────
 function PODocument({
   poNumber, vendor, lineItems, subtotal, pfAmount, grandTotal,
-  notes, dispatch, date, quotNo, quotDate,
+  notes, dispatch, date, quotNo, quotDate, paymentTerms,
 }: {
   poNumber: string;
   vendor: Vendor | null;
@@ -61,6 +62,7 @@ function PODocument({
   date: string;
   quotNo: string;
   quotDate: string;
+  paymentTerms: string;
 }) {
   return (
     <div
@@ -227,7 +229,7 @@ function PODocument({
             { label: "TAXES", value: dispatch.taxes },
           ],
           [
-            { label: "PAYMENT TERMS", value: vendor?.payment_terms ?? "60 Days" },
+            { label: "PAYMENT TERMS", value: paymentTerms || "60 Days" },
             { label: "PAYMENT DATE", value: dispatch.payment_date || "—" },
           ],
         ].map((row, ri) => (
@@ -250,9 +252,10 @@ function PODocument({
   );
 }
 
+// ── POPreviewModal ────────────────────────────────────────────────────────────
 function POPreviewModal({
   poNumber, vendor, lineItems, subtotal, pfAmount, grandTotal,
-  notes, dispatch, onClose, quotNo, quotDate,
+  notes, dispatch, onClose, quotNo, quotDate, paymentTerms,
 }: {
   poNumber: string;
   vendor: Vendor | null;
@@ -265,6 +268,7 @@ function POPreviewModal({
   onClose: () => void;
   quotNo: string;
   quotDate: string;
+  paymentTerms: string;
 }) {
   const today = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" });
 
@@ -275,7 +279,7 @@ function POPreviewModal({
     total: grandTotal,
     notes,
     line_items: lineItems,
-    dispatch_meta: dispatch,
+    dispatch_meta: { ...dispatch, payment_terms: paymentTerms },
     vendors: vendor,
     quot_no: quotNo || null,
     quot_date: quotDate || null,
@@ -296,7 +300,7 @@ function POPreviewModal({
           poNumber={poNumber} vendor={vendor} lineItems={lineItems}
           subtotal={subtotal} pfAmount={pfAmount} grandTotal={grandTotal}
           notes={notes} dispatch={dispatch} date={today}
-          quotNo={quotNo} quotDate={quotDate}
+          quotNo={quotNo} quotDate={quotDate} paymentTerms={paymentTerms}
         />
       </div>
       <div className="fixed inset-0 bg-black/80 z-50 flex items-start justify-center p-4 overflow-y-auto">
@@ -320,7 +324,7 @@ function POPreviewModal({
             poNumber={poNumber} vendor={vendor} lineItems={lineItems}
             subtotal={subtotal} pfAmount={pfAmount} grandTotal={grandTotal}
             notes={notes} dispatch={dispatch} date={today}
-            quotNo={quotNo} quotDate={quotDate}
+            quotNo={quotNo} quotDate={quotDate} paymentTerms={paymentTerms}
           />
         </div>
       </div>
@@ -328,6 +332,7 @@ function POPreviewModal({
   );
 }
 
+// ── NewPOPage ─────────────────────────────────────────────────────────────────
 export default function NewPOPage() {
   const searchParams = useSearchParams();
   const editId = searchParams.get("id");
@@ -347,6 +352,7 @@ export default function NewPOPage() {
   const [poNumber, setPoNumber] = useState("");
   const [quotNo, setQuotNo] = useState("");
   const [quotDate, setQuotDate] = useState("");
+  const [paymentTerms, setPaymentTerms] = useState("60 Days");
   const [saving, setSaving] = useState(false);
   const [savedPoId, setSavedPoId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
@@ -409,6 +415,8 @@ export default function NewPOPage() {
           setQuotNo(po.quot_no ?? po.dispatch_meta?.quot_no ?? "");
           setQuotDate(po.quot_date ?? po.dispatch_meta?.quot_date ?? "");
           if (po.dispatch_meta) setDispatch(po.dispatch_meta);
+          // Restore saved payment terms
+          setPaymentTerms(po.dispatch_meta?.payment_terms ?? po.vendors?.payment_terms ?? "60 Days");
           setDeliveryAddress(po.vendors?.delivery_address ?? po.vendors?.address ?? "");
           setDeliveryGstin(po.vendors?.delivery_gstin ?? po.vendors?.gstin ?? "");
         }
@@ -423,9 +431,12 @@ export default function NewPOPage() {
     if (selectedVendor) {
       setDeliveryAddress(selectedVendor.delivery_address ?? selectedVendor.address ?? "");
       setDeliveryGstin(selectedVendor.delivery_gstin ?? selectedVendor.gstin ?? "");
+      // Pre-fill payment terms from vendor default
+      setPaymentTerms(selectedVendor.payment_terms ?? "60 Days");
     } else {
       setDeliveryAddress("");
       setDeliveryGstin("");
+      setPaymentTerms("60 Days");
     }
   }, [selectedVendor]);
 
@@ -453,33 +464,30 @@ export default function NewPOPage() {
     return () => clearTimeout(t);
   }, [searchQuery, searchItems]);
 
+  // FIXED: queries actual PO history instead of stale vendor_items table
   async function fetchLastPrice(itemId: string, vendorId: string) {
-  if (!itemId || !vendorId) return;
-  const supabase = createClient();
+    if (!itemId || !vendorId) return;
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("purchase_orders")
+      .select("line_items, created_at")
+      .eq("vendor_id", vendorId)
+      .eq("status", "confirmed")
+      .order("created_at", { ascending: false })
+      .limit(20);
 
-  // Query actual PO history for real last-quoted price
-  const { data } = await supabase
-    .from("purchase_orders")
-    .select("line_items, created_at")
-    .eq("vendor_id", vendorId)
-    .eq("status", "confirmed")
-    .order("created_at", { ascending: false })
-    .limit(20);
-
-  if (data && data.length > 0) {
-    const allLines = (data as unknown as { line_items: LineItemWithNote[] }[])
-      .flatMap((po) => po.line_items ?? []);
-    const match = allLines.find((l) => l.item_id === itemId);
-    if (match?.unit_price) {
-      setLastPrice(match.unit_price);
-      // auto-fill price field too so user doesn't start from 0
-      setItemPrice(match.unit_price);
-      return;
+    if (data && data.length > 0) {
+      const allLines = (data as unknown as { line_items: LineItemWithNote[] }[])
+        .flatMap((po) => po.line_items ?? []);
+      const match = allLines.find((l) => l.item_id === itemId);
+      if (match?.unit_price) {
+        setLastPrice(match.unit_price);
+        setItemPrice(match.unit_price);
+        return;
+      }
     }
+    setLastPrice(null);
   }
-  setLastPrice(null);
-}
-
 
   function selectItem(item: Item) {
     setSelectedItem(item);
@@ -558,6 +566,7 @@ export default function NewPOPage() {
       notes: notes.trim() || null,
       dispatch_meta: {
         ...dispatch,
+        payment_terms: paymentTerms,
         quot_no: quotNo.trim() || "",
         quot_date: quotDate || "",
       },
@@ -637,7 +646,7 @@ export default function NewPOPage() {
             poNumber={poNumber} vendor={previewVendor} lineItems={lineItems}
             subtotal={subtotal} pfAmount={pfAmount} grandTotal={grandTotal}
             notes={notes} dispatch={dispatch} onClose={() => setShowPreview(false)}
-            quotNo={quotNo} quotDate={quotDate}
+            quotNo={quotNo} quotDate={quotDate} paymentTerms={paymentTerms}
           />
         )}
       </div>
@@ -715,8 +724,8 @@ export default function NewPOPage() {
 
           {selectedVendor && (
             <div className="mt-3 grid grid-cols-1 gap-3">
-            <div>
-              <label className="text-xs text-gray-500 mb-1 block">Other Party Delivery Address</label>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Other Party Delivery Address</label>
                 <textarea
                   value={deliveryAddress}
                   onChange={(e) => setDeliveryAddress(e.target.value)}
@@ -731,6 +740,16 @@ export default function NewPOPage() {
                   value={deliveryGstin}
                   onChange={(e) => setDeliveryGstin(e.target.value)}
                   placeholder="GST number at delivery location"
+                  className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+              {/* NEW: Editable payment terms, pre-filled from vendor */}
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Payment Terms</label>
+                <input
+                  value={paymentTerms}
+                  onChange={(e) => setPaymentTerms(e.target.value)}
+                  placeholder="e.g. 60 Days, 100% Against Dispatch"
                   className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
               </div>
@@ -796,7 +815,7 @@ export default function NewPOPage() {
                     {lastPrice !== null && (
                       <span className="text-green-400 ml-1">
                         Last: Rs. {lastPrice.toLocaleString("en-IN")}
-                        {itemPrice > lastPrice ? " (higher)" : itemPrice < lastPrice ? " (lower)" : " (same)"}
+                        {itemPrice > lastPrice ? " ▲" : itemPrice < lastPrice ? " ▼" : " (same)"}
                       </span>
                     )}
                   </label>
@@ -858,9 +877,7 @@ export default function NewPOPage() {
                         <td className="px-5 py-3 text-white align-top">
                           <div className="flex items-center gap-2">
                             <input
-                              type="number"
-                              min="1"
-                              value={line.quantity}
+                              type="number" min="1" value={line.quantity}
                               onChange={(e) => updateLineItem(i, "quantity", Number(e.target.value))}
                               className="w-20 bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-white text-xs focus:outline-none focus:ring-1 focus:ring-orange-500"
                             />
@@ -870,10 +887,7 @@ export default function NewPOPage() {
                         <td className="px-5 py-3 text-right text-gray-300 align-top">
                           <div className="flex justify-end">
                             <input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={line.unit_price}
+                              type="number" min="0" step="0.01" value={line.unit_price}
                               onChange={(e) => updateLineItem(i, "unit_price", Number(e.target.value))}
                               className="w-28 bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-white text-xs text-right focus:outline-none focus:ring-1 focus:ring-orange-500"
                             />
@@ -1036,7 +1050,7 @@ export default function NewPOPage() {
           poNumber={poNumber} vendor={previewVendor} lineItems={lineItems}
           subtotal={subtotal} pfAmount={pfAmount} grandTotal={grandTotal}
           notes={notes} dispatch={dispatch} onClose={() => setShowPreview(false)}
-          quotNo={quotNo} quotDate={quotDate}
+          quotNo={quotNo} quotDate={quotDate} paymentTerms={paymentTerms}
         />
       )}
     </div>
