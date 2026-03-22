@@ -454,19 +454,32 @@ export default function NewPOPage() {
   }, [searchQuery, searchItems]);
 
   async function fetchLastPrice(itemId: string, vendorId: string) {
-    if (!itemId || !vendorId) return;
-    const supabase = createClient();
-    const { data } = await supabase.from("vendor_items").select("last_price").eq("item_id", itemId).eq("vendor_id", vendorId).maybeSingle();
-    if (data) {
-      const row = data as unknown as { last_price: number };
-      if (row.last_price) {
-        setItemPrice(row.last_price);
-        setLastPrice(row.last_price);
-        return;
-      }
+  if (!itemId || !vendorId) return;
+  const supabase = createClient();
+
+  // Query actual PO history for real last-quoted price
+  const { data } = await supabase
+    .from("purchase_orders")
+    .select("line_items, created_at")
+    .eq("vendor_id", vendorId)
+    .eq("status", "confirmed")
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  if (data && data.length > 0) {
+    const allLines = (data as unknown as { line_items: LineItemWithNote[] }[])
+      .flatMap((po) => po.line_items ?? []);
+    const match = allLines.find((l) => l.item_id === itemId);
+    if (match?.unit_price) {
+      setLastPrice(match.unit_price);
+      // auto-fill price field too so user doesn't start from 0
+      setItemPrice(match.unit_price);
+      return;
     }
-    setLastPrice(null);
   }
+  setLastPrice(null);
+}
+
 
   function selectItem(item: Item) {
     setSelectedItem(item);
