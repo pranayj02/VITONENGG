@@ -1,4 +1,5 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
 import { useRouter, usePathname } from "next/navigation";
@@ -15,15 +16,41 @@ import {
   X,
 } from "lucide-react";
 
-const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/dashboard/catalog", label: "Item Catalog", icon: Package },
-  { href: "/dashboard/vendors", label: "Vendors", icon: Users },
-  { href: "/dashboard/buyers", label: "Buyers", icon: Users },
-  { href: "/dashboard/po/new", label: "New PO", icon: FileText },
-  { href: "/dashboard/invoices/new", label: "New Invoice", icon: Receipt },
-  { href: "/dashboard/history", label: "History", icon: History },
+const navSections = [
+  {
+    title: "Overview",
+    items: [
+      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    ],
+  },
+  {
+    title: "Master Data",
+    items: [
+      { href: "/dashboard/catalog", label: "Item Catalog", icon: Package },
+      { href: "/dashboard/vendors", label: "Vendors", icon: Users },
+      { href: "/dashboard/buyers", label: "Buyers", icon: Users },
+    ],
+  },
+  {
+    title: "Purchase Orders",
+    items: [
+      { href: "/dashboard/po/new", label: "New PO", icon: FileText },
+      { href: "/dashboard/history", label: "PO History", icon: History },
+    ],
+  },
+  {
+    title: "Invoices",
+    items: [
+      { href: "/dashboard/invoices/new", label: "New Invoice", icon: Receipt },
+      { href: "/dashboard/invoices/history", label: "Invoice History", icon: History },
+    ],
+  },
 ];
+
+function isRouteActive(pathname: string, href: string) {
+  if (href === "/dashboard") return pathname === "/dashboard";
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
 
 export default function DashboardLayout({
   children,
@@ -62,40 +89,48 @@ export default function DashboardLayout({
 
   function NavLinks({ onLinkClick }: { onLinkClick?: () => void }) {
     return (
-      <>
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive =
-            item.href === "/dashboard"
-              ? pathname === "/dashboard"
-              : pathname.startsWith(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onLinkClick}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-150 ${
-                isActive
-                  ? "bg-orange-500 text-white shadow-lg shadow-orange-500/20"
-                  : "text-gray-400 hover:text-white hover:bg-gray-800"
-              }`}
-            >
-              <Icon size={18} />
-              {item.label}
-            </Link>
-          );
-        })}
-      </>
+      <div className="space-y-5">
+        {navSections.map((section) => (
+          <div key={section.title}>
+            <p className="px-4 mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-600">
+              {section.title}
+            </p>
+
+            <div className="space-y-1">
+              {section.items.map((item) => {
+                const Icon = item.icon;
+                const isActive = isRouteActive(pathname, item.href);
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={onLinkClick}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-150 ${
+                      isActive
+                        ? "bg-orange-500 text-white shadow-lg shadow-orange-500/20"
+                        : "text-gray-400 hover:text-white hover:bg-gray-800"
+                    }`}
+                  >
+                    <Icon size={18} />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gray-950 flex">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 bg-gray-900 border-r border-gray-800 fixed top-0 left-0 bottom-0 z-10">
+      <aside className="hidden md:flex flex-col w-72 bg-gray-900 border-r border-gray-800 fixed top-0 left-0 bottom-0 z-10">
         <div className="p-6 border-b border-gray-800">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/20 flex-shrink-0">
+            <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/20 flex-shrink-0">
               <span className="text-white font-bold text-lg">V</span>
             </div>
             <div>
@@ -104,9 +139,11 @@ export default function DashboardLayout({
             </div>
           </div>
         </div>
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+
+        <nav className="flex-1 p-4 overflow-y-auto">
           <NavLinks />
         </nav>
+
         <div className="p-4 border-t border-gray-800">
           <button
             onClick={handleSignOut}
@@ -126,6 +163,7 @@ export default function DashboardLayout({
           </div>
           <span className="text-white font-bold text-sm">VITONENGG</span>
         </div>
+
         <button
           onClick={() => setMobileOpen(!mobileOpen)}
           className="text-gray-400 hover:text-white p-1"
@@ -155,9 +193,11 @@ export default function DashboardLayout({
                 </div>
               </div>
             </div>
-            <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+
+            <nav className="flex-1 p-4 overflow-y-auto">
               <NavLinks onLinkClick={() => setMobileOpen(false)} />
             </nav>
+
             <div className="p-4 border-t border-gray-800">
               <button
                 onClick={handleSignOut}
@@ -172,7 +212,7 @@ export default function DashboardLayout({
       )}
 
       {/* Page Content */}
-      <main className="flex-1 md:ml-64 pt-14 md:pt-0 min-h-screen">
+      <main className="flex-1 md:ml-72 pt-14 md:pt-0 min-h-screen">
         {children}
       </main>
     </div>
