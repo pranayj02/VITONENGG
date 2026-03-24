@@ -320,6 +320,12 @@ export default function BuyersPage() {
 
       setSuccess("Buyer added successfully.");
     } else {
+      if (!editingBuyerId) {
+        setError("Missing buyer ID for edit.");
+        setSavingBuyer(false);
+        return;
+      }
+
       const { error } = await supabase
         .from("buyers")
         .update(payload)
@@ -340,6 +346,7 @@ export default function BuyersPage() {
         });
       }
     }
+
 
     setBuyerModalOpen(false);
     setBuyerForm(emptyBuyerForm);
