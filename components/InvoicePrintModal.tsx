@@ -1,27 +1,6 @@
 "use client";
 
-import React, { useMemo, useRef } from "react";
-import { X, Printer } from "lucide-react";
-
-type InvoiceLine = {
-  buyer_po_sr_no?: string;
-  buyer_item_code?: string;
-  description: string;
-  hsn_code?: string;
-  quantity: number;
-  unit: string;
-  unit_rate: number;
-  taxable_value: number;
-  gst_rate: number;
-};
-
-type BuyerSnapshot = {
-  name: string;
-  address?: string | null;
-  gstin?: string | null;
-  state?: string | null;
-  state_code?: string | null;
-};
+import { Printer, X } from "lucide-react";
 
 type DispatchMeta = {
   place_of_supply?: string;
@@ -38,14 +17,36 @@ type DispatchMeta = {
   shipped_to?: string;
 };
 
-type InvoicePreviewData = {
+type InvoiceLine = {
+  buyer_po_sr_no: string;
+  buyer_item_code: string;
+  description: string;
+  hsn_code: string;
+  quantity: number;
+  unit: string;
+  unit_rate: number;
+  taxable_value: number;
+  gst_rate: number;
+};
+
+type InvoicePreview = {
+  id?: string | null;
   invoice_number: string;
   invoice_date: string;
   buyers_po_number?: string | null;
   fy_label?: string | null;
   fy_serial?: number | null;
   status: string;
-  buyer: BuyerSnapshot;
+  buyer: {
+    name: string;
+    display_name?: string | null;
+    company_name?: string | null;
+    branch_name?: string | null;
+    address?: string | null;
+    gstin?: string | null;
+    state?: string | null;
+    state_code?: string | null;
+  };
   line_items: InvoiceLine[];
   subtotal: number;
   cgst: number;
@@ -58,110 +59,374 @@ type InvoicePreviewData = {
   dispatch_meta?: DispatchMeta | null;
 };
 
-function formatDate(date?: string | null) {
-  if (!date) return "—";
-  const d = new Date(date);
-  if (Number.isNaN(d.getTime())) return date;
-  return d.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
+function formatDate(value?: string | null) {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = d.getFullYear();
+  return `${day}.${month}.${year}`;
 }
 
-function formatDateTime(date?: string | null) {
-  if (!date) return "—";
-  const d = new Date(date);
-  if (Number.isNaN(d.getTime())) return date;
-  return d.toLocaleString("en-IN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-}
-
-function money(value?: number | null) {
+function formatMoney(value?: number | null) {
   return Number(value || 0).toLocaleString("en-IN", {
-    maximumFractionDigits: 2,
     minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   });
 }
 
-function numberToWords(num: number) {
-  const a = [
-    "", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine",
-    "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen",
-    "Seventeen", "Eighteen", "Nineteen",
-  ];
-  const b = ["", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety"];
+function integerToWords(num: number): string {
+  if (num === 0) return "ZERO";
 
-  function twoDigits(n: number): string {
-    if (n < 20) return a[n];
-    return `${b[Math.floor(n / 10)]}${n % 10 ? " " + a[n % 10] : ""}`.trim();
+  const ones = [
+    "", "ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX", "SEVEN", "EIGHT", "NINE",
+    "TEN", "ELEVEN", "TWELVE", "THIRTEEN", "FOURTEEN", "FIFTEEN", "SIXTEEN",
+    "SEVENTEEN", "EIGHTEEN", "NINETEEN",
+  ];
+  const tens = ["", "", "TWENTY", "THIRTY", "FORTY", "FIFTY", "SIXTY", "SEVENTY", "EIGHTY", "NINETY"];
+
+  function twoDigit(n: number): string {
+    if (n < 20) return ones[n];
+    return `${tens[Math.floor(n / 10)]}${n % 10 ? ` ${ones[n % 10]}` : ""}`.trim();
   }
 
-  function threeDigits(n: number): string {
+  function threeDigit(n: number): string {
     const hundred = Math.floor(n / 100);
     const rest = n % 100;
-    let out = "";
-    if (hundred) out += `${a[hundred]} Hundred`;
-    if (rest) out += `${out ? " " : ""}${twoDigits(rest)}`;
-    return out;
+    if (!hundred) return twoDigit(rest);
+    return `${ones[hundred]} HUNDRED${rest ? ` ${twoDigit(rest)}` : ""}`.trim();
   }
 
-  if (num === 0) return "Zero Rupees Only";
-
+  const parts: string[] = [];
   const crore = Math.floor(num / 10000000);
   num %= 10000000;
   const lakh = Math.floor(num / 100000);
   num %= 100000;
   const thousand = Math.floor(num / 1000);
   num %= 1000;
-  const hundredPart = num;
+  const last = num;
 
-  const parts = [];
-  if (crore) parts.push(`${threeDigits(crore)} Crore`);
-  if (lakh) parts.push(`${threeDigits(lakh)} Lakh`);
-  if (thousand) parts.push(`${threeDigits(thousand)} Thousand`);
-  if (hundredPart) parts.push(threeDigits(hundredPart));
+  if (crore) parts.push(`${twoDigit(crore)} CRORE`);
+  if (lakh) parts.push(`${twoDigit(lakh)} LAKH`);
+  if (thousand) parts.push(`${twoDigit(thousand)} THOUSAND`);
+  if (last) parts.push(threeDigit(last));
 
-  return `${parts.join(" ").trim()} Rupees Only`;
+  return parts.join(" ").trim();
 }
 
-function renderPrintHtml(node: HTMLElement) {
-  return `
-    <html>
-      <head>
-        <title>Invoice Print</title>
-        <style>
-          @page { size: A4; margin: 12mm; }
-          * { box-sizing: border-box; }
-          body {
-            margin: 0;
-            font-family: Arial, Helvetica, sans-serif;
-            color: #111827;
-            background: #ffffff;
-          }
-          .print-root {
-            width: 100%;
-          }
-          table {
-            border-collapse: collapse;
-            width: 100%;
-          }
-          .avoid-break {
-            page-break-inside: avoid;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="print-root">${node.outerHTML}</div>
-      </body>
-    </html>
-  `;
+function amountToWords(value: number) {
+  const rounded = Math.round(Number(value || 0));
+  return `RS. ${integerToWords(rounded)} ONLY`;
+}
+
+function InvoiceDocument({ invoice }: { invoice: InvoicePreview }) {
+  const dispatch = invoice.dispatch_meta || {};
+  const buyer = invoice.buyer || { name: "—" };
+  const lines = invoice.line_items || [];
+  const totalPackages = lines.length;
+  const taxableValue = Number(invoice.subtotal || 0);
+  const freightPacking = Number(dispatch.freight_packing || 0);
+  const otherCharges = Number(dispatch.other_charges || 0);
+
+  return (
+    <div
+      className="invoice-print-document bg-white text-black"
+      style={{
+        fontFamily: "Arial, sans-serif",
+        fontSize: "11px",
+        width: "210mm",
+        minHeight: "297mm",
+        margin: "0 auto",
+        padding: "12mm 10mm 10mm 10mm",
+        boxSizing: "border-box",
+      }}
+    >
+      <div style={{ display: "grid", gridTemplateColumns: "220px 1fr 150px", gap: "10px", alignItems: "start" }}>
+        <div style={{ border: "1px solid #000", padding: "8px 10px", minHeight: "78px" }}>
+          <div style={{ fontSize: "12px", fontWeight: 700, marginBottom: "6px" }}>GST Invoice No. {invoice.invoice_number}</div>
+          <div style={{ marginBottom: "4px" }}>
+            <strong>Date</strong> {formatDate(invoice.invoice_date)}
+          </div>
+          <div>
+            <strong>P.O. No.</strong> {invoice.buyers_po_number || "-"}
+          </div>
+        </div>
+
+        <div style={{ textAlign: "center", minWidth: 0 }}>
+          <div style={{ fontWeight: 700, fontSize: "20px", letterSpacing: "0.3px" }}>
+            VITON ENGINEERS PVT. LTD.
+          </div>
+          <div style={{ marginTop: "4px", lineHeight: 1.35, fontSize: "10px" }}>
+            Office 701, Swastik Disa Corporate Park, Opp. Shreyas Cinema, LBS Marg, Ghatkopar W Mumbai- 400086
+          </div>
+          <div style={{ lineHeight: 1.35, fontSize: "10px" }}>
+            Factory B 401, Addl. Ambernath MIDC, Anand Nagar, Ambernath E Dist. Thane-421506
+          </div>
+          <div style={{ marginTop: "3px", fontSize: "10px" }}>
+            Phone 08779301215, Tel Fax 022-25660534, Email info@vitonvalves.com
+          </div>
+          <div style={{ marginTop: "6px", fontWeight: 700, fontSize: "13px" }}>
+            GOODS AND SERVICE TAX - INVOICE
+          </div>
+          <div style={{ fontSize: "10px" }}>Rules 7 Section 31 of GST</div>
+        </div>
+
+        <div style={{ minHeight: "78px" }} />
+      </div>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr 1fr",
+          marginTop: "8px",
+          borderTop: "1px solid #000",
+          borderBottom: "1px solid #000",
+          padding: "4px 0",
+          fontSize: "10px",
+        }}
+      >
+        <div>ORIGINAL FOR RECEIPIENT</div>
+        <div style={{ textAlign: "center" }}>DUPLICATE FOR TRANSPORTER</div>
+        <div style={{ textAlign: "right" }}>TRIPLICATE FOR SUPPLIER</div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderLeft: "1px solid #000", borderRight: "1px solid #000" }}>
+        <div style={{ borderRight: "1px solid #000", borderBottom: "1px solid #000", padding: "8px" }}>
+          <div><strong>GST Challan No.</strong> {invoice.invoice_number}</div>
+          <div><strong>Date</strong> {formatDate(invoice.invoice_date)}</div>
+          <div><strong>P.O. Date</strong> {formatDate(dispatch.po_date)}</div>
+          <div><strong>GSTIN No.</strong> 27AACCV7755N1ZK</div>
+          <div><strong>PAN No.</strong> AACCV7755N</div>
+          <div><strong>Vehicle No.</strong> {dispatch.vehicle_no || "-"}</div>
+        </div>
+
+        <div style={{ borderBottom: "1px solid #000", padding: "8px" }}>
+          <div><strong>HSN CODE</strong> {lines[0]?.hsn_code || "84818030"}</div>
+          <div><strong>UDYAM REGISTRATION NO.</strong> UDYAM-MH-18-0012579</div>
+          <div><strong>Date Time of Supply</strong> {dispatch.date_time_of_supply || "-"}</div>
+          <div><strong>State</strong> Maharashtra</div>
+          <div><strong>Code</strong> 27</div>
+          <div><strong>CIN NO.</strong> U29268MH2008PTC184004</div>
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderLeft: "1px solid #000", borderRight: "1px solid #000", borderBottom: "1px solid #000" }}>
+        <div style={{ borderRight: "1px solid #000", padding: "8px", minHeight: "132px" }}>
+          <div style={{ fontWeight: 700, marginBottom: "6px" }}>Name Address Of Receipent Billed to</div>
+          <div style={{ fontWeight: 700 }}>{buyer.company_name || buyer.display_name || buyer.name || "—"}</div>
+          {dispatch.billed_to ? (
+            <div style={{ whiteSpace: "pre-wrap", marginTop: "4px", lineHeight: 1.4 }}>
+              {dispatch.billed_to}
+            </div>
+          ) : null}
+          <div style={{ marginTop: "6px" }}><strong>GSTIN</strong> {buyer.gstin || "-"}</div>
+          <div>
+            <strong>State</strong> {buyer.state || "-"} <strong style={{ marginLeft: 10 }}>Code</strong> {buyer.state_code || "-"}
+          </div>
+          <div style={{ marginTop: "6px" }}>
+            <strong>PLACE OF SUPPLY</strong> {dispatch.place_of_supply || buyer.state || "-"}
+          </div>
+        </div>
+
+        <div style={{ padding: "8px", minHeight: "132px" }}>
+          <div style={{ fontWeight: 700, marginBottom: "6px" }}>Name Address of Consignee Shipped to</div>
+          <div style={{ fontWeight: 700 }}>{buyer.company_name || buyer.display_name || buyer.name || "—"}</div>
+          {dispatch.shipped_to ? (
+            <div style={{ whiteSpace: "pre-wrap", marginTop: "4px", lineHeight: 1.4 }}>
+              {dispatch.shipped_to}
+            </div>
+          ) : null}
+          <div style={{ marginTop: "6px" }}><strong>GSTIN</strong> {buyer.gstin || "-"}</div>
+          <div>
+            <strong>State</strong> {buyer.state || "-"} <strong style={{ marginLeft: 10 }}>Code</strong> {buyer.state_code || "-"}
+          </div>
+          <div style={{ marginTop: "6px" }}>
+            <strong>PLACE OF SUPPLY</strong> {dispatch.place_of_supply || buyer.state || "-"}
+          </div>
+        </div>
+      </div>
+
+      <table style={{ width: "100%", borderCollapse: "collapse", borderLeft: "1px solid #000", borderRight: "1px solid #000" }}>
+        <thead>
+          <tr>
+            {[
+              "Sr. No.",
+              "Description of Goods",
+              "HSN CODE",
+              "GST",
+              "No Of Packages",
+              "Quantity",
+              "UoM",
+              "Unit Rate Rs.",
+              "Taxable Value Rs.",
+            ].map((header) => (
+              <th
+                key={header}
+                style={{
+                  borderBottom: "1px solid #000",
+                  borderTop: "1px solid #000",
+                  borderRight: "1px solid #000",
+                  padding: "6px 5px",
+                  textAlign: "center",
+                  fontSize: "10px",
+                  fontWeight: 700,
+                }}
+              >
+                {header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+
+        <tbody>
+          {lines.map((line, index) => (
+            <tr key={index}>
+              <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 5px", verticalAlign: "top", textAlign: "center", width: "38px" }}>
+                {index + 1}
+              </td>
+              <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 7px", verticalAlign: "top", width: "44%" }}>
+                {line.buyer_po_sr_no ? (
+                  <div style={{ marginBottom: "2px" }}>PO. SR. NO. {line.buyer_po_sr_no}</div>
+                ) : null}
+                <div style={{ fontWeight: 700, whiteSpace: "pre-wrap", lineHeight: 1.35 }}>
+                  {line.description}
+                </div>
+                {line.buyer_item_code ? (
+                  <div style={{ marginTop: "3px", fontSize: "10px" }}>
+                    Buyer Item Code: {line.buyer_item_code}
+                  </div>
+                ) : null}
+              </td>
+              <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 5px", verticalAlign: "top", textAlign: "center" }}>
+                {line.hsn_code || "84818030"}
+              </td>
+              <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 5px", verticalAlign: "top", textAlign: "center" }}>
+                {Number(line.gst_rate || 0)}
+              </td>
+              <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 5px", verticalAlign: "top", textAlign: "center" }}>
+                1
+              </td>
+              <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 5px", verticalAlign: "top", textAlign: "center" }}>
+                {line.quantity}
+              </td>
+              <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 5px", verticalAlign: "top", textAlign: "center" }}>
+                {line.unit}
+              </td>
+              <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 5px", verticalAlign: "top", textAlign: "right" }}>
+                {formatMoney(line.unit_rate)}
+              </td>
+              <td style={{ borderBottom: "1px solid #000", padding: "6px 5px", verticalAlign: "top", textAlign: "right" }}>
+                {formatMoney(line.taxable_value)}
+              </td>
+            </tr>
+          ))}
+
+          {lines.length < 6
+            ? Array.from({ length: 6 - lines.length }).map((_, idx) => (
+                <tr key={`blank-${idx}`}>
+                  {Array.from({ length: 9 }).map((__, colIdx) => (
+                    <td
+                      key={colIdx}
+                      style={{
+                        borderBottom: "1px solid #000",
+                        borderRight: colIdx < 8 ? "1px solid #000" : undefined,
+                        padding: "11px 5px",
+                      }}
+                    />
+                  ))}
+                </tr>
+              ))
+            : null}
+        </tbody>
+      </table>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1.1fr 0.9fr", borderLeft: "1px solid #000", borderRight: "1px solid #000", borderBottom: "1px solid #000" }}>
+        <div style={{ borderRight: "1px solid #000", padding: "8px" }}>
+          <div style={{ marginBottom: "6px" }}>
+            Tax is payable On Reverse Charges <span style={{ marginLeft: "12px" }}>Yes</span> <span style={{ marginLeft: "12px" }}>No</span>
+          </div>
+          <div><strong>Invoice Value In Words</strong> {amountToWords(invoice.total)}</div>
+          {invoice.notes ? (
+            <div style={{ marginTop: "8px", whiteSpace: "pre-wrap", lineHeight: 1.4 }}>
+              <strong>Notes:</strong> {invoice.notes}
+            </div>
+          ) : null}
+        </div>
+
+        <div>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "10px" }}>
+            <tbody>
+              <tr>
+                <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 8px" }}>TOTAL VALUE</td>
+                <td style={{ borderBottom: "1px solid #000", textAlign: "right", padding: "6px 8px" }}>{formatMoney(taxableValue)}</td>
+              </tr>
+              <tr>
+                <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 8px" }}>Documents Through</td>
+                <td style={{ borderBottom: "1px solid #000", padding: "6px 8px", textAlign: "right" }}>{dispatch.documents_through || "-"}</td>
+              </tr>
+              <tr>
+                <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 8px" }}>Freight Packing</td>
+                <td style={{ borderBottom: "1px solid #000", textAlign: "right", padding: "6px 8px" }}>{formatMoney(freightPacking)}</td>
+              </tr>
+              <tr>
+                <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 8px" }}>Transportation</td>
+                <td style={{ borderBottom: "1px solid #000", padding: "6px 8px", textAlign: "right" }}>{dispatch.transportation || "-"}</td>
+              </tr>
+              <tr>
+                <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 8px" }}>Other Charges</td>
+                <td style={{ borderBottom: "1px solid #000", textAlign: "right", padding: "6px 8px" }}>{formatMoney(otherCharges)}</td>
+              </tr>
+              <tr>
+                <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 8px" }}>L. R. No.</td>
+                <td style={{ borderBottom: "1px solid #000", padding: "6px 8px", textAlign: "right" }}>{dispatch.lr_no || "-"}</td>
+              </tr>
+              <tr>
+                <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 8px" }}>Central Tax CGST</td>
+                <td style={{ borderBottom: "1px solid #000", textAlign: "right", padding: "6px 8px" }}>
+                  {invoice.cgst > 0 ? `9  ${formatMoney(invoice.cgst)}` : "0.00"}
+                </td>
+              </tr>
+              <tr>
+                <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 8px" }}>Mode of despatch</td>
+                <td style={{ borderBottom: "1px solid #000", padding: "6px 8px", textAlign: "right" }}>{dispatch.mode_of_dispatch || "-"}</td>
+              </tr>
+              <tr>
+                <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 8px" }}>State Tax SGST</td>
+                <td style={{ borderBottom: "1px solid #000", textAlign: "right", padding: "6px 8px" }}>
+                  {invoice.sgst > 0 ? `9  ${formatMoney(invoice.sgst)}` : "0.00"}
+                </td>
+              </tr>
+              <tr>
+                <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 8px" }}>Integrated Tax IGST</td>
+                <td style={{ borderBottom: "1px solid #000", textAlign: "right", padding: "6px 8px" }}>
+                  {invoice.igst > 0 ? `18  ${formatMoney(invoice.igst)}` : "0.00"}
+                </td>
+              </tr>
+              <tr>
+                <td style={{ borderRight: "1px solid #000", padding: "8px", fontWeight: 700 }}>TOTAL INVOICE VALUE</td>
+                <td style={{ textAlign: "right", padding: "8px", fontWeight: 700 }}>{formatMoney(invoice.total)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div style={{ borderLeft: "1px solid #000", borderRight: "1px solid #000", borderBottom: "1px solid #000", padding: "8px 10px", fontSize: "10px", lineHeight: 1.35 }}>
+        I/We hereby certify that my/our registration certificate under the GST Act 2017 is in force on the date on which the sale of the goods specified in this GST invoice is made by me/us and that the transaction of sale covered by this GST invoice has been effected by me/us and it shall be accounted for in the turnover of sales while filing of return and due tax, if any payable on this sale has been paid or shall be paid.
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 220px", borderLeft: "1px solid #000", borderRight: "1px solid #000", borderBottom: "1px solid #000" }}>
+        <div style={{ padding: "12px 10px", fontSize: "10px", display: "flex", alignItems: "end" }}>
+          SUBJECT TO MUMBAI JURISDICTION
+        </div>
+        <div style={{ borderLeft: "1px solid #000", padding: "12px 10px", minHeight: "92px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+          <div style={{ textAlign: "center", fontWeight: 700 }}>For VITON ENGINEERS PVT. LTD.</div>
+          <div style={{ textAlign: "center", marginTop: "36px" }}>{invoice.signed_by || "Authorised Signatory"}</div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function InvoicePrintModal({
@@ -171,263 +436,79 @@ export default function InvoicePrintModal({
 }: {
   open: boolean;
   onClose: () => void;
-  invoice: InvoicePreviewData | null;
+  invoice: InvoicePreview | null;
 }) {
-  const previewRef = useRef<HTMLDivElement | null>(null);
-
-  const taxMode = useMemo(() => {
-    if (!invoice) return "intra";
-    return invoice.igst > 0 ? "inter" : "intra";
-  }, [invoice]);
-
   if (!open || !invoice) return null;
 
-  const dispatch = invoice.dispatch_meta || {};
-  const billedTo = dispatch.billed_to || invoice.buyer.address || "—";
-  const shippedTo = dispatch.shipped_to || invoice.buyer.address || "—";
-
-  function handlePrint() {
-    if (!previewRef.current) return;
-
-    const iframe = document.createElement("iframe");
-    iframe.style.position = "fixed";
-    iframe.style.right = "0";
-    iframe.style.bottom = "0";
-    iframe.style.width = "0";
-    iframe.style.height = "0";
-    iframe.style.border = "0";
-    document.body.appendChild(iframe);
-
-    const doc = iframe.contentWindow?.document;
-    if (!doc) return;
-
-    doc.open();
-    doc.write(renderPrintHtml(previewRef.current));
-    doc.close();
-
-    iframe.onload = () => {
-      iframe.contentWindow?.focus();
-      iframe.contentWindow?.print();
-      setTimeout(() => document.body.removeChild(iframe), 1000);
-    };
-  }
-
   return (
-    <div className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="w-full max-w-7xl h-[92vh] bg-[#111827] border border-gray-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800">
-          <div>
-            <h2 className="text-white text-xl font-bold">Invoice Preview</h2>
-            <p className="text-gray-400 text-sm mt-1">
-              Review, print, or save as PDF from the browser print dialog.
-            </p>
-          </div>
+    <>
+      <style>{`
+        @media print {
+          body * {
+            visibility: hidden !important;
+          }
 
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handlePrint}
-              className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2.5 rounded-xl transition"
-            >
-              <Printer size={16} />
-              Print / Save PDF
-            </button>
+          .invoice-print-root,
+          .invoice-print-root * {
+            visibility: visible !important;
+          }
 
-            <button
-              onClick={onClose}
-              className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gray-900 hover:bg-gray-800 text-gray-300"
-            >
-              <X size={18} />
-            </button>
-          </div>
-        </div>
+          .invoice-print-root {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            background: white !important;
+            padding: 0 !important;
+            margin: 0 !important;
+          }
 
-        <div className="flex-1 overflow-auto bg-gray-950 p-6">
-          <div className="mx-auto max-w-[920px]">
-            <div
-              ref={previewRef}
-              className="bg-white text-gray-900 rounded-2xl shadow-xl p-8 leading-relaxed"
-            >
-              <div className="flex items-start justify-between gap-6 border-b-2 border-[#5060AB] pb-4">
-                <div className="flex items-start gap-4">
-                  <img src="/Logo.JPG" alt="Viton Logo" className="w-14 h-14 object-contain" />
-                  <div>
-                    <h1 className="text-[22px] font-bold tracking-wide">
-                      VITON ENGINEERS PVT. LTD.
-                    </h1>
-                    <p className="text-[12px] text-gray-600 mt-1">
-                      Office: 701, Swastik Disa Corporate Park, Opp. Shreyas Cinema, LBS Marg, Ghatkopar West, Mumbai - 400086
-                    </p>
-                    <p className="text-[12px] text-gray-600">
-                      Works: B-40/1, Addl. Ambernath MIDC, Anand Nagar, Opp. Hali Pad, Ambernath East, Dist. Thane - 421506
-                    </p>
-                    <p className="text-[12px] text-gray-600">
-                      Phone: 08779301215 / 9769639388 | GSTIN: 27AACCV7755N1ZK | Email: info@vitonvalves.com
-                    </p>
-                  </div>
-                </div>
+          .invoice-preview-shell {
+            display: none !important;
+          }
 
-                <div className="min-w-[220px] border-2 border-[#5060AB] rounded-xl overflow-hidden">
-                  <div className="bg-[#5060AB] text-white font-bold uppercase text-center py-2 text-sm tracking-wider">
-                    Tax Invoice
-                  </div>
-                  <div className="p-3">
-                    <div className="text-sm text-gray-600">Invoice No.</div>
-                    <div className="font-bold text-lg">{invoice.invoice_number}</div>
-                    <div className="mt-3 text-sm text-gray-600">Date</div>
-                    <div className="font-semibold">{formatDate(invoice.invoice_date)}</div>
-                    <div className="mt-3 text-sm text-gray-600">Status</div>
-                    <div className="font-semibold capitalize">{invoice.status}</div>
-                  </div>
-                </div>
-              </div>
+          @page {
+            size: A4;
+            margin: 0;
+          }
+        }
+      `}</style>
 
-              <div className="grid grid-cols-2 gap-4 mt-5">
-                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-                  <div className="text-[11px] uppercase tracking-wider text-gray-400 font-bold mb-2">
-                    Billed To
-                  </div>
-                  <div className="text-[15px] font-bold">{invoice.buyer.name}</div>
-                  <div className="text-[13px] text-gray-700 whitespace-pre-line mt-1">{billedTo}</div>
-                  <div className="text-[13px] text-gray-700 mt-1">
-                    GSTIN: {invoice.buyer.gstin || "—"}
-                  </div>
-                  <div className="text-[13px] text-gray-700">
-                    State: {invoice.buyer.state || "—"} {invoice.buyer.state_code ? `(${invoice.buyer.state_code})` : ""}
-                  </div>
-                  <div className="text-[13px] text-gray-700 mt-2">
-                    Buyer PO No.: {invoice.buyers_po_number || "—"}
-                  </div>
-                </div>
+      <div className="invoice-print-root" style={{ display: "none" }}>
+        <InvoiceDocument invoice={invoice} />
+      </div>
 
-                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-                  <div className="text-[11px] uppercase tracking-wider text-gray-400 font-bold mb-2">
-                    Shipped To / Supply
-                  </div>
-                  <div className="text-[13px] text-gray-700 whitespace-pre-line">{shippedTo}</div>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 mt-3 text-[13px]">
-                    <div><span className="text-gray-500">Place of Supply:</span> {dispatch.place_of_supply || invoice.buyer.state || "—"}</div>
-                    <div><span className="text-gray-500">PO Date:</span> {formatDate(dispatch.po_date)}</div>
-                    <div><span className="text-gray-500">Date/Time of Supply:</span> {dispatch.date_time_of_supply || formatDateTime(invoice.invoice_date)}</div>
-                    <div><span className="text-gray-500">Tax Mode:</span> {taxMode === "intra" ? "CGST + SGST" : "IGST"}</div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-5 border border-gray-200 rounded-xl overflow-hidden avoid-break">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-[#5060AB] text-white">
-                      <th className="text-left text-[12px] font-bold px-3 py-3 w-[46px]">Sr.</th>
-                      <th className="text-left text-[12px] font-bold px-3 py-3 w-[120px]">PO Sr. No.</th>
-                      <th className="text-left text-[12px] font-bold px-3 py-3 w-[120px]">Buyer Code</th>
-                      <th className="text-left text-[12px] font-bold px-3 py-3">Description</th>
-                      <th className="text-left text-[12px] font-bold px-3 py-3 w-[90px]">HSN</th>
-                      <th className="text-right text-[12px] font-bold px-3 py-3 w-[70px]">Qty</th>
-                      <th className="text-left text-[12px] font-bold px-3 py-3 w-[70px]">Unit</th>
-                      <th className="text-right text-[12px] font-bold px-3 py-3 w-[100px]">Rate</th>
-                      <th className="text-right text-[12px] font-bold px-3 py-3 w-[120px]">Taxable Value</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {invoice.line_items.map((line, index) => (
-                      <tr key={index} className={index % 2 ? "bg-gray-50" : "bg-white"}>
-                        <td className="px-3 py-3 text-[12px] border-t border-gray-200 align-top">{index + 1}</td>
-                        <td className="px-3 py-3 text-[12px] border-t border-gray-200 align-top">{line.buyer_po_sr_no || "—"}</td>
-                        <td className="px-3 py-3 text-[12px] border-t border-gray-200 align-top">{line.buyer_item_code || "—"}</td>
-                        <td className="px-3 py-3 text-[12px] border-t border-gray-200 align-top whitespace-pre-line">{line.description}</td>
-                        <td className="px-3 py-3 text-[12px] border-t border-gray-200 align-top">{line.hsn_code || "—"}</td>
-                        <td className="px-3 py-3 text-[12px] border-t border-gray-200 align-top text-right">{line.quantity}</td>
-                        <td className="px-3 py-3 text-[12px] border-t border-gray-200 align-top">{line.unit}</td>
-                        <td className="px-3 py-3 text-[12px] border-t border-gray-200 align-top text-right">{money(line.unit_rate)}</td>
-                        <td className="px-3 py-3 text-[12px] border-t border-gray-200 align-top text-right font-semibold">{money(line.taxable_value)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 mt-5 avoid-break">
-                <div className="space-y-4">
-                  <div className="border border-gray-200 rounded-xl p-4">
-                    <div className="text-[11px] uppercase tracking-wider text-gray-400 font-bold mb-2">
-                      Dispatch Details
-                    </div>
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-[13px]">
-                      <div><span className="text-gray-500">Documents Through:</span> {dispatch.documents_through || "Direct"}</div>
-                      <div><span className="text-gray-500">Transportation:</span> {dispatch.transportation || "—"}</div>
-                      <div><span className="text-gray-500">L.R. No.:</span> {dispatch.lr_no || "—"}</div>
-                      <div><span className="text-gray-500">Mode of Dispatch:</span> {dispatch.mode_of_dispatch || "By Road"}</div>
-                      <div><span className="text-gray-500">Vehicle No.:</span> {dispatch.vehicle_no || "—"}</div>
-                      <div><span className="text-gray-500">Freight / Packing:</span> {money(dispatch.freight_packing || 0)}</div>
-                    </div>
-                  </div>
-
-                  {invoice.notes ? (
-                    <div className="border border-indigo-200 bg-indigo-50 rounded-xl p-4">
-                      <div className="text-[11px] uppercase tracking-wider text-indigo-500 font-bold mb-2">
-                        Notes
-                      </div>
-                      <div className="text-[13px] text-gray-700 whitespace-pre-line">
-                        {invoice.notes}
-                      </div>
-                    </div>
-                  ) : null}
-
-                  <div className="text-[12px] text-gray-600">
-                    Invoice Value In Words: <span className="font-semibold text-gray-900">{numberToWords(Math.round(invoice.total))}</span>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="border border-gray-200 rounded-xl overflow-hidden">
-                    <div className="flex justify-between px-4 py-3 text-[13px] border-b border-gray-200">
-                      <span className="text-gray-600">Subtotal</span>
-                      <span className="font-medium">{money(invoice.subtotal)}</span>
-                    </div>
-
-                    <div className="flex justify-between px-4 py-3 text-[13px] border-b border-gray-200">
-                      <span className="text-gray-600">CGST</span>
-                      <span className="font-medium">{money(invoice.cgst)}</span>
-                    </div>
-
-                    <div className="flex justify-between px-4 py-3 text-[13px] border-b border-gray-200">
-                      <span className="text-gray-600">SGST</span>
-                      <span className="font-medium">{money(invoice.sgst)}</span>
-                    </div>
-
-                    <div className="flex justify-between px-4 py-3 text-[13px] border-b border-gray-200">
-                      <span className="text-gray-600">IGST</span>
-                      <span className="font-medium">{money(invoice.igst)}</span>
-                    </div>
-
-                    <div className="flex justify-between px-4 py-4 bg-[#5060AB] text-white">
-                      <span className="font-bold tracking-wide">TOTAL</span>
-                      <span className="font-bold text-[16px]">Rs. {money(invoice.total)}</span>
-                    </div>
-                  </div>
-
-                  <div className="mt-8 pt-8 text-right">
-                    <div className="text-[13px] text-gray-700 font-semibold">
-                      For VITON ENGINEERS PVT. LTD.
-                    </div>
-                    <div className="h-16" />
-                    <div className="text-[13px] font-bold">
-                      {invoice.signed_by || "Authorised Signatory"}
-                    </div>
-                    <div className="text-[11px] text-gray-500 mt-1">
-                      Signature to be applied by hand
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-6 text-center text-[11px] text-gray-500">
-                SUBJECT TO MUMBAI JURISDICTION
-              </div>
+      <div className="invoice-preview-shell fixed inset-0 bg-black/80 z-50 flex items-start justify-center p-4 overflow-y-auto">
+        <div className="bg-white rounded-2xl w-full max-w-5xl my-4 shadow-2xl overflow-hidden">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white sticky top-0 z-10">
+            <div>
+              <h2 className="font-bold text-gray-900 text-lg">Invoice Preview</h2>
+              <p className="text-gray-500 text-sm mt-0.5">{invoice.invoice_number}</p>
             </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => window.print()}
+                className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-all"
+              >
+                <Printer size={15} />
+                Print
+              </button>
+
+              <button
+                onClick={onClose}
+                className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 transition-all"
+              >
+                <X size={18} />
+              </button>
+            </div>
+          </div>
+
+          <div style={{ background: "#f3f4f6", padding: "20px", overflowX: "auto" }}>
+            <InvoiceDocument invoice={invoice} />
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
