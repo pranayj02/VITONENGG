@@ -125,15 +125,31 @@ export default async function InvoicePrintPage({
   const { id } = await params;
   const supabase = createClient();
 
-  const { data, error } = await supabase
+    const { data, error } = await supabase
     .from("invoices")
     .select("*")
     .eq("id", id)
     .single();
 
   if (error || !data) {
-    notFound();
+    return (
+      <div className="min-h-screen bg-white p-6">
+        <h1 className="text-red-600 font-bold text-lg mb-4">Invoice print debug</h1>
+        <pre className="text-sm whitespace-pre-wrap text-black">
+          {JSON.stringify(
+            {
+              id,
+              error,
+              data,
+            },
+            null,
+            2
+          )}
+        </pre>
+      </div>
+    );
   }
+
 
   const invoice = toPreviewInvoice(data as InvoiceRow);
 
