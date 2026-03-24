@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Search, Plus, Trash2, Save, FileText, Eye } from "lucide-react";
-import { createClient } from "@/lib/Supabase";
-import { getCurrentFY } from "@/lib/Fy";
+import { createClient } from "@/lib/supabase";
+import { getCurrentFY } from "@/lib/fy";
 import InvoicePrintModal from "@/components/InvoicePrintModal";
 
 type Buyer = {
