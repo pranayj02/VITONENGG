@@ -311,6 +311,7 @@ export default function NewInvoicePage() {
 
       const payload = {
         invoice_number: invoiceNumber,
+        invoice_date: invoiceDate,
         buyer_name: selectedBuyer.name,
         buyer_gstin: selectedBuyer.gstin,
         buyer_address: selectedBuyer.address,
@@ -848,33 +849,36 @@ export default function NewInvoicePage() {
                 </button>
 
                 <button
-                  onClick={() =>
-                    setPreviewInvoice({
-                      invoice_number: invoiceNumber,
-                      invoice_date: invoiceDate,
-                      buyers_po_number: buyersPoNumber || null,
-                      fy_label: fyLabel,
-                      fy_serial: fySerial,
-                      status: saveAsDraft ? "draft" : "confirmed",
-                      buyer: {
-                        name: selectedBuyer?.name || "—",
-                        address: selectedBuyer?.address || "",
-                        gstin: selectedBuyer?.gstin || "",
-                        state: selectedBuyer?.state || "",
-                        state_code: selectedBuyer?.state_code || "",
-                      },
-                      line_items: lineItems.filter((l) => l.description.trim()),
-                      subtotal: taxableBase,
-                      cgst,
-                      sgst,
-                      igst,
-                      total,
-                      notes: notes || null,
-                      signed_by: "Authorised Signatory",
-                      signed_at: new Date().toISOString(),
-                      dispatch_meta: dispatchMeta,
-                    }) || setPreviewOpen(true)
-                  }
+                  onClick={() => {
+  setPreviewInvoice({
+    invoice_number: invoiceNumber,
+    invoice_date: invoiceDate,
+    buyers_po_number: buyersPoNumber || null,
+    fy_label: fyLabel,
+    fy_serial: fySerial,
+    status: saveAsDraft ? "draft" : "confirmed",
+    buyer: {
+      name: selectedBuyer?.name || "—",
+      address: selectedBuyer?.address || "",
+      gstin: selectedBuyer?.gstin || "",
+      state: selectedBuyer?.state || "",
+      state_code: selectedBuyer?.state_code || "",
+    },
+    line_items: lineItems.filter((l) => l.description.trim()),
+    subtotal: taxableBase,
+    cgst,
+    sgst,
+    igst,
+    total,
+    notes: notes || null,
+    signed_by: "Authorised Signatory",
+    signed_at: new Date().toISOString(),
+    dispatch_meta: dispatchMeta,
+  });
+
+  setPreviewOpen(true);
+}}
+
                   className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white font-semibold px-5 py-3 rounded-xl text-sm transition"
                 >
                   <FileText size={15} />
