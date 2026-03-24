@@ -164,7 +164,11 @@ function toPreviewInvoice(row: InvoiceRow): InvoicePreview {
         row.buyer_name ||
         "—",
       display_name: row.buyer_display_name || row.buyer_name || null,
-      company_name: row.buyer_company_name || row.buyer_display_name || row.buyer_name || null,
+      company_name:
+        row.buyer_company_name ||
+        row.buyer_display_name ||
+        row.buyer_name ||
+        null,
       branch_name: row.buyer_branch_name || null,
       address: row.buyer_address || null,
       gstin: row.buyer_gstin || null,
@@ -241,6 +245,14 @@ export default function InvoiceHistoryPage() {
     } finally {
       setDeletingId(null);
     }
+  }
+
+  function openPrintPage(id: string) {
+    window.open(
+      `/dashboard/invoices/print/${encodeURIComponent(id)}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
   }
 
   const filteredRows = rows.filter((row) => {
@@ -404,7 +416,9 @@ export default function InvoiceHistoryPage() {
                         <td className="px-5 py-4 align-top">
                           <p className="text-white">{buyerLabel}</p>
                           <p className="text-gray-500 text-xs mt-1">
-                            {[row.buyer_branch_name, row.buyer_gstin].filter(Boolean).join(" · ") || row.buyer_state || "—"}
+                            {[row.buyer_branch_name, row.buyer_gstin].filter(Boolean).join(" · ") ||
+                              row.buyer_state ||
+                              "—"}
                           </p>
                         </td>
 
@@ -444,10 +458,7 @@ export default function InvoiceHistoryPage() {
 
                             <button
                               type="button"
-                              onClick={() => {
-                                setPreviewInvoice(preview);
-                                setPreviewOpen(true);
-                              }}
+                              onClick={() => openPrintPage(row.id)}
                               className="inline-flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white px-3 py-2 rounded-xl text-xs font-semibold transition"
                             >
                               <Printer size={14} />
