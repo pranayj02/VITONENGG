@@ -19,6 +19,7 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/catalog", label: "Item Catalog", icon: Package },
   { href: "/dashboard/vendors", label: "Vendors", icon: Users },
+  { href: "/dashboard/buyers", label: "Buyers", icon: Users },
   { href: "/dashboard/po/new", label: "New PO", icon: FileText },
   { href: "/dashboard/invoices/new", label: "New Invoice", icon: Receipt },
   { href: "/dashboard/history", label: "History", icon: History },
