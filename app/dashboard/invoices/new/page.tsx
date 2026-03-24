@@ -241,6 +241,14 @@ function normalizeDispatchMeta(row: any): DispatchMeta {
   };
 }
 
+function openInvoicePrint(id: string) {
+  window.open(
+    `/dashboard/invoices/print/${encodeURIComponent(id)}`,
+    "_blank",
+    "noopener,noreferrer"
+  );
+}
+
 export default function NewInvoicePage() {
   const searchParams = useSearchParams();
   const editId = searchParams.get("id");
@@ -595,11 +603,11 @@ export default function NewInvoicePage() {
 
             <div className="flex flex-wrap gap-3 justify-center">
               <button
-                onClick={() => setPreviewOpen(true)}
+                onClick={() => savedInvoiceId && openInvoicePrint(savedInvoiceId)}
                 className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-5 py-2.5 rounded-xl text-sm flex items-center gap-2"
               >
                 <Printer size={15} />
-                Preview and Print
+                Print Invoice
               </button>
 
               <a
