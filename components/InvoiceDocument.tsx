@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useRef } from "react";
+
 export type DispatchMeta = {
   place_of_supply?: string;
   po_date?: string;
@@ -76,48 +78,13 @@ function formatMoney(value?: number | null) {
 
 function integerToWords(num: number): string {
   if (num === 0) return "ZERO";
-
-  const ones = [
-    "",
-    "ONE",
-    "TWO",
-    "THREE",
-    "FOUR",
-    "FIVE",
-    "SIX",
-    "SEVEN",
-    "EIGHT",
-    "NINE",
-    "TEN",
-    "ELEVEN",
-    "TWELVE",
-    "THIRTEEN",
-    "FOURTEEN",
-    "FIFTEEN",
-    "SIXTEEN",
-    "SEVENTEEN",
-    "EIGHTEEN",
-    "NINETEEN",
-  ];
-
-  const tens = [
-    "",
-    "",
-    "TWENTY",
-    "THIRTY",
-    "FORTY",
-    "FIFTY",
-    "SIXTY",
-    "SEVENTY",
-    "EIGHTY",
-    "NINETY",
-  ];
+  const ones = ["","ONE","TWO","THREE","FOUR","FIVE","SIX","SEVEN","EIGHT","NINE","TEN","ELEVEN","TWELVE","THIRTEEN","FOURTEEN","FIFTEEN","SIXTEEN","SEVENTEEN","EIGHTEEN","NINETEEN"];
+  const tens = ["","","TWENTY","THIRTY","FORTY","FIFTY","SIXTY","SEVENTY","EIGHTY","NINETY"];
 
   function twoDigit(n: number): string {
     if (n < 20) return ones[n];
     return `${tens[Math.floor(n / 10)]}${n % 10 ? ` ${ones[n % 10]}` : ""}`.trim();
   }
-
   function threeDigit(n: number): string {
     const hundred = Math.floor(n / 100);
     const rest = n % 100;
@@ -126,18 +93,15 @@ function integerToWords(num: number): string {
   }
 
   const parts: string[] = [];
-  const crore = Math.floor(num / 10000000);
-  num %= 10000000;
-  const lakh = Math.floor(num / 100000);
-  num %= 100000;
-  const thousand = Math.floor(num / 1000);
-  num %= 1000;
+  const crore = Math.floor(num / 10000000); num %= 10000000;
+  const lakh = Math.floor(num / 100000);   num %= 100000;
+  const thousand = Math.floor(num / 1000); num %= 1000;
   const last = num;
 
-  if (crore) parts.push(`${twoDigit(crore)} CRORE`);
-  if (lakh) parts.push(`${twoDigit(lakh)} LAKH`);
+  if (crore)    parts.push(`${twoDigit(crore)} CRORE`);
+  if (lakh)     parts.push(`${twoDigit(lakh)} LAKH`);
   if (thousand) parts.push(`${twoDigit(thousand)} THOUSAND`);
-  if (last) parts.push(threeDigit(last));
+  if (last)     parts.push(threeDigit(last));
 
   return parts.join(" ").trim();
 }
@@ -147,6 +111,9 @@ function amountToWords(value: number) {
   return `RS. ${integerToWords(rounded)} ONLY`;
 }
 
+// A4 at 96 dpi: 210mm × 297mm ≈ 794px × 1123px
+const A4_HEIGHT_PX = 297 * (96 / 25.4);
+
 export default function InvoiceDocument({
   invoice,
   className = "",
@@ -154,6 +121,29 @@ export default function InvoiceDocument({
   invoice: InvoicePreview;
   className?: string;
 }) {
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+
+    // Reset any previous scale before measuring
+    el.style.transform = "";
+    el.style.transformOrigin = "";
+
+    const contentH = el.scrollHeight;
+    if (contentH > A4_HEIGHT_PX) {
+      const scale = A4_HEIGHT_PX / contentH;
+      // Only scale down if it's not too extreme (don't go below 70%)
+      if (scale >= 0.7) {
+        el.style.transform = `scale(${scale})`;
+        el.style.transformOrigin = "top left";
+        // Compensate width so the page doesn't scroll horizontally
+        el.style.width = `${(1 / scale) * 100}%`;
+      }
+    }
+  }, [invoice]);
+
   const dispatch = invoice.dispatch_meta || {};
   const buyer = invoice.buyer || { name: "—" };
   const lines = invoice.line_items || [];
@@ -163,12 +153,12 @@ export default function InvoiceDocument({
 
   return (
     <div
+      ref={wrapperRef}
       className={className}
       style={{
         fontFamily: "Arial, sans-serif",
         fontSize: "11px",
         width: "210mm",
-        minHeight: "297mm",
         margin: "0 auto",
         padding: "12mm 10mm 10mm 10mm",
         boxSizing: "border-box",
@@ -176,6 +166,7 @@ export default function InvoiceDocument({
         color: "black",
       }}
     >
+      {/* ── Header ── */}
       <div
         style={{
           display: "grid",
@@ -220,6 +211,7 @@ export default function InvoiceDocument({
         <div style={{ minHeight: "78px" }} />
       </div>
 
+      {/* ── Copy labels ── */}
       <div
         style={{
           display: "grid",
@@ -236,6 +228,7 @@ export default function InvoiceDocument({
         <div style={{ textAlign: "right" }}>TRIPLICATE FOR SUPPLIER</div>
       </div>
 
+      {/* ── Challan / HSN meta ── */}
       <div
         style={{
           display: "grid",
@@ -252,7 +245,6 @@ export default function InvoiceDocument({
           <div><strong>PAN No.</strong> AACCV7755N</div>
           <div><strong>Vehicle No.</strong> {dispatch.vehicle_no || "-"}</div>
         </div>
-
         <div style={{ borderBottom: "1px solid #000", padding: "8px" }}>
           <div><strong>HSN CODE</strong> {lines[0]?.hsn_code || "84818030"}</div>
           <div><strong>UDYAM REGISTRATION NO.</strong> UDYAM-MH-18-0012579</div>
@@ -263,6 +255,7 @@ export default function InvoiceDocument({
         </div>
       </div>
 
+      {/* ── Billed / Shipped ── */}
       <div
         style={{
           display: "grid",
@@ -272,7 +265,7 @@ export default function InvoiceDocument({
           borderBottom: "1px solid #000",
         }}
       >
-        <div style={{ borderRight: "1px solid #000", padding: "8px", minHeight: "132px" }}>
+        <div style={{ borderRight: "1px solid #000", padding: "8px" }}>
           <div style={{ fontWeight: 700, marginBottom: "6px" }}>
             Name Address Of Receipent Billed to
           </div>
@@ -296,7 +289,7 @@ export default function InvoiceDocument({
           </div>
         </div>
 
-        <div style={{ padding: "8px", minHeight: "132px" }}>
+        <div style={{ padding: "8px" }}>
           <div style={{ fontWeight: 700, marginBottom: "6px" }}>
             Name Address of Consignee Shipped to
           </div>
@@ -321,6 +314,7 @@ export default function InvoiceDocument({
         </div>
       </div>
 
+      {/* ── Line items — only real rows, no blanks ── */}
       <table
         style={{
           width: "100%",
@@ -359,31 +353,13 @@ export default function InvoiceDocument({
             ))}
           </tr>
         </thead>
-
         <tbody>
           {lines.map((line, index) => (
             <tr key={index}>
-              <td
-                style={{
-                  borderBottom: "1px solid #000",
-                  borderRight: "1px solid #000",
-                  padding: "6px 5px",
-                  verticalAlign: "top",
-                  textAlign: "center",
-                  width: "38px",
-                }}
-              >
+              <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 5px", verticalAlign: "top", textAlign: "center", width: "38px" }}>
                 {index + 1}
               </td>
-              <td
-                style={{
-                  borderBottom: "1px solid #000",
-                  borderRight: "1px solid #000",
-                  padding: "6px 7px",
-                  verticalAlign: "top",
-                  width: "44%",
-                }}
-              >
+              <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 7px", verticalAlign: "top", width: "44%" }}>
                 {line.buyer_po_sr_no ? (
                   <div style={{ marginBottom: "2px" }}>PO. SR. NO. {line.buyer_po_sr_no}</div>
                 ) : null}
@@ -396,104 +372,33 @@ export default function InvoiceDocument({
                   </div>
                 ) : null}
               </td>
-              <td
-                style={{
-                  borderBottom: "1px solid #000",
-                  borderRight: "1px solid #000",
-                  padding: "6px 5px",
-                  verticalAlign: "top",
-                  textAlign: "center",
-                }}
-              >
+              <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 5px", verticalAlign: "top", textAlign: "center" }}>
                 {line.hsn_code || "84818030"}
               </td>
-              <td
-                style={{
-                  borderBottom: "1px solid #000",
-                  borderRight: "1px solid #000",
-                  padding: "6px 5px",
-                  verticalAlign: "top",
-                  textAlign: "center",
-                }}
-              >
+              <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 5px", verticalAlign: "top", textAlign: "center" }}>
                 {Number(line.gst_rate || 0)}
               </td>
-              <td
-                style={{
-                  borderBottom: "1px solid #000",
-                  borderRight: "1px solid #000",
-                  padding: "6px 5px",
-                  verticalAlign: "top",
-                  textAlign: "center",
-                }}
-              >
+              <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 5px", verticalAlign: "top", textAlign: "center" }}>
                 1
               </td>
-              <td
-                style={{
-                  borderBottom: "1px solid #000",
-                  borderRight: "1px solid #000",
-                  padding: "6px 5px",
-                  verticalAlign: "top",
-                  textAlign: "center",
-                }}
-              >
+              <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 5px", verticalAlign: "top", textAlign: "center" }}>
                 {line.quantity}
               </td>
-              <td
-                style={{
-                  borderBottom: "1px solid #000",
-                  borderRight: "1px solid #000",
-                  padding: "6px 5px",
-                  verticalAlign: "top",
-                  textAlign: "center",
-                }}
-              >
+              <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 5px", verticalAlign: "top", textAlign: "center" }}>
                 {line.unit}
               </td>
-              <td
-                style={{
-                  borderBottom: "1px solid #000",
-                  borderRight: "1px solid #000",
-                  padding: "6px 5px",
-                  verticalAlign: "top",
-                  textAlign: "right",
-                }}
-              >
+              <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 5px", verticalAlign: "top", textAlign: "right" }}>
                 {formatMoney(line.unit_rate)}
               </td>
-              <td
-                style={{
-                  borderBottom: "1px solid #000",
-                  padding: "6px 5px",
-                  verticalAlign: "top",
-                  textAlign: "right",
-                }}
-              >
+              <td style={{ borderBottom: "1px solid #000", padding: "6px 5px", verticalAlign: "top", textAlign: "right" }}>
                 {formatMoney(line.taxable_value)}
               </td>
             </tr>
           ))}
-
-          {lines.length < 6
-            ? Array.from({ length: 6 - lines.length }).map((_, idx) => (
-                <tr key={`blank-${idx}`}>
-                  {Array.from({ length: 9 }).map((__, colIdx) => (
-                    <td
-                      key={colIdx}
-                      style={{
-                        borderBottom: "1px solid #000",
-                        borderRight: colIdx < 8 ? "1px solid #000" : undefined,
-                        padding: "11px 5px",
-                      }}
-                    />
-                  ))}
-                </tr>
-              ))
-            : null}
         </tbody>
       </table>
 
+      {/* ── Totals / dispatch summary ── */}
       <div
         style={{
           display: "grid",
@@ -505,7 +410,8 @@ export default function InvoiceDocument({
       >
         <div style={{ borderRight: "1px solid #000", padding: "8px" }}>
           <div style={{ marginBottom: "6px" }}>
-            Tax is payable On Reverse Charges <span style={{ marginLeft: "12px" }}>Yes</span>{" "}
+            Tax is payable On Reverse Charges{" "}
+            <span style={{ marginLeft: "12px" }}>Yes</span>{" "}
             <span style={{ marginLeft: "12px" }}>No</span>
           </div>
           <div>
@@ -521,86 +427,27 @@ export default function InvoiceDocument({
         <div>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "10px" }}>
             <tbody>
-              <tr>
-                <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 8px" }}>
-                  TOTAL VALUE
-                </td>
-                <td style={{ borderBottom: "1px solid #000", textAlign: "right", padding: "6px 8px" }}>
-                  {formatMoney(taxableValue)}
-                </td>
-              </tr>
-              <tr>
-                <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 8px" }}>
-                  Documents Through
-                </td>
-                <td style={{ borderBottom: "1px solid #000", padding: "6px 8px", textAlign: "right" }}>
-                  {dispatch.documents_through || "-"}
-                </td>
-              </tr>
-              <tr>
-                <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 8px" }}>
-                  Freight Packing
-                </td>
-                <td style={{ borderBottom: "1px solid #000", textAlign: "right", padding: "6px 8px" }}>
-                  {formatMoney(freightPacking)}
-                </td>
-              </tr>
-              <tr>
-                <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 8px" }}>
-                  Transportation
-                </td>
-                <td style={{ borderBottom: "1px solid #000", padding: "6px 8px", textAlign: "right" }}>
-                  {dispatch.transportation || "-"}
-                </td>
-              </tr>
-              <tr>
-                <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 8px" }}>
-                  Other Charges
-                </td>
-                <td style={{ borderBottom: "1px solid #000", textAlign: "right", padding: "6px 8px" }}>
-                  {formatMoney(otherCharges)}
-                </td>
-              </tr>
-              <tr>
-                <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 8px" }}>
-                  L. R. No.
-                </td>
-                <td style={{ borderBottom: "1px solid #000", padding: "6px 8px", textAlign: "right" }}>
-                  {dispatch.lr_no || "-"}
-                </td>
-              </tr>
-              <tr>
-                <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 8px" }}>
-                  Central Tax CGST
-                </td>
-                <td style={{ borderBottom: "1px solid #000", textAlign: "right", padding: "6px 8px" }}>
-                  {invoice.cgst > 0 ? `9  ${formatMoney(invoice.cgst)}` : "0.00"}
-                </td>
-              </tr>
-              <tr>
-                <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 8px" }}>
-                  Mode of despatch
-                </td>
-                <td style={{ borderBottom: "1px solid #000", padding: "6px 8px", textAlign: "right" }}>
-                  {dispatch.mode_of_dispatch || "-"}
-                </td>
-              </tr>
-              <tr>
-                <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 8px" }}>
-                  State Tax SGST
-                </td>
-                <td style={{ borderBottom: "1px solid #000", textAlign: "right", padding: "6px 8px" }}>
-                  {invoice.sgst > 0 ? `9  ${formatMoney(invoice.sgst)}` : "0.00"}
-                </td>
-              </tr>
-              <tr>
-                <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 8px" }}>
-                  Integrated Tax IGST
-                </td>
-                <td style={{ borderBottom: "1px solid #000", textAlign: "right", padding: "6px 8px" }}>
-                  {invoice.igst > 0 ? `18  ${formatMoney(invoice.igst)}` : "0.00"}
-                </td>
-              </tr>
+              {[
+                { label: "TOTAL VALUE",          value: formatMoney(taxableValue) },
+                { label: "Documents Through",    value: dispatch.documents_through || "-" },
+                { label: "Freight Packing",      value: formatMoney(freightPacking) },
+                { label: "Transportation",       value: dispatch.transportation || "-" },
+                { label: "Other Charges",        value: formatMoney(otherCharges) },
+                { label: "L. R. No.",            value: dispatch.lr_no || "-" },
+                { label: "Central Tax CGST",     value: invoice.cgst > 0 ? `9  ${formatMoney(invoice.cgst)}` : "0.00" },
+                { label: "Mode of despatch",     value: dispatch.mode_of_dispatch || "-" },
+                { label: "State Tax SGST",       value: invoice.sgst > 0 ? `9  ${formatMoney(invoice.sgst)}` : "0.00" },
+                { label: "Integrated Tax IGST",  value: invoice.igst > 0 ? `18  ${formatMoney(invoice.igst)}` : "0.00" },
+              ].map(({ label, value }) => (
+                <tr key={label}>
+                  <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 8px" }}>
+                    {label}
+                  </td>
+                  <td style={{ borderBottom: "1px solid #000", textAlign: "right", padding: "6px 8px" }}>
+                    {value}
+                  </td>
+                </tr>
+              ))}
               <tr>
                 <td style={{ borderRight: "1px solid #000", padding: "8px", fontWeight: 700 }}>
                   TOTAL INVOICE VALUE
@@ -614,59 +461,61 @@ export default function InvoiceDocument({
         </div>
       </div>
 
-      <div
-        style={{
-          borderLeft: "1px solid #000",
-          borderRight: "1px solid #000",
-          borderBottom: "1px solid #000",
-          padding: "8px 10px",
-          fontSize: "10px",
-          lineHeight: 1.35,
-        }}
-      >
-        I/We hereby certify that my/our registration certificate under the GST Act 2017
-        is in force on the date on which the sale of the goods specified in this GST
-        invoice is made by me/us and that the transaction of sale covered by this GST
-        invoice has been effected by me/us and it shall be accounted for in the turnover
-        of sales while filing of return and due tax, if any payable on this sale has
-        been paid or shall be paid.
-      </div>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 220px",
-          borderLeft: "1px solid #000",
-          borderRight: "1px solid #000",
-          borderBottom: "1px solid #000",
-        }}
-      >
+      {/* ── Disclaimer + Signature — kept together, never split ── */}
+      <div style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
         <div
           style={{
-            padding: "12px 10px",
+            borderLeft: "1px solid #000",
+            borderRight: "1px solid #000",
+            borderBottom: "1px solid #000",
+            padding: "8px 10px",
             fontSize: "10px",
-            display: "flex",
-            alignItems: "end",
+            lineHeight: 1.35,
           }}
         >
-          SUBJECT TO MUMBAI JURISDICTION
+          I/We hereby certify that my/our registration certificate under the GST Act 2017
+          is in force on the date on which the sale of the goods specified in this GST
+          invoice is made by me/us and that the transaction of sale covered by this GST
+          invoice has been effected by me/us and it shall be accounted for in the turnover
+          of sales while filing of return and due tax, if any payable on this sale has
+          been paid or shall be paid.
         </div>
 
         <div
           style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 220px",
             borderLeft: "1px solid #000",
-            padding: "12px 10px",
-            minHeight: "92px",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "space-between",
+            borderRight: "1px solid #000",
+            borderBottom: "1px solid #000",
           }}
         >
-          <div style={{ textAlign: "center", fontWeight: 700 }}>
-            For VITON ENGINEERS PVT. LTD.
+          <div
+            style={{
+              padding: "12px 10px",
+              fontSize: "10px",
+              display: "flex",
+              alignItems: "end",
+            }}
+          >
+            SUBJECT TO MUMBAI JURISDICTION
           </div>
-          <div style={{ textAlign: "center", marginTop: "36px" }}>
-            {invoice.signed_by || "Authorised Signatory"}
+          <div
+            style={{
+              borderLeft: "1px solid #000",
+              padding: "12px 10px",
+              minHeight: "92px",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+            }}
+          >
+            <div style={{ textAlign: "center", fontWeight: 700 }}>
+              For VITON ENGINEERS PVT. LTD.
+            </div>
+            <div style={{ textAlign: "center", marginTop: "36px" }}>
+              {invoice.signed_by || "Authorised Signatory"}
+            </div>
           </div>
         </div>
       </div>
