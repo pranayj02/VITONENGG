@@ -93,10 +93,11 @@ function integerToWords(num: number): string {
   }
 
   const parts: string[] = [];
-  const crore = Math.floor(num / 10000000); num %= 10000000;
-  const lakh = Math.floor(num / 100000);   num %= 100000;
-  const thousand = Math.floor(num / 1000); num %= 1000;
-  const last = num;
+  let n = num;
+  const crore = Math.floor(n / 10000000); n %= 10000000;
+  const lakh = Math.floor(n / 100000);    n %= 100000;
+  const thousand = Math.floor(n / 1000);  n %= 1000;
+  const last = n;
 
   if (crore)    parts.push(`${twoDigit(crore)} CRORE`);
   if (lakh)     parts.push(`${twoDigit(lakh)} LAKH`);
@@ -111,7 +112,6 @@ function amountToWords(value: number) {
   return `RS. ${integerToWords(rounded)} ONLY`;
 }
 
-// A4 at 96 dpi: 210mm × 297mm ≈ 794px × 1123px
 const A4_HEIGHT_PX = 297 * (96 / 25.4);
 
 export default function InvoiceDocument({
@@ -126,19 +126,15 @@ export default function InvoiceDocument({
   useEffect(() => {
     const el = wrapperRef.current;
     if (!el) return;
-
-    // Reset any previous scale before measuring
     el.style.transform = "";
     el.style.transformOrigin = "";
-
+    el.style.width = "";
     const contentH = el.scrollHeight;
     if (contentH > A4_HEIGHT_PX) {
       const scale = A4_HEIGHT_PX / contentH;
-      // Only scale down if it's not too extreme (don't go below 70%)
       if (scale >= 0.7) {
         el.style.transform = `scale(${scale})`;
         el.style.transformOrigin = "top left";
-        // Compensate width so the page doesn't scroll horizontally
         el.style.width = `${(1 / scale) * 100}%`;
       }
     }
@@ -150,6 +146,14 @@ export default function InvoiceDocument({
   const taxableValue = Number(invoice.subtotal || 0);
   const freightPacking = Number(dispatch.freight_packing || 0);
   const otherCharges = Number(dispatch.other_charges || 0);
+
+  const gstRate = lines[0]?.gst_rate ?? 18;
+  const cgstRate = gstRate / 2;
+  const sgstRate = gstRate / 2;
+
+  // State fallback: use buyer.state first, then place_of_supply
+  const buyerState = buyer.state || dispatch.place_of_supply || "-";
+  const buyerStateCode = buyer.state_code || "-";
 
   return (
     <div
@@ -281,8 +285,8 @@ export default function InvoiceDocument({
             <strong>GSTIN</strong> {buyer.gstin || "-"}
           </div>
           <div>
-            <strong>State</strong> {buyer.state || "-"}{" "}
-            <strong style={{ marginLeft: 10 }}>Code</strong> {buyer.state_code || "-"}
+            <strong>State</strong> {buyerState}{" "}
+            <strong style={{ marginLeft: 10 }}>Code</strong> {buyerStateCode}
           </div>
           <div style={{ marginTop: "6px" }}>
             <strong>PLACE OF SUPPLY</strong> {dispatch.place_of_supply || buyer.state || "-"}
@@ -305,8 +309,8 @@ export default function InvoiceDocument({
             <strong>GSTIN</strong> {buyer.gstin || "-"}
           </div>
           <div>
-            <strong>State</strong> {buyer.state || "-"}{" "}
-            <strong style={{ marginLeft: 10 }}>Code</strong> {buyer.state_code || "-"}
+            <strong>State</strong> {buyerState}{" "}
+            <strong style={{ marginLeft: 10 }}>Code</strong> {buyerStateCode}
           </div>
           <div style={{ marginTop: "6px" }}>
             <strong>PLACE OF SUPPLY</strong> {dispatch.place_of_supply || buyer.state || "-"}
@@ -314,7 +318,7 @@ export default function InvoiceDocument({
         </div>
       </div>
 
-      {/* ── Line items — only real rows, no blanks ── */}
+      {/* ── Line items ── */}
       <table
         style={{
           width: "100%",
@@ -428,16 +432,16 @@ export default function InvoiceDocument({
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "10px" }}>
             <tbody>
               {[
-                { label: "TOTAL VALUE",          value: formatMoney(taxableValue) },
-                { label: "Documents Through",    value: dispatch.documents_through || "-" },
-                { label: "Freight Packing",      value: formatMoney(freightPacking) },
-                { label: "Transportation",       value: dispatch.transportation || "-" },
-                { label: "Other Charges",        value: formatMoney(otherCharges) },
-                { label: "L. R. No.",            value: dispatch.lr_no || "-" },
-                { label: "Central Tax CGST",     value: invoice.cgst > 0 ? `9  ${formatMoney(invoice.cgst)}` : "0.00" },
-                { label: "Mode of despatch",     value: dispatch.mode_of_dispatch || "-" },
-                { label: "State Tax SGST",       value: invoice.sgst > 0 ? `9  ${formatMoney(invoice.sgst)}` : "0.00" },
-                { label: "Integrated Tax IGST",  value: invoice.igst > 0 ? `18  ${formatMoney(invoice.igst)}` : "0.00" },
+                { label: "TOTAL VALUE",                         value: formatMoney(taxableValue) },
+                { label: "Documents Through",                   value: dispatch.documents_through || "-" },
+                { label: "Freight Packing",                     value: formatMoney(freightPacking) },
+                { label: "Transportation",                      value: dispatch.transportation || "-" },
+                { label: "Other Charges",                       value: formatMoney(otherCharges) },
+                { label: "L. R. No.",                           value: dispatch.lr_no || "-" },
+                { label: "Mode of despatch",                    value: dispatch.mode_of_dispatch || "-" },
+                { label: `Central Tax CGST (${cgstRate}%)`,    value: invoice.cgst > 0 ? formatMoney(invoice.cgst) : "0.00" },
+                { label: `State Tax SGST (${sgstRate}%)`,      value: invoice.sgst > 0 ? formatMoney(invoice.sgst) : "0.00" },
+                { label: `Integrated Tax IGST (${gstRate}%)`,  value: invoice.igst > 0 ? formatMoney(invoice.igst) : "0.00" },
               ].map(({ label, value }) => (
                 <tr key={label}>
                   <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 8px" }}>
@@ -461,7 +465,7 @@ export default function InvoiceDocument({
         </div>
       </div>
 
-      {/* ── Disclaimer + Signature — kept together, never split ── */}
+      {/* ── Disclaimer + Signature — never split across pages ── */}
       <div style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
         <div
           style={{
