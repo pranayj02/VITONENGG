@@ -11,13 +11,34 @@ import {
   Search,
   Trash2,
   X,
+  History,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { getCurrentFY } from "@/lib/fy";
 import InvoicePrintModal from "@/components/InvoicePrintModal";
 import { useSearchParams } from "next/navigation";
 
+// ─── State code lookup (for fallback when buyer.state_code is null) ──────────
+
+const STATE_CODES: Record<string, string> = {
+  "Andhra Pradesh": "37", "Arunachal Pradesh": "12", "Assam": "18",
+  "Bihar": "10", "Chhattisgarh": "22", "Goa": "30", "Gujarat": "24",
+  "Haryana": "06", "Himachal Pradesh": "02", "Jharkhand": "20",
+  "Karnataka": "29", "Kerala": "32", "Madhya Pradesh": "23",
+  "Maharashtra": "27", "Manipur": "14", "Meghalaya": "17",
+  "Mizoram": "15", "Nagaland": "13", "Odisha": "21", "Punjab": "03",
+  "Rajasthan": "08", "Sikkim": "11", "Tamil Nadu": "33",
+  "Telangana": "36", "Tripura": "16", "Uttar Pradesh": "09",
+  "Uttarakhand": "05", "West Bengal": "19", "Delhi": "07",
+  "Jammu and Kashmir": "01", "Ladakh": "38", "Chandigarh": "04",
+  "Dadra and Nagar Haveli and Daman and Diu": "26",
+  "Lakshadweep": "31", "Andaman and Nicobar Islands": "35",
+  "Puducherry": "34",
+};
+
 const MAHARASHTRA_STATE_CODE = "27";
+
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 type BuyerRow = {
   id: string;
@@ -141,6 +162,8 @@ type InvoiceRecord = {
   created_at?: string | null;
 };
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
 function createEmptyLine(): InvoiceLine {
   return {
     buyer_po_sr_no: "",
@@ -185,6 +208,11 @@ function normalizeBuyer(row: BuyerRow): Buyer {
   const displayName =
     row.display_name?.trim() || (branchName ? `${companyName} - ${branchName}` : companyName);
 
+  // Derive state_code from state name if not stored
+  const state = row.state ?? null;
+  const stateCode =
+    row.state_code?.trim() || (state ? STATE_CODES[state] ?? null : null);
+
   return {
     id: row.id,
     company_name: companyName,
@@ -192,8 +220,8 @@ function normalizeBuyer(row: BuyerRow): Buyer {
     display_name: displayName,
     address: row.address ?? null,
     gstin: row.gstin ?? null,
-    state: row.state ?? null,
-    state_code: row.state_code ?? null,
+    state,
+    state_code: stateCode,
     contact_name: row.contact_name ?? null,
     contact_phone: row.contact_phone ?? null,
     payment_terms: row.payment_terms ?? null,
@@ -224,7 +252,6 @@ function normalizeLine(row: any): InvoiceLine {
 
 function normalizeDispatchMeta(row: any): DispatchMeta {
   const fallback = defaultDispatchMeta();
-
   return {
     place_of_supply: String(row?.place_of_supply ?? fallback.place_of_supply),
     po_date: String(row?.po_date ?? fallback.po_date),
@@ -248,6 +275,8 @@ function openInvoicePrint(id: string) {
     "noopener,noreferrer"
   );
 }
+
+// ─── Component ───────────────────────────────────────────────────────────────
 
 export default function NewInvoicePage() {
   const searchParams = useSearchParams();
@@ -286,9 +315,7 @@ export default function NewInvoicePage() {
     try {
       setLoading(true);
       setError("");
-
       const loadedBuyers = await loadBuyers();
-
       if (editId) {
         await loadExistingInvoice(loadedBuyers, editId);
       } else {
@@ -316,12 +343,10 @@ export default function NewInvoicePage() {
 
   async function loadExistingInvoice(buyerRows: Buyer[], id: string) {
     const { data, error } = await supabase.from("invoices").select("*").eq("id", id).single();
-
     if (error) throw error;
 
     const invoice = data as InvoiceRecord;
-    const existingBuyer =
-      buyerRows.find((buyer) => buyer.id === invoice.buyer_id) ?? null;
+    const existingBuyer = buyerRows.find((b) => b.id === invoice.buyer_id) ?? null;
 
     if (existingBuyer) {
       setSelectedBuyer(existingBuyer);
@@ -375,7 +400,6 @@ export default function NewInvoicePage() {
     if (error) throw error;
 
     const nextSerial = data?.[0]?.fy_serial ? Number(data[0].fy_serial) + 1 : 1;
-
     setFyLabel(currentFy);
     setFySerial(nextSerial);
     setInvoiceNumber(`${currentFy}/${String(nextSerial).padStart(3, "0")}`);
@@ -397,18 +421,13 @@ export default function NewInvoicePage() {
   }
 
   const filteredBuyers = buyers.filter((buyer) =>
-    [
-      buyer.display_name,
-      buyer.company_name,
-      buyer.branch_name || "",
-      buyer.gstin || "",
-      buyer.address || "",
-      buyer.state || "",
-    ]
+    [buyer.display_name, buyer.company_name, buyer.branch_name || "", buyer.gstin || "", buyer.state || ""]
       .join(" ")
       .toLowerCase()
       .includes(buyerSearch.toLowerCase())
   );
+
+  // ── Tax calculation — uses actual gst_rate from first valid line ────────────
 
   const taxMode =
     selectedBuyer?.state_code && selectedBuyer.state_code !== MAHARASHTRA_STATE_CODE
@@ -419,10 +438,18 @@ export default function NewInvoicePage() {
   const freightPacking = Number(dispatchMeta.freight_packing || 0);
   const otherCharges = Number(dispatchMeta.other_charges || 0);
   const taxableBase = Number((subtotal + freightPacking + otherCharges).toFixed(2));
-  const cgst = taxMode === "intra" ? Number((taxableBase * 0.09).toFixed(2)) : 0;
-  const sgst = taxMode === "intra" ? Number((taxableBase * 0.09).toFixed(2)) : 0;
-  const igst = taxMode === "inter" ? Number((taxableBase * 0.18).toFixed(2)) : 0;
+
+  // Derive GST rate from line items — use first line with a valid rate, default 18
+  const lineGstRate = lineItems.find((l) => Number(l.gst_rate) > 0)?.gst_rate ?? 18;
+  const halfRate = lineGstRate / 2 / 100;
+  const fullRate = lineGstRate / 100;
+
+  const cgst = taxMode === "intra" ? Number((taxableBase * halfRate).toFixed(2)) : 0;
+  const sgst = taxMode === "intra" ? Number((taxableBase * halfRate).toFixed(2)) : 0;
+  const igst = taxMode === "inter" ? Number((taxableBase * fullRate).toFixed(2)) : 0;
   const total = Number((taxableBase + cgst + sgst + igst).toFixed(2));
+
+  // ── Line item helpers ────────────────────────────────────────────────────────
 
   function updateLine(index: number, patch: Partial<InvoiceLine>) {
     setLineItems((prev) =>
@@ -549,28 +576,46 @@ export default function NewInvoicePage() {
       };
 
       const result = editId
-        ? await supabase
-            .from("invoices")
-            .update(payload)
-            .eq("id", editId)
-            .select("id")
-            .single()
+        ? await supabase.from("invoices").update(payload).eq("id", editId).select("id").single()
         : await supabase.from("invoices").insert(payload).select("id").single();
 
       if (result.error) throw result.error;
 
-      const buyerMemoryPayload = previewData.line_items.map((line) => ({
-        buyer_id: selectedBuyer.id,
-        buyer_item_code: line.buyer_item_code.trim() || null,
-        description: line.description.trim(),
-        unit: line.unit.trim() || "Nos.",
-        hsn_code: line.hsn_code.trim() || null,
-        gst_rate: Number(line.gst_rate || 18),
-        last_price: Number(line.unit_rate || 0),
-      }));
+      // ── Buyer item memory: update existing records, insert only new ones ──
+      for (const line of previewData.line_items) {
+        if (!line.description.trim()) continue;
 
-      if (buyerMemoryPayload.length > 0) {
-        await supabase.from("buyer_items").insert(buyerMemoryPayload);
+        const existing = buyerItems.find(
+          (bi) =>
+            bi.description.trim().toLowerCase() === line.description.trim().toLowerCase() &&
+            bi.buyer_id === selectedBuyer.id
+        );
+
+        if (existing) {
+          // Only update if price has changed
+          if (existing.last_price !== Number(line.unit_rate)) {
+            await supabase
+              .from("buyer_items")
+              .update({
+                last_price: Number(line.unit_rate),
+                buyer_item_code: line.buyer_item_code.trim() || existing.buyer_item_code,
+                hsn_code: line.hsn_code.trim() || existing.hsn_code,
+                gst_rate: Number(line.gst_rate || 18),
+                unit: line.unit.trim() || existing.unit,
+              })
+              .eq("id", existing.id);
+          }
+        } else {
+          await supabase.from("buyer_items").insert({
+            buyer_id: selectedBuyer.id,
+            buyer_item_code: line.buyer_item_code.trim() || null,
+            description: line.description.trim(),
+            unit: line.unit.trim() || "Nos.",
+            hsn_code: line.hsn_code.trim() || null,
+            gst_rate: Number(line.gst_rate || 18),
+            last_price: Number(line.unit_rate || 0),
+          });
+        }
       }
 
       const row = result.data as { id: string };
@@ -583,6 +628,8 @@ export default function NewInvoicePage() {
       setSaving(false);
     }
   }
+
+  // ─── Success screen ──────────────────────────────────────────────────────────
 
   if (savedInvoiceId && previewInvoice) {
     return (
@@ -598,7 +645,7 @@ export default function NewInvoicePage() {
             </h2>
             <p className="text-gray-400 text-sm font-mono mb-2">{invoiceNumber}</p>
             <p className="text-gray-500 text-sm mb-6">
-              Saved as {invoiceStatus === "draft" ? "draft" : "confirmed"} invoice.
+              Saved as {invoiceStatus === "draft" ? "draft" : "confirmed"} · {selectedBuyer?.display_name}
             </p>
 
             <div className="flex flex-wrap gap-3 justify-center">
@@ -616,6 +663,14 @@ export default function NewInvoicePage() {
               >
                 <Plus size={15} />
                 New Invoice
+              </a>
+
+              <a
+                href="/dashboard/invoices/history"
+                className="bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold px-5 py-2.5 rounded-xl text-sm flex items-center gap-2"
+              >
+                <History size={15} />
+                View History
               </a>
             </div>
           </div>
@@ -670,6 +725,8 @@ export default function NewInvoicePage() {
 
         <div className="grid grid-cols-1 xl:grid-cols-[1.2fr_0.8fr] gap-6">
           <div className="space-y-6">
+
+            {/* ── Buyer Branch ── */}
             <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
               <h2 className="text-white font-bold text-lg mb-4">Buyer Branch</h2>
 
@@ -723,6 +780,7 @@ export default function NewInvoicePage() {
                         <p className="text-gray-400 text-xs mt-1">
                           {buyer.branch_name || buyer.state || "Main Branch"} ·{" "}
                           {buyer.gstin || "No GSTIN"}
+                          {buyer.state_code ? ` · Code ${buyer.state_code}` : ""}
                         </p>
                         {buyer.address ? (
                           <p className="text-gray-500 text-xs mt-1 line-clamp-2">{buyer.address}</p>
@@ -750,7 +808,9 @@ export default function NewInvoicePage() {
                           : "bg-blue-500/10 text-blue-400"
                       }`}
                     >
-                      {taxMode === "intra" ? "CGST + SGST" : "IGST"}
+                      {taxMode === "intra"
+                        ? `CGST ${lineGstRate / 2}% + SGST ${lineGstRate / 2}%`
+                        : `IGST ${lineGstRate}%`}
                     </span>
                   </div>
 
@@ -800,6 +860,7 @@ export default function NewInvoicePage() {
               </div>
             </div>
 
+            {/* ── Line Items ── */}
             <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
               <div className="px-5 py-4 border-b border-gray-800 flex items-center justify-between">
                 <div>
@@ -852,9 +913,7 @@ export default function NewInvoicePage() {
                           </label>
                           <input
                             value={line.buyer_po_sr_no}
-                            onChange={(e) =>
-                              updateLine(index, { buyer_po_sr_no: e.target.value })
-                            }
+                            onChange={(e) => updateLine(index, { buyer_po_sr_no: e.target.value })}
                             placeholder="00010"
                             className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500"
                           />
@@ -866,9 +925,7 @@ export default function NewInvoicePage() {
                           </label>
                           <input
                             value={line.buyer_item_code}
-                            onChange={(e) =>
-                              updateLine(index, { buyer_item_code: e.target.value })
-                            }
+                            onChange={(e) => updateLine(index, { buyer_item_code: e.target.value })}
                             placeholder="Optional"
                             className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500"
                           />
@@ -924,6 +981,11 @@ export default function NewInvoicePage() {
                               <p className="text-gray-400 text-xs mt-1 line-clamp-2">
                                 {item.description}
                               </p>
+                              {item.last_price ? (
+                                <p className="text-orange-400 text-xs mt-0.5 font-mono">
+                                  Last: Rs. {item.last_price.toLocaleString("en-IN")}
+                                </p>
+                              ) : null}
                             </button>
                           ))}
                         </div>
@@ -977,7 +1039,7 @@ export default function NewInvoicePage() {
                             type="number"
                             readOnly
                             value={line.taxable_value}
-                            className="w-full bg-gray-800 border border-gray-800 rounded-xl px-4 py-3 text-white text-sm"
+                            className="w-full bg-gray-800 border border-gray-800 rounded-xl px-4 py-3 text-white text-sm cursor-not-allowed"
                           />
                         </div>
                       </div>
@@ -988,6 +1050,7 @@ export default function NewInvoicePage() {
             </div>
           </div>
 
+          {/* ── Right panel ── */}
           <div className="space-y-6">
             <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
               <h2 className="text-white font-bold text-lg mb-4">Dispatch and Notes</h2>
@@ -1000,10 +1063,7 @@ export default function NewInvoicePage() {
                   <input
                     value={dispatchMeta.place_of_supply}
                     onChange={(e) =>
-                      setDispatchMeta((prev) => ({
-                        ...prev,
-                        place_of_supply: e.target.value,
-                      }))
+                      setDispatchMeta((prev) => ({ ...prev, place_of_supply: e.target.value }))
                     }
                     className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white text-sm"
                   />
@@ -1028,10 +1088,7 @@ export default function NewInvoicePage() {
                   <input
                     value={dispatchMeta.date_time_of_supply}
                     onChange={(e) =>
-                      setDispatchMeta((prev) => ({
-                        ...prev,
-                        date_time_of_supply: e.target.value,
-                      }))
+                      setDispatchMeta((prev) => ({ ...prev, date_time_of_supply: e.target.value }))
                     }
                     placeholder="24.03.2026 AT 13.00 Hr."
                     className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white text-sm"
@@ -1045,10 +1102,7 @@ export default function NewInvoicePage() {
                   <input
                     value={dispatchMeta.documents_through}
                     onChange={(e) =>
-                      setDispatchMeta((prev) => ({
-                        ...prev,
-                        documents_through: e.target.value,
-                      }))
+                      setDispatchMeta((prev) => ({ ...prev, documents_through: e.target.value }))
                     }
                     className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white text-sm"
                   />
@@ -1061,10 +1115,7 @@ export default function NewInvoicePage() {
                   <input
                     value={dispatchMeta.transportation}
                     onChange={(e) =>
-                      setDispatchMeta((prev) => ({
-                        ...prev,
-                        transportation: e.target.value,
-                      }))
+                      setDispatchMeta((prev) => ({ ...prev, transportation: e.target.value }))
                     }
                     placeholder="VEPL Scope / VRL / Self"
                     className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white text-sm"
@@ -1089,10 +1140,7 @@ export default function NewInvoicePage() {
                   <input
                     value={dispatchMeta.mode_of_dispatch}
                     onChange={(e) =>
-                      setDispatchMeta((prev) => ({
-                        ...prev,
-                        mode_of_dispatch: e.target.value,
-                      }))
+                      setDispatchMeta((prev) => ({ ...prev, mode_of_dispatch: e.target.value }))
                     }
                     className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white text-sm"
                   />
@@ -1152,9 +1200,7 @@ export default function NewInvoicePage() {
 
               <div className="mt-4 space-y-4">
                 <div>
-                  <label className="block text-sm text-gray-300 font-medium mb-2">
-                    Billed To
-                  </label>
+                  <label className="block text-sm text-gray-300 font-medium mb-2">Billed To</label>
                   <textarea
                     value={dispatchMeta.billed_to}
                     onChange={(e) =>
@@ -1165,9 +1211,7 @@ export default function NewInvoicePage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm text-gray-300 font-medium mb-2">
-                    Shipped To
-                  </label>
+                  <label className="block text-sm text-gray-300 font-medium mb-2">Shipped To</label>
                   <textarea
                     value={dispatchMeta.shipped_to}
                     onChange={(e) =>
@@ -1189,6 +1233,7 @@ export default function NewInvoicePage() {
               </div>
             </div>
 
+            {/* ── Totals ── */}
             <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
               <h2 className="text-white font-bold text-lg mb-4">Totals</h2>
 
@@ -1210,15 +1255,15 @@ export default function NewInvoicePage() {
                   <span>Rs. {money(taxableBase)}</span>
                 </div>
                 <div className="flex items-center justify-between text-gray-400">
-                  <span>CGST</span>
+                  <span>CGST ({lineGstRate / 2}%)</span>
                   <span>Rs. {money(cgst)}</span>
                 </div>
                 <div className="flex items-center justify-between text-gray-400">
-                  <span>SGST</span>
+                  <span>SGST ({lineGstRate / 2}%)</span>
                   <span>Rs. {money(sgst)}</span>
                 </div>
                 <div className="flex items-center justify-between text-gray-400">
-                  <span>IGST</span>
+                  <span>IGST ({lineGstRate}%)</span>
                   <span>Rs. {money(igst)}</span>
                 </div>
                 <div className="flex items-center justify-between text-white font-bold text-base pt-2 border-t border-gray-800">
