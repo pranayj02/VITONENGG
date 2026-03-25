@@ -8,11 +8,8 @@ import {
   Building2,
   Trash2,
   Plus,
-  Phone,
-  MapPin,
   BadgeIndianRupee,
   Pencil,
-  Eye,
   Package,
   Save,
   GitBranch,
@@ -187,34 +184,29 @@ export default function BuyersPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Distinct company names for combobox
   const [companyNames, setCompanyNames] = useState<string[]>([]);
   const [companyDropdownOpen, setCompanyDropdownOpen] = useState(false);
 
-  // Buyer modal
   const [buyerModalOpen, setBuyerModalOpen] = useState(false);
   const [buyerModalMode, setBuyerModalMode] = useState<"add" | "edit">("add");
   const [buyerForm, setBuyerForm] = useState<BuyerFormState>(emptyBuyerForm);
   const [editingBuyerId, setEditingBuyerId] = useState<string | null>(null);
   const [savingBuyer, setSavingBuyer] = useState(false);
 
-  // Detail panel
   const [detailBuyer, setDetailBuyer] = useState<Buyer | null>(null);
   const [buyerItems, setBuyerItems] = useState<BuyerItem[]>([]);
   const [itemsLoading, setItemsLoading] = useState(false);
 
-  // Item forms
   const [showNewItemForm, setShowNewItemForm] = useState(false);
   const [newItemForm, setNewItemForm] = useState<BuyerItemFormState>(emptyItemForm);
   const [savingItem, setSavingItem] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [editingItemForm, setEditingItemForm] = useState<BuyerItemFormState>(emptyItemForm);
 
-  // Delete confirmation
   const [confirmDeleteBuyer, setConfirmDeleteBuyer] = useState<Buyer | null>(null);
   const [deletingBuyerId, setDeletingBuyerId] = useState<string | null>(null);
 
-  // ── Data loading ────────────────────────────────────────────────────────────
+  // ── Data loading ─────────────────────────────────────────────────────────────
 
   async function loadBuyers() {
     setLoading(true);
@@ -223,7 +215,8 @@ export default function BuyersPage() {
     const { data, error } = await supabase
       .from("buyers")
       .select("*")
-      .order("company_name", { ascending: true });
+      .order("company_name", { ascending: true })
+      .order("branch_name", { ascending: true });
 
     if (error) {
       setError(error.message);
@@ -235,7 +228,6 @@ export default function BuyersPage() {
     setBuyers(rows);
     setFilteredBuyers(rows);
 
-    // Build distinct company names for combobox
     const names = Array.from(
       new Set(
         rows
@@ -289,7 +281,6 @@ export default function BuyersPage() {
           buyer.state_code,
           buyer.contact_name,
           buyer.contact_phone,
-          buyer.payment_terms,
           buyer.address,
         ]
           .join(" ")
@@ -299,7 +290,7 @@ export default function BuyersPage() {
     );
   }, [buyers, search]);
 
-  // ── Modal helpers ───────────────────────────────────────────────────────────
+  // ── Modal helpers ─────────────────────────────────────────────────────────────
 
   function openAddBuyer() {
     setBuyerModalMode("add");
@@ -329,7 +320,7 @@ export default function BuyersPage() {
     await loadBuyerItems(buyer.id);
   }
 
-  // ── Form field updates ──────────────────────────────────────────────────────
+  // ── Form field updates ────────────────────────────────────────────────────────
 
   function updateBuyerField<K extends keyof BuyerFormState>(
     key: K,
@@ -338,7 +329,7 @@ export default function BuyersPage() {
     setBuyerForm((prev) => {
       const next = { ...prev, [key]: value };
 
-      // GSTIN typed → auto-fill state + state_code
+      // ── FIX 1: GSTIN autofill — clear stale state if prefix invalid ──
       if (key === "gstin") {
         const gst = String(value).toUpperCase();
         next.gstin = gst;
@@ -347,14 +338,22 @@ export default function BuyersPage() {
           if (meta) {
             next.state = meta.state;
             next.state_code = meta.code;
+          } else {
+            // Invalid prefix — clear to avoid stale mismatch
+            next.state = "";
+            next.state_code = "";
           }
+        } else {
+          // Too short to derive anything — clear both
+          next.state = "";
+          next.state_code = "";
         }
       }
 
-      // State selected → auto-fill state_code
+      // ── FIX 2: State dropdown — always sync state_code, clear if blank ──
       if (key === "state") {
         const match = INDIA_STATES.find((s) => s.state === value);
-        if (match) next.state_code = match.code;
+        next.state_code = match ? match.code : "";
       }
 
       return next;
@@ -375,7 +374,7 @@ export default function BuyersPage() {
     setEditingItemForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  // ── Save / delete buyers ────────────────────────────────────────────────────
+  // ── Save / delete buyers ──────────────────────────────────────────────────────
 
   async function handleSaveBuyer(e: React.FormEvent) {
     e.preventDefault();
@@ -389,13 +388,55 @@ export default function BuyersPage() {
       return;
     }
 
+    // ── FIX 3: Duplicate GSTIN check ─────────────────────────────────────────
+    if (buyerForm.gstin.trim()) {
+      const { data: existingGstin } = await supabase
+        .from("buyers")
+        .select("id, display_name")
+        .eq("gstin", buyerForm.gstin.trim().toUpperCase())
+        .neq("id", editingBuyerId ?? "00000000-0000-0000-0000-000000000000")
+        .maybeSingle();
+
+      if (existingGstin) {
+        setError(
+          `This GSTIN is already registered under "${
+            (existingGstin as any).display_name || "another buyer"
+          }". Each GSTIN must be unique.`
+        );
+        setSavingBuyer(false);
+        return;
+      }
+    }
+
+    // ── Duplicate company + branch check ─────────────────────────────────────
+    const branchVal = buyerForm.branch_name.trim() || null;
+    const dupQuery = supabase
+      .from("buyers")
+      .select("id")
+      .eq("company_name", buyerForm.company_name.trim())
+      .neq("id", editingBuyerId ?? "00000000-0000-0000-0000-000000000000");
+
+    const { data: existingBranch } = branchVal
+      ? await dupQuery.eq("branch_name", branchVal).maybeSingle()
+      : await dupQuery.is("branch_name", null).maybeSingle();
+
+    if (existingBranch) {
+      setError(
+        branchVal
+          ? `"${buyerForm.company_name.trim()} - ${branchVal}" already exists.`
+          : `"${buyerForm.company_name.trim()}" already exists with no branch name. Add a branch name to differentiate.`
+      );
+      setSavingBuyer(false);
+      return;
+    }
+
     const displayName = composeDisplayName(buyerForm.company_name, buyerForm.branch_name);
 
     const payload = {
       company_name: buyerForm.company_name.trim(),
       branch_name: buyerForm.branch_name.trim() || null,
       display_name: displayName,
-      name: displayName, // backward-compat
+      name: displayName,
       address: buyerForm.address.trim() || null,
       gstin: buyerForm.gstin.trim().toUpperCase() || null,
       state: buyerForm.state.trim() || null,
@@ -438,7 +479,7 @@ export default function BuyersPage() {
     await loadBuyers();
   }
 
-  // ── Buyer items ─────────────────────────────────────────────────────────────
+  // ── Buyer items ───────────────────────────────────────────────────────────────
 
   async function handleAddBuyerItem() {
     if (!detailBuyer) return;
@@ -519,14 +560,15 @@ export default function BuyersPage() {
     await loadBuyerItems(detailBuyer.id);
   }
 
-  // ── Filtered company suggestions for combobox ───────────────────────────────
+  // ── Company combobox suggestions ──────────────────────────────────────────────
 
-  const companySuggestions = companyNames.filter((name) =>
-    name.toLowerCase().includes(buyerForm.company_name.toLowerCase()) &&
-    name.toLowerCase() !== buyerForm.company_name.toLowerCase()
+  const companySuggestions = companyNames.filter(
+    (name) =>
+      name.toLowerCase().includes(buyerForm.company_name.toLowerCase()) &&
+      name.toLowerCase() !== buyerForm.company_name.toLowerCase()
   );
 
-  // ─── Render ─────────────────────────────────────────────────────────────────
+  // ─── Render ───────────────────────────────────────────────────────────────────
 
   return (
     <div className="p-6 lg:p-8 max-w-7xl mx-auto">
@@ -628,7 +670,12 @@ export default function BuyersPage() {
                   className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white text-sm uppercase placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500"
                 />
                 <p className="text-gray-600 text-xs mt-1.5">
-                  State and code auto-fill from the first 2 digits.
+                  State and code auto-fill from the first 2 digits.{" "}
+                  {buyerForm.gstin.length >= 2 && !buyerForm.state && (
+                    <span className="text-yellow-500">
+                      Unrecognised prefix — please select state manually.
+                    </span>
+                  )}
                 </p>
               </div>
 
@@ -951,7 +998,9 @@ export default function BuyersPage() {
                     <div className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
                   </div>
                 ) : buyerItems.length === 0 ? (
-                  <div className="text-center py-16 text-gray-600">No items yet for this branch.</div>
+                  <div className="text-center py-16 text-gray-600">
+                    No items yet for this branch.
+                  </div>
                 ) : (
                   <div className="space-y-3">
                     {buyerItems.map((item) => {
@@ -1001,7 +1050,10 @@ export default function BuyersPage() {
                                 />
                               </div>
                               <div className="flex justify-end gap-3">
-                                <button onClick={cancelEditingItem} className="bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold px-4 py-2.5 rounded-xl text-sm">
+                                <button
+                                  onClick={cancelEditingItem}
+                                  className="bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold px-4 py-2.5 rounded-xl text-sm"
+                                >
                                   Cancel
                                 </button>
                                 <button
@@ -1010,43 +1062,38 @@ export default function BuyersPage() {
                                   className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-semibold px-4 py-2.5 rounded-xl text-sm"
                                 >
                                   <Save size={14} />
-                                  {savingItem ? "Saving..." : "Update Item"}
+                                  {savingItem ? "Saving..." : "Save"}
                                 </button>
                               </div>
                             </div>
                           ) : (
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-9 h-9 rounded-xl bg-orange-500/10 flex items-center justify-center flex-shrink-0">
-                                    <Package size={16} className="text-orange-400" />
-                                  </div>
-                                  <div className="text-white font-semibold">
-                                    {item.buyer_item_code || "No buyer item code"}
-                                  </div>
-                                </div>
-                                <div className="mt-3 text-gray-300 text-sm leading-6 whitespace-pre-wrap">
-                                  {item.description}
-                                </div>
-                                <div className="mt-3 flex flex-wrap gap-2">
-                                  {item.unit && (
-                                    <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-gray-800 text-gray-300">
-                                      Unit: {item.unit}
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-2 mb-1">
+                                  {item.buyer_item_code && (
+                                    <span className="text-orange-400 font-mono text-xs font-semibold bg-orange-500/10 px-2 py-0.5 rounded-lg">
+                                      {item.buyer_item_code}
                                     </span>
                                   )}
                                   {item.hsn_code && (
-                                    <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-gray-800 text-gray-300">
-                                      HSN: {item.hsn_code}
+                                    <span className="text-gray-500 text-xs">
+                                      HSN {item.hsn_code}
                                     </span>
                                   )}
                                   {item.gst_rate != null && (
-                                    <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-gray-800 text-gray-300">
-                                      GST: {item.gst_rate}%
+                                    <span className="text-gray-500 text-xs">
+                                      GST {item.gst_rate}%
                                     </span>
                                   )}
+                                </div>
+                                <p className="text-white text-sm leading-relaxed">
+                                  {item.description}
+                                </p>
+                                <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-gray-500">
+                                  {item.unit && <span>{item.unit}</span>}
                                   {item.last_price != null && (
-                                    <span className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-gray-800 text-gray-300">
-                                      Last Price: Rs. {Number(item.last_price).toLocaleString("en-IN")}
+                                    <span className="text-green-400 font-mono">
+                                      Last Rs. {item.last_price.toLocaleString("en-IN")}
                                     </span>
                                   )}
                                 </div>
@@ -1054,17 +1101,15 @@ export default function BuyersPage() {
                               <div className="flex gap-2 flex-shrink-0">
                                 <button
                                   onClick={() => startEditingItem(item)}
-                                  className="flex items-center gap-2 bg-yellow-500/10 hover:bg-yellow-500 text-yellow-400 hover:text-white border border-yellow-500/30 hover:border-yellow-500 font-semibold px-3 py-2 rounded-xl text-sm transition-all"
+                                  className="p-2 rounded-xl bg-gray-800 hover:bg-yellow-500/20 text-gray-400 hover:text-yellow-400 transition-all"
                                 >
                                   <Pencil size={14} />
-                                  Edit
                                 </button>
                                 <button
                                   onClick={() => handleDeleteItem(item.id)}
-                                  className="flex items-center gap-2 bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/30 hover:border-red-500 font-semibold px-3 py-2 rounded-xl text-sm transition-all"
+                                  className="p-2 rounded-xl bg-gray-800 hover:bg-red-500/20 text-gray-400 hover:text-red-400 transition-all"
                                 >
                                   <Trash2 size={14} />
-                                  Delete
                                 </button>
                               </div>
                             </div>
@@ -1081,34 +1126,34 @@ export default function BuyersPage() {
       )}
 
       {/* ── Page header ── */}
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-white text-2xl font-bold">Buyers</h1>
           <p className="text-gray-500 text-sm mt-1">
-            Each card is one branch. One company can have multiple branches with different GSTINs.
+            Each row is one GST registration / invoice destination.
           </p>
         </div>
         <button
           onClick={openAddBuyer}
-          className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-3 rounded-xl text-sm transition-all"
+          className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-5 py-2.5 rounded-xl text-sm transition-all"
         >
-          <Plus size={16} />
+          <Plus size={15} />
           Add Branch
         </button>
       </div>
 
-      {/* ── Toasts ── */}
-      {error && (
-        <div className="mb-4 bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-300 text-sm">
-          {error}
-        </div>
-      )}
       {success && (
-        <div className="mb-4 bg-green-500/10 border border-green-500/30 rounded-xl p-3 text-green-300 text-sm flex items-center justify-between gap-3">
-          <span>{success}</span>
-          <button onClick={() => setSuccess(null)} className="text-green-200 hover:text-white">
+        <div className="mb-4 bg-green-500/10 border border-green-500/30 rounded-xl p-3 text-green-300 text-sm flex items-center justify-between">
+          {success}
+          <button onClick={() => setSuccess(null)} className="text-green-500 hover:text-green-300">
             <X size={14} />
           </button>
+        </div>
+      )}
+
+      {error && !buyerModalOpen && (
+        <div className="mb-4 bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-300 text-sm">
+          {error}
         </div>
       )}
 
@@ -1118,137 +1163,97 @@ export default function BuyersPage() {
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by company, branch, GSTIN, state or contact..."
-          className="w-full bg-gray-900 border border-gray-800 rounded-xl pl-10 pr-10 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500"
+          placeholder="Search buyers, GSTIN, state, contact..."
+          className="w-full bg-gray-900 border border-gray-800 rounded-xl pl-10 pr-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500"
         />
-        {search && (
-          <button
-            onClick={() => setSearch("")}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white"
-          >
-            <X size={14} />
-          </button>
-        )}
       </div>
 
       {/* ── Buyer cards ── */}
       {loading ? (
-        <div className="flex justify-center py-16">
-          <div className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+        <div className="flex justify-center py-24">
+          <div className="w-7 h-7 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
         </div>
       ) : filteredBuyers.length === 0 ? (
-        <div className="text-center py-16 text-gray-600">
-          {search ? "No branches match your search." : "No buyer branches added yet."}
+        <div className="text-center py-24 text-gray-600">
+          {search ? "No buyers match your search." : "No buyers yet. Add your first branch above."}
         </div>
       ) : (
-        <div className="space-y-3">
-          {filteredBuyers.map((buyer) => {
-            const isIntra = buyer.state_code === "27";
-            const displayName = buyer.display_name || buyer.company_name || buyer.name;
-
-            return (
-              <div
-                key={buyer.id}
-                className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden hover:border-gray-700 transition-all"
-              >
-                <div className="px-5 py-4 flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-4 flex-1 min-w-0">
-                    <div className="w-10 h-10 bg-orange-500/10 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <Building2 size={18} className="text-orange-400" />
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {filteredBuyers.map((buyer) => (
+            <div
+              key={buyer.id}
+              className="bg-gray-900 border border-gray-800 rounded-2xl p-5 flex flex-col gap-3 hover:border-gray-700 transition-all"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-white font-semibold truncate">
+                    {buyer.company_name || buyer.name}
+                  </p>
+                  {buyer.branch_name && (
+                    <div className="flex items-center gap-1.5 mt-1">
+                      <GitBranch size={11} className="text-orange-400 flex-shrink-0" />
+                      <p className="text-orange-400 text-xs font-medium truncate">
+                        {buyer.branch_name}
+                      </p>
                     </div>
-
-                    <div className="min-w-0">
-                      {/* Company + branch + tax mode badge */}
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-white font-semibold text-base">
-                          {buyer.company_name || buyer.name}
-                        </p>
-                        {buyer.branch_name && (
-                          <span className="flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-lg bg-gray-800 text-gray-300">
-                            <GitBranch size={11} />
-                            {buyer.branch_name}
-                          </span>
-                        )}
-                        <span
-                          className={`text-xs font-semibold px-2.5 py-1 rounded-lg ${
-                            isIntra
-                              ? "bg-green-500/10 text-green-400"
-                              : "bg-blue-500/10 text-blue-400"
-                          }`}
-                        >
-                          {isIntra ? "Intra-state" : "Inter-state"}
-                        </span>
-                      </div>
-
-                      {/* Details */}
-                      <div className="mt-2 space-y-1.5">
-                        {buyer.gstin && (
-                          <div className="flex items-center gap-2 text-sm">
-                            <span className="font-mono text-orange-300">{buyer.gstin}</span>
-                          </div>
-                        )}
-                        {(buyer.state || buyer.state_code) && (
-                          <div className="flex items-center gap-2 text-sm text-gray-400">
-                            <MapPin size={13} className="text-gray-500 flex-shrink-0" />
-                            <span>
-                              {buyer.state || "—"}
-                              {buyer.state_code ? ` (${buyer.state_code})` : ""}
-                            </span>
-                          </div>
-                        )}
-                        {buyer.address && (
-                          <div className="flex items-start gap-2 text-sm text-gray-500">
-                            <MapPin size={13} className="text-gray-600 flex-shrink-0 mt-0.5" />
-                            <span className="leading-5 line-clamp-2">{buyer.address}</span>
-                          </div>
-                        )}
-                        {(buyer.contact_name || buyer.contact_phone) && (
-                          <div className="flex items-center gap-2 text-sm text-gray-400">
-                            <Phone size={13} className="text-gray-500 flex-shrink-0" />
-                            <span>
-                              {buyer.contact_name || "—"}
-                              {buyer.contact_phone ? ` · ${buyer.contact_phone}` : ""}
-                            </span>
-                          </div>
-                        )}
-                        {buyer.payment_terms && (
-                          <div className="flex items-center gap-2 text-sm text-gray-400">
-                            <BadgeIndianRupee size={13} className="text-gray-500 flex-shrink-0" />
-                            <span>{buyer.payment_terms}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex gap-2 flex-wrap justify-end flex-shrink-0">
-                    <button
-                      onClick={() => openBuyerDetail(buyer)}
-                      className="flex items-center gap-2 bg-blue-500/10 hover:bg-blue-500 text-blue-400 hover:text-white border border-blue-500/30 hover:border-blue-500 font-semibold px-4 py-2 rounded-xl text-sm transition-all"
-                    >
-                      <Eye size={14} />
-                      View
-                    </button>
-                    <button
-                      onClick={() => openEditBuyer(buyer)}
-                      className="flex items-center gap-2 bg-yellow-500/10 hover:bg-yellow-500 text-yellow-400 hover:text-white border border-yellow-500/30 hover:border-yellow-500 font-semibold px-4 py-2 rounded-xl text-sm transition-all"
-                    >
-                      <Pencil size={14} />
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => setConfirmDeleteBuyer(buyer)}
-                      className="flex items-center gap-2 bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/30 hover:border-red-500 font-semibold px-4 py-2 rounded-xl text-sm transition-all"
-                    >
-                      <Trash2 size={14} />
-                      Delete
-                    </button>
-                  </div>
+                  )}
+                </div>
+                <div className="flex gap-1.5 flex-shrink-0">
+                  <button
+                    onClick={() => openEditBuyer(buyer)}
+                    className="p-2 rounded-xl bg-gray-800 hover:bg-yellow-500/20 text-gray-400 hover:text-yellow-400 transition-all"
+                    title="Edit"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                  <button
+                    onClick={() => openBuyerDetail(buyer)}
+                    className="p-2 rounded-xl bg-gray-800 hover:bg-orange-500/20 text-gray-400 hover:text-orange-400 transition-all"
+                    title="View items"
+                  >
+                    <Package size={14} />
+                  </button>
+                  <button
+                    onClick={() => setConfirmDeleteBuyer(buyer)}
+                    className="p-2 rounded-xl bg-gray-800 hover:bg-red-500/20 text-gray-400 hover:text-red-400 transition-all"
+                    title="Delete"
+                  >
+                    <Trash2 size={14} />
+                  </button>
                 </div>
               </div>
-            );
-          })}
+
+              {buyer.gstin && (
+                <p className="text-orange-300 font-mono text-xs bg-orange-500/5 border border-orange-500/10 rounded-lg px-3 py-1.5 truncate">
+                  {buyer.gstin}
+                </p>
+              )}
+
+              <div className="space-y-1 text-xs text-gray-500">
+                {buyer.state && (
+                  <div className="flex items-center gap-2">
+                    <BadgeIndianRupee size={12} className="flex-shrink-0" />
+                    <span>
+                      {buyer.state}
+                      {buyer.state_code ? ` (${buyer.state_code})` : ""}
+                    </span>
+                  </div>
+                )}
+                {buyer.address && (
+                  <p className="text-gray-600 line-clamp-2 leading-relaxed">{buyer.address}</p>
+                )}
+                {buyer.contact_name && (
+                  <p className="text-gray-500">
+                    {buyer.contact_name}
+                    {buyer.contact_phone ? ` · ${buyer.contact_phone}` : ""}
+                  </p>
+                )}
+                {buyer.payment_terms && (
+                  <p className="text-gray-600">{buyer.payment_terms}</p>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
