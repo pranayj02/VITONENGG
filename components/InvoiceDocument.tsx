@@ -152,23 +152,29 @@ export default function InvoiceDocument({
   const sgstRate = gstRate / 2;
 
   const STATE_CODES: Record<string, string> = {
-  "Andhra Pradesh": "37", "Arunachal Pradesh": "12", "Assam": "18",
-  "Bihar": "10", "Chhattisgarh": "22", "Goa": "30", "Gujarat": "24",
-  "Haryana": "06", "Himachal Pradesh": "02", "Jharkhand": "20",
-  "Karnataka": "29", "Kerala": "32", "Madhya Pradesh": "23",
-  "Maharashtra": "27", "Manipur": "14", "Meghalaya": "17",
-  "Mizoram": "15", "Nagaland": "13", "Odisha": "21", "Punjab": "03",
-  "Rajasthan": "08", "Sikkim": "11", "Tamil Nadu": "33",
-  "Telangana": "36", "Tripura": "16", "Uttar Pradesh": "09",
-  "Uttarakhand": "05", "West Bengal": "19", "Delhi": "07",
-  "Jammu and Kashmir": "01", "Ladakh": "38", "Chandigarh": "04",
-  "Puducherry": "34", "Dadra and Nagar Haveli and Daman and Diu": "26",
-  "Lakshadweep": "31", "Andaman and Nicobar Islands": "35",
-};
+    "Andhra Pradesh": "37", "Arunachal Pradesh": "12", "Assam": "18",
+    "Bihar": "10", "Chhattisgarh": "22", "Goa": "30", "Gujarat": "24",
+    "Haryana": "06", "Himachal Pradesh": "02", "Jharkhand": "20",
+    "Karnataka": "29", "Kerala": "32", "Madhya Pradesh": "23",
+    "Maharashtra": "27", "Manipur": "14", "Meghalaya": "17",
+    "Mizoram": "15", "Nagaland": "13", "Odisha": "21", "Punjab": "03",
+    "Rajasthan": "08", "Sikkim": "11", "Tamil Nadu": "33",
+    "Telangana": "36", "Tripura": "16", "Uttar Pradesh": "09",
+    "Uttarakhand": "05", "West Bengal": "19", "Delhi": "07",
+    "Jammu and Kashmir": "01", "Ladakh": "38", "Chandigarh": "04",
+    "Puducherry": "34", "Dadra and Nagar Haveli and Daman and Diu": "26",
+    "Lakshadweep": "31", "Andaman and Nicobar Islands": "35",
+  };
 
-const buyerState = buyer.state || dispatch.place_of_supply || "-";
-const buyerStateCode = buyer.state_code || STATE_CODES[buyerState] || "-";
+  const buyerState = buyer.state || dispatch.place_of_supply || "-";
+  const buyerStateCode = buyer.state_code || STATE_CODES[buyerState] || "-";
 
+  const cellStyle: React.CSSProperties = {
+    borderBottom: "1px solid #000",
+    borderRight: "1px solid #000",
+    padding: "6px 8px",
+    fontSize: "10px",
+  };
 
   return (
     <div
@@ -186,6 +192,7 @@ const buyerStateCode = buyer.state_code || STATE_CODES[buyerState] || "-";
       }}
     >
       {/* ── Header ── */}
+      {/* CHANGE 3: Office address removed from center block */}
       <div
         style={{
           display: "grid",
@@ -194,6 +201,7 @@ const buyerStateCode = buyer.state_code || STATE_CODES[buyerState] || "-";
           alignItems: "start",
         }}
       >
+        {/* CHANGE 1: PO No. and PO Date now together in the top-left block */}
         <div style={{ border: "1px solid #000", padding: "8px 10px", minHeight: "78px" }}>
           <div style={{ fontSize: "12px", fontWeight: 700, marginBottom: "6px" }}>
             GST Invoice No. {invoice.invoice_number}
@@ -201,8 +209,11 @@ const buyerStateCode = buyer.state_code || STATE_CODES[buyerState] || "-";
           <div style={{ marginBottom: "4px" }}>
             <strong>Date</strong> {formatDate(invoice.invoice_date)}
           </div>
-          <div>
+          <div style={{ marginBottom: "4px" }}>
             <strong>P.O. No.</strong> {invoice.buyers_po_number || "-"}
+          </div>
+          <div>
+            <strong>P.O. Date</strong> {formatDate(dispatch.po_date) || "-"}
           </div>
         </div>
 
@@ -210,13 +221,9 @@ const buyerStateCode = buyer.state_code || STATE_CODES[buyerState] || "-";
           <div style={{ fontWeight: 700, fontSize: "20px", letterSpacing: "0.3px" }}>
             VITON ENGINEERS PVT. LTD.
           </div>
+          {/* Office address removed — only factory address retained */}
           <div style={{ marginTop: "4px", lineHeight: 1.35, fontSize: "10px" }}>
-            Office 701, Swastik Disa Corporate Park, Opp. Shreyas Cinema, LBS Marg,
-            Ghatkopar W Mumbai- 400086
-          </div>
-          <div style={{ lineHeight: 1.35, fontSize: "10px" }}>
-            Factory B 401, Addl. Ambernath MIDC, Anand Nagar, Ambernath E Dist.
-            Thane-421506
+            Factory B 401, Addl. Ambernath MIDC, Anand Nagar, Ambernath E Dist. Thane-421506
           </div>
           <div style={{ marginTop: "3px", fontSize: "10px" }}>
             Phone 08779301215, Tel Fax 022-25660534, Email info@vitonvalves.com
@@ -248,6 +255,8 @@ const buyerStateCode = buyer.state_code || STATE_CODES[buyerState] || "-";
       </div>
 
       {/* ── Challan / HSN meta ── */}
+      {/* CHANGE 1: PO Date removed from here (moved to header block above) */}
+      {/* CHANGE 4: "Details of Viton Engineers" heading added on right column */}
       <div
         style={{
           display: "grid",
@@ -259,12 +268,15 @@ const buyerStateCode = buyer.state_code || STATE_CODES[buyerState] || "-";
         <div style={{ borderRight: "1px solid #000", borderBottom: "1px solid #000", padding: "8px" }}>
           <div><strong>GST Challan No.</strong> {invoice.invoice_number}</div>
           <div><strong>Date</strong> {formatDate(invoice.invoice_date)}</div>
-          <div><strong>P.O. Date</strong> {formatDate(dispatch.po_date)}</div>
           <div><strong>GSTIN No.</strong> 27AACCV7755N1ZK</div>
           <div><strong>PAN No.</strong> AACCV7755N</div>
           <div><strong>Vehicle No.</strong> {dispatch.vehicle_no || "-"}</div>
         </div>
         <div style={{ borderBottom: "1px solid #000", padding: "8px" }}>
+          {/* CHANGE 4: Heading added */}
+          <div style={{ fontWeight: 700, marginBottom: "6px", fontSize: "10px" }}>
+            Details of Viton Engineers
+          </div>
           <div><strong>HSN CODE</strong> {lines[0]?.hsn_code || "84818030"}</div>
           <div><strong>UDYAM REGISTRATION NO.</strong> UDYAM-MH-18-0012579</div>
           <div><strong>Date Time of Supply</strong> {dispatch.date_time_of_supply || "-"}</div>
@@ -334,6 +346,7 @@ const buyerStateCode = buyer.state_code || STATE_CODES[buyerState] || "-";
       </div>
 
       {/* ── Line items ── */}
+      {/* CHANGE 5: "No. of Packages" column removed */}
       <table
         style={{
           width: "100%",
@@ -349,7 +362,6 @@ const buyerStateCode = buyer.state_code || STATE_CODES[buyerState] || "-";
               "Description of Goods",
               "HSN CODE",
               "GST",
-              "No Of Packages",
               "Quantity",
               "UoM",
               "Unit Rate Rs.",
@@ -395,11 +407,9 @@ const buyerStateCode = buyer.state_code || STATE_CODES[buyerState] || "-";
                 {line.hsn_code || "84818030"}
               </td>
               <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 5px", verticalAlign: "top", textAlign: "center" }}>
-                {Number(line.gst_rate || 0)}
+                {Number(line.gst_rate || 0)}%
               </td>
-              <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 5px", verticalAlign: "top", textAlign: "center" }}>
-                1
-              </td>
+              {/* No. of Packages column removed */}
               <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 5px", verticalAlign: "top", textAlign: "center" }}>
                 {line.quantity}
               </td>
@@ -418,6 +428,7 @@ const buyerStateCode = buyer.state_code || STATE_CODES[buyerState] || "-";
       </table>
 
       {/* ── Totals / dispatch summary ── */}
+      {/* CHANGE 2: Non-monetary fields moved to LEFT column. Right column is monetary only. */}
       <div
         style={{
           display: "grid",
@@ -427,51 +438,65 @@ const buyerStateCode = buyer.state_code || STATE_CODES[buyerState] || "-";
           borderBottom: "1px solid #000",
         }}
       >
-        <div style={{ borderRight: "1px solid #000", padding: "8px" }}>
-          <div style={{ marginBottom: "6px" }}>
-            Tax is payable On Reverse Charges{" "}
-            <span style={{ marginLeft: "12px" }}>Yes</span>{" "}
-            <span style={{ marginLeft: "12px" }}>No</span>
-          </div>
-          <div>
-            <strong>Invoice Value In Words</strong> {amountToWords(invoice.total)}
-          </div>
-          {invoice.notes ? (
-            <div style={{ marginTop: "8px", whiteSpace: "pre-wrap", lineHeight: 1.4 }}>
-              <strong>Notes:</strong> {invoice.notes}
+        {/* LEFT — non-monetary dispatch info + invoice value in words */}
+        <div style={{ borderRight: "1px solid #000" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "10px" }}>
+            <tbody>
+              {[
+                { label: "Documents Through", value: dispatch.documents_through || "-" },
+                { label: "Transportation",    value: dispatch.transportation || "-" },
+                { label: "L. R. No.",         value: dispatch.lr_no || "-" },
+                { label: "Mode of Despatch",  value: dispatch.mode_of_dispatch || "-" },
+              ].map(({ label, value }) => (
+                <tr key={label}>
+                  <td style={{ ...cellStyle, width: "45%" }}>{label}</td>
+                  <td style={{ ...cellStyle, borderRight: "none" }}>{value}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div style={{ padding: "8px", fontSize: "10px" }}>
+            <div style={{ marginBottom: "4px" }}>
+              Tax is payable On Reverse Charges{" "}
+              <span style={{ marginLeft: "12px" }}>Yes</span>{" "}
+              <span style={{ marginLeft: "12px" }}>No</span>
             </div>
-          ) : null}
+            <div>
+              <strong>Invoice Value In Words</strong>{" "}
+              {amountToWords(invoice.total)}
+            </div>
+            {invoice.notes ? (
+              <div style={{ marginTop: "8px", whiteSpace: "pre-wrap", lineHeight: 1.4 }}>
+                <strong>Notes:</strong> {invoice.notes}
+              </div>
+            ) : null}
+          </div>
         </div>
 
+        {/* RIGHT — monetary totals only */}
         <div>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "10px" }}>
             <tbody>
               {[
-                { label: "TOTAL VALUE",                         value: formatMoney(taxableValue) },
-                { label: "Documents Through",                   value: dispatch.documents_through || "-" },
-                { label: "Freight Packing",                     value: formatMoney(freightPacking) },
-                { label: "Transportation",                      value: dispatch.transportation || "-" },
-                { label: "Other Charges",                       value: formatMoney(otherCharges) },
-                { label: "L. R. No.",                           value: dispatch.lr_no || "-" },
-                { label: "Mode of despatch",                    value: dispatch.mode_of_dispatch || "-" },
-                { label: `Central Tax CGST (${cgstRate}%)`,    value: invoice.cgst > 0 ? formatMoney(invoice.cgst) : "0.00" },
-                { label: `State Tax SGST (${sgstRate}%)`,      value: invoice.sgst > 0 ? formatMoney(invoice.sgst) : "0.00" },
-                { label: `Integrated Tax IGST (${gstRate}%)`,  value: invoice.igst > 0 ? formatMoney(invoice.igst) : "0.00" },
+                { label: "TOTAL VALUE",                        value: formatMoney(taxableValue) },
+                { label: "Freight / Packing",                  value: formatMoney(freightPacking) },
+                { label: "Other Charges",                      value: formatMoney(otherCharges) },
+                { label: `Central Tax CGST (${cgstRate}%)`,   value: invoice.cgst > 0 ? formatMoney(invoice.cgst) : "0.00" },
+                { label: `State Tax SGST (${sgstRate}%)`,     value: invoice.sgst > 0 ? formatMoney(invoice.sgst) : "0.00" },
+                { label: `Integrated Tax IGST (${gstRate}%)`, value: invoice.igst > 0 ? formatMoney(invoice.igst) : "0.00" },
               ].map(({ label, value }) => (
                 <tr key={label}>
-                  <td style={{ borderBottom: "1px solid #000", borderRight: "1px solid #000", padding: "6px 8px" }}>
-                    {label}
-                  </td>
-                  <td style={{ borderBottom: "1px solid #000", textAlign: "right", padding: "6px 8px" }}>
+                  <td style={cellStyle}>{label}</td>
+                  <td style={{ ...cellStyle, borderRight: "none", textAlign: "right" }}>
                     {value}
                   </td>
                 </tr>
               ))}
               <tr>
-                <td style={{ borderRight: "1px solid #000", padding: "8px", fontWeight: 700 }}>
+                <td style={{ borderRight: "1px solid #000", padding: "8px", fontWeight: 700, fontSize: "10px" }}>
                   TOTAL INVOICE VALUE
                 </td>
-                <td style={{ textAlign: "right", padding: "8px", fontWeight: 700 }}>
+                <td style={{ textAlign: "right", padding: "8px", fontWeight: 700, fontSize: "10px" }}>
                   {formatMoney(invoice.total)}
                 </td>
               </tr>
@@ -480,7 +505,7 @@ const buyerStateCode = buyer.state_code || STATE_CODES[buyerState] || "-";
         </div>
       </div>
 
-      {/* ── Disclaimer + Signature — never split across pages ── */}
+      {/* ── Disclaimer + Signature ── */}
       <div style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
         <div
           style={{
