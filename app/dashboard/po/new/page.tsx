@@ -386,15 +386,35 @@ export default function NewPOPage() {
       setVendors((vData ?? []) as unknown as Vendor[]);
 
       const currentFY = getCurrentFY();
-      const { data: maxRow } = await supabase
+      const { data: poRows } = await supabase
         .from("purchase_orders")
-        .select("fy_serial")
-        .eq("fy_label", currentFY)
-        .order("fy_serial", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .select("id, fy_label, fy_serial, po_number, created_at")
+        .order("created_at", { ascending: false })
+        .limit(500);
 
-      const nextSerial = ((maxRow as { fy_serial?: number } | null)?.fy_serial ?? 0) + 1;
+      const rows = (poRows ?? []) as {
+        id: string;
+        fy_label: string | null;
+        fy_serial: number | null;
+        po_number: string | null;
+        created_at: string;
+      }[];
+
+      const maxSerialForFY = rows.reduce((max, row) => {
+        const po = row.po_number ?? "";
+        const parsed = po.match(/VEPL\/PUR\/(\d+)\/(\d{2}-\d{2})$/);
+        const parsedSerial = parsed ? Number(parsed[1]) : 0;
+        const parsedFy = parsed ? parsed[2] : "";
+        const belongsToCurrentFY = row.fy_label === currentFY || parsedFy === currentFY;
+        if (!belongsToCurrentFY) return max;
+        const serial =
+          typeof row.fy_serial === "number" && row.fy_serial > 0
+            ? row.fy_serial
+            : parsedSerial;
+        return Math.max(max, serial || 0);
+      }, 0);
+
+      const nextSerial = maxSerialForFY + 1;
       setFyLabel(currentFY);
       setFySerial(nextSerial);
 
@@ -586,6 +606,8 @@ export default function NewPOPage() {
             total: payload.total,
             notes: payload.notes,
             dispatch_meta: payload.dispatch_meta,
+            fy_label: payload.fy_label,
+            fy_serial: payload.fy_serial,
           })
           .eq("id", editId)
           .select("id")
@@ -689,7 +711,15 @@ export default function NewPOPage() {
               <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">PO Number</label>
               <input
                 value={poNumber}
-                onChange={(e) => setPoNumber(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value.toUpperCase();
+                  setPoNumber(val);
+                  const match = val.match(/VEPL\/PUR\/(\d+)\/(\d{2}-\d{2})$/);
+                  if (match) {
+                    setFySerial(Number(match[1]));
+                    setFyLabel(match[2]);
+                  }
+                }}
                 className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-orange-500"
               />
             </div>
