@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
-import { Plus, Search, X, Save, Pencil, RefreshCw } from "lucide-react";
+import { Plus, Search, X, Save, Pencil, RefreshCw, Trash2 } from "lucide-react";
 import type { Item } from "@/lib/types";
 
 const UNITS = ["NOS", "SET", "KG", "MTR", "MM", "PCS"];
@@ -155,6 +155,8 @@ export default function CatalogPage() {
   const [codeFields, setCodeFields] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [deleteItem, setDeleteItem] = useState<Item | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   async function loadItems() {
     const supabase = createClient();
@@ -253,6 +255,22 @@ export default function CatalogPage() {
     setSaving(false);
   }
 
+  async function handleDelete() {
+    if (!deleteItem) return;
+    setDeleting(true);
+    const supabase = createClient();
+    const { error } = await supabase.from("items").delete().eq("id", deleteItem.id);
+    if (error) {
+      setError(error.message);
+      setDeleting(false);
+      setDeleteItem(null);
+      return;
+    }
+    await loadItems();
+    setDeleteItem(null);
+    setDeleting(false);
+  }
+
   const categoryColors: Record<string, string> = {
     Valves: "bg-orange-500/10 text-orange-400",
     Castings: "bg-blue-500/10 text-blue-400",
@@ -315,12 +333,53 @@ export default function CatalogPage() {
                     <td className="px-5 py-3.5 text-gray-400">{item.unit}</td>
                     <td className="px-5 py-3.5 text-gray-500 font-mono text-xs">{item.hsn_code ?? "—"}</td>
                     <td className="px-5 py-3.5">
-                      <button onClick={() => openEdit(item)} className="text-gray-500 hover:text-orange-400 transition-colors p-1"><Pencil size={14} /></button>
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => openEdit(item)} className="text-gray-500 hover:text-orange-400 transition-colors p-1" title="Edit item"><Pencil size={14} /></button>
+                        <button onClick={() => setDeleteItem(item)} className="text-gray-500 hover:text-red-400 transition-colors p-1" title="Delete item"><Trash2 size={14} /></button>
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteItem && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-sm">
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center flex-shrink-0">
+                  <Trash2 size={18} className="text-red-400" />
+                </div>
+                <div>
+                  <h2 className="text-white font-bold text-base">Delete Item?</h2>
+                  <p className="text-gray-500 text-xs mt-0.5">This action cannot be undone.</p>
+                </div>
+              </div>
+              <div className="bg-gray-800 rounded-xl px-4 py-3 mb-5">
+                <p className="text-orange-400 font-mono text-xs font-semibold">{deleteItem.serial_id}</p>
+                <p className="text-white text-sm mt-0.5">{deleteItem.name}</p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteItem(null)}
+                  className="flex-1 bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold py-2.5 rounded-xl text-sm transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="flex-1 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors"
+                >
+                  {deleting ? "Deleting..." : "Delete"}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
