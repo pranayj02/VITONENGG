@@ -698,14 +698,21 @@ export default function NewPOPage() {
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Select Vendor *</label>
-              <select
-                value={selectedVendorId}
-                onChange={(e) => setSelectedVendorId(e.target.value)}
-                className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-              >
-                <option value="">— select vendor —</option>
-                {vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
-              </select>
+              <div className="relative">
+                <select
+                  value={selectedVendorId}
+                  onChange={(e) => setSelectedVendorId(e.target.value)}
+                  className="w-full appearance-none bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 pr-10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer"
+                >
+                  <option value="">— select vendor —</option>
+                  {vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                  <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
             </div>
             <div>
               <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">PO Number</label>
@@ -1004,15 +1011,22 @@ export default function NewPOPage() {
               <div className="mt-4">
                 <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Packing &amp; Forwarding</label>
                 <div className="flex gap-2">
-                  <select
-                    value={dispatch.pf_mode}
-                    onChange={(e) => setDispatchField("pf_mode", e.target.value as DispatchMeta["pf_mode"])}
-                    className="flex-1 bg-gray-800 border border-gray-700 rounded-xl px-3 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-                  >
-                    <option value="nil">Nil</option>
-                    <option value="percent">Percentage (%)</option>
-                    <option value="fixed">Fixed Amount (Rs.)</option>
-                  </select>
+                  <div className="relative flex-1">
+                    <select
+                      value={dispatch.pf_mode}
+                      onChange={(e) => setDispatchField("pf_mode", e.target.value as DispatchMeta["pf_mode"])}
+                      className="w-full appearance-none bg-gray-800 border border-gray-700 rounded-xl px-3 py-3 pr-10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer"
+                    >
+                      <option value="nil">Nil</option>
+                      <option value="percent">Percentage (%)</option>
+                      <option value="fixed">Fixed Amount (Rs.)</option>
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                      <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
                   {dispatch.pf_mode !== "nil" && (
                     <input
                       type="number" min="0" step="0.1"
