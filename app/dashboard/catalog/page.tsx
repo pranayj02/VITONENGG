@@ -421,11 +421,18 @@ export default function CatalogPage() {
                       <div key={field.key}>
                         <label className="block text-gray-500 text-xs mb-1">{field.label}</label>
                         {field.options ? (
-                          <select value={codeFields[field.key] ?? ""} onChange={e => setCodeField(field.key, e.target.value)}
-                            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:ring-2 focus:ring-orange-500">
-                            <option value="">— select —</option>
-                            {field.options.map(o => <option key={o} value={o}>{o}</option>)}
-                          </select>
+                          <div className="relative">
+                            <select value={codeFields[field.key] ?? ""} onChange={e => setCodeField(field.key, e.target.value)}
+                              className="w-full appearance-none bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 pr-8 text-white text-xs focus:outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer">
+                              <option value="">— select —</option>
+                              {field.options.map(o => <option key={o} value={o}>{o}</option>)}
+                            </select>
+                            <div className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center">
+                              <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </div>
+                          </div>
                         ) : (
                           <input value={codeFields[field.key] ?? ""} onChange={e => setCodeField(field.key, e.target.value)}
                             placeholder={field.placeholder}
@@ -466,10 +473,17 @@ export default function CatalogPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Unit</label>
-                  <select value={formMeta.unit} onChange={e => setFormMeta(f => ({ ...f, unit: e.target.value }))}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500">
-                    {UNITS.map(u => <option key={u}>{u}</option>)}
-                  </select>
+                  <div className="relative">
+                    <select value={formMeta.unit} onChange={e => setFormMeta(f => ({ ...f, unit: e.target.value }))}
+                      className="w-full appearance-none bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 pr-10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer">
+                      {UNITS.map(u => <option key={u}>{u}</option>)}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                      <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">HSN Code</label>
