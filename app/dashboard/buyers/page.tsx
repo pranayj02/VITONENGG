@@ -685,18 +685,25 @@ export default function BuyersPage() {
                   <label className="block text-sm text-gray-300 font-medium mb-2">
                     State
                   </label>
-                  <select
-                    value={buyerForm.state}
-                    onChange={(e) => updateBuyerField("state", e.target.value)}
-                    className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-                  >
-                    <option value="">— Select State —</option>
-                    {INDIA_STATES.map((s) => (
-                      <option key={s.code} value={s.state}>
-                        {s.state}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <select
+                      value={buyerForm.state}
+                      onChange={(e) => updateBuyerField("state", e.target.value)}
+                      className="w-full appearance-none bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 pr-10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer"
+                    >
+                      <option value="">— Select State —</option>
+                      {INDIA_STATES.map((s) => (
+                        <option key={s.code} value={s.state}>
+                          {s.state}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                      <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
                 </div>
 
                 <div>
