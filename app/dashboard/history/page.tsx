@@ -42,7 +42,7 @@ export default function POHistoryPage() {
     const q = search.toLowerCase();
     setFiltered(rows.filter((r) =>
       (r.po_number ?? "").toLowerCase().includes(q) ||
-      (r.vendor_id ?? "").toLowerCase().includes(q)
+      (r.vendor_name ?? "").toLowerCase().includes(q)
     ));
   }, [search, rows]);
 
@@ -111,7 +111,7 @@ export default function POHistoryPage() {
                     <td className="px-5 py-4">
                       <span className="font-mono text-viton-red dark:text-orange-400 font-semibold text-xs">{row.po_number}</span>
                     </td>
-                    <td className="px-5 py-4 text-viton-navy dark:text-gray-200">{row.vendor_id ?? "—"}</td>
+                    <td className="px-5 py-4 text-viton-navy dark:text-gray-200">{row.vendor_name ?? "—"}</td>
                     <td className="px-5 py-4 text-[#4a5578] dark:text-gray-400">{formatDate(row.po_date ?? row.created_at)}</td>
                     <td className="px-5 py-4 text-viton-navy dark:text-gray-200 tabular-nums font-medium">{formatCurrency(row.grand_total)}</td>
                     <td className="px-5 py-4">
