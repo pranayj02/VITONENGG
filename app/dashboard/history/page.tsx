@@ -60,11 +60,9 @@ function exportToExcel(po: POWithVendor) {
   const csv = rows.map((row) =>
     row.map((cell) => {
       const val = String(cell ?? "").replace(/"/g, '""');
-      return val.includes(",") || val.includes("
-") || val.includes('"') ? `"${val}"` : val;
+      return val.includes(",") || val.includes("\n") || val.includes('"') ? `"${val}"` : val;
     }).join(",")
-  ).join("
-");
+  ).join("\n");
   const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
