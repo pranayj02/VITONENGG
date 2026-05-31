@@ -29,7 +29,15 @@ export default function InvoiceHistoryPage() {
         .select("id, invoice_number, buyer_name, total, invoice_date, created_at, status")
         .order("created_at", { ascending: false });
       if (error) { setError(error.message); setLoading(false); return; }
-      const rows = (data ?? []) as unknown as InvoiceSummary[];
+      const rows = (data ?? []).map((row: any) => ({
+        id: String(row.id),
+        invoice_number: String(row.invoice_number ?? ""),
+        buyer_name: row.buyer_name ?? null,
+        grand_total: row.total ?? row.grand_total ?? null,
+        invoice_date: row.invoice_date ?? null,
+        created_at: row.created_at ?? null,
+        status: row.status ?? null,
+      })) as InvoiceSummary[];
       setRows(rows);
       setFiltered(rows);
       setLoading(false);
@@ -42,7 +50,7 @@ export default function InvoiceHistoryPage() {
     const q = search.toLowerCase();
     setFiltered(rows.filter((r) =>
       (r.invoice_number ?? "").toLowerCase().includes(q) ||
-      (r.buyer_name ?? "").toLowerCase().includes(q)
+      (r.invoice_number ?? "").toLowerCase().includes(q) || (r.buyer_name ?? "").toLowerCase().includes(q)
     ));
   }, [search, rows]);
 
@@ -113,7 +121,7 @@ export default function InvoiceHistoryPage() {
                     </td>
                     <td className="px-5 py-4 text-viton-navy dark:text-gray-200">{row.buyer_name ?? "—"}</td>
                     <td className="px-5 py-4 text-[#4a5578] dark:text-gray-400">{formatDate(row.invoice_date ?? row.created_at)}</td>
-                    <td className="px-5 py-4 text-viton-navy dark:text-gray-200 tabular-nums font-medium">{formatCurrency(row.grand_total)}</td>
+                    <td className="px-5 py-4 text-viton-navy dark:text-gray-200 tabular-nums font-medium">{formatCurrency(row.total)}</td>
                     <td className="px-5 py-4">
                       <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
                         row.status === "paid"
