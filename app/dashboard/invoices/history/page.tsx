@@ -26,7 +26,7 @@ export default function InvoiceHistoryPage() {
       const supabase = createClient();
       const { data, error } = await supabase
         .from("invoices")
-        .select("id, invoice_number, buyer_name, grand_total, invoice_date, created_at, status")
+        .select("id, invoice_number, buyer_name, total, invoice_date, created_at, status")
         .order("created_at", { ascending: false });
       if (error) { setError(error.message); setLoading(false); return; }
       const rows = (data ?? []) as unknown as InvoiceSummary[];
