@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
-import { Search, X, FileText, Pencil, Trash2, ChevronDown, ChevronUp, Download, ExternalLink } from "lucide-react";
+import { Search, X, FileText, Pencil, Trash2, ChevronDown, ChevronUp, Download } from "lucide-react";
 import Link from "next/link";
 
 interface POSummary {
@@ -9,7 +9,25 @@ interface POSummary {
   po_number: string;
   vendor_id?: string | null;
   vendor_name?: string | null;
+  vendor?: {
+    id?: string;
+    name?: string | null;
+    address?: string | null;
+    gstin?: string | null;
+    contact_name?: string | null;
+    contact_phone?: string | null;
+    contact_email?: string | null;
+    payment_terms?: string | null;
+    delivery_address?: string | null;
+    delivery_gstin?: string | null;
+  } | null;
+  line_items?: any[];
+  notes?: string | null;
+  dispatch_meta?: Record<string, any> | null;
+  quot_no?: string | null;
+  quot_date?: string | null;
   total?: number | null;
+  subtotal?: number | null;
   created_at?: string | null;
   status?: string | null;
 }
@@ -28,7 +46,7 @@ export default function POHistoryPage() {
       const supabase = createClient();
       const { data, error } = await supabase
         .from("purchase_orders")
-        .select("id, po_number, vendor_id, total, created_at, status, vendors(name)")
+        .select("id, po_number, vendor_id, subtotal, total, notes, line_items, dispatch_meta, quot_no, quot_date, created_at, status, vendors(*)")
         .order("created_at", { ascending: false });
       if (error) {
         setError(error.message);
@@ -40,6 +58,13 @@ export default function POHistoryPage() {
         po_number: String(row.po_number ?? ""),
         vendor_id: row.vendor_id ?? null,
         vendor_name: row.vendors?.name ?? null,
+        vendor: row.vendors ?? null,
+        line_items: Array.isArray(row.line_items) ? row.line_items : [],
+        notes: row.notes ?? null,
+        dispatch_meta: row.dispatch_meta ?? null,
+        quot_no: row.quot_no ?? null,
+        quot_date: row.quot_date ?? null,
+        subtotal: row.subtotal ?? null,
         total: row.total ?? null,
         created_at: row.created_at ?? null,
         status: row.status ?? null,
@@ -100,8 +125,31 @@ export default function POHistoryPage() {
     URL.revokeObjectURL(url);
   }
 
-  function downloadRowPDF(row: POSummary) {
-    window.open(`/dashboard/po/new?id=${row.id}`, "_blank");
+  async function downloadRowPDF(row: POSummary) {
+    const reactPdf = await import("@react-pdf/renderer");
+    const pdfModule = await import("@/components/POPdf");
+    const po = {
+      po_number: row.po_number,
+      created_at: row.created_at ?? new Date().toISOString(),
+      subtotal: row.subtotal ?? 0,
+      total: row.total ?? 0,
+      notes: row.notes ?? "",
+      line_items: row.line_items ?? [],
+      dispatch_meta: row.dispatch_meta ?? {},
+      vendors: row.vendor ?? {
+        id: row.vendor_id,
+        name: row.vendor_name ?? row.vendor_id ?? "—",
+      },
+      quot_no: row.quot_no ?? null,
+      quot_date: row.quot_date ?? null,
+    };
+    const blob = await reactPdf.pdf(<pdfModule.POPdfDocument po={po} />).toBlob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${row.po_number.replace(/\//g, "-")}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   async function handleDelete(id: string, poNumber: string) {
@@ -178,70 +226,57 @@ export default function POHistoryPage() {
               <tbody>
                 {filtered.map((row, i) => {
                   const expanded = expandedId === row.id;
-                  return (
-                    <>
-                      <tr key={row.id} className={`border-b border-[#dde1ea] dark:border-gray-800 hover:bg-[#f7f8fb] dark:hover:bg-gray-800/30 transition-colors ${i % 2 === 0 ? "" : "bg-[#fafbfd] dark:bg-transparent"}`}>
-                        <td className="px-4 py-4 w-12">
-                          <button
-                            onClick={() => setExpandedId(expanded ? null : row.id)}
-                            className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[#f1f3f8] hover:bg-[#e7ebf3] text-[#4a5578] dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-300 transition-colors"
-                            aria-label={expanded ? "Collapse actions" : "Expand actions"}
-                          >
-                            {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                          </button>
-                        </td>
-                        <td className="px-4 py-4">
-                          <span className="font-mono text-viton-red dark:text-orange-400 font-semibold text-xs">{row.po_number}</span>
-                        </td>
-                        <td className="px-4 py-4 text-viton-navy dark:text-gray-200">{row.vendor_name ?? row.vendor_id ?? "—"}</td>
-                        <td className="px-4 py-4 text-[#4a5578] dark:text-gray-400">{formatDate(row.created_at)}</td>
-                        <td className="px-4 py-4 text-viton-navy dark:text-gray-200 tabular-nums font-medium">{formatCurrency(row.total)}</td>
-                        <td className="px-4 py-4">
-                          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
-                            row.status === "approved" || row.status === "confirmed"
-                              ? "bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400"
-                              : row.status === "cancelled"
-                              ? "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400"
-                              : "bg-[#f1f3f8] dark:bg-gray-800 text-[#4a5578] dark:text-gray-400"
-                          }`}>
-                            {row.status ?? "draft"}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4 w-12 text-right">
-                          <button
-                            onClick={() => setExpandedId(expanded ? null : row.id)}
-                            className="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-[#f1f3f8] text-[#8892a8] dark:hover:bg-gray-800 dark:text-gray-400 transition-colors"
-                            aria-label="Toggle row actions"
-                          >
-                            <ExternalLink size={15} />
-                          </button>
+                  return [
+                    <tr key={row.id} className={`border-b border-[#dde1ea] dark:border-gray-800 hover:bg-[#f7f8fb] dark:hover:bg-gray-800/30 transition-colors ${i % 2 === "0" ? "" : "bg-[#fafbfd] dark:bg-transparent"}`}>
+                      <td className="px-4 py-4 w-12">
+                        <button
+                          onClick={() => setExpandedId(expanded ? null : row.id)}
+                          className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[#f1f3f8] hover:bg-[#e7ebf3] text-[#4a5578] dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-300 transition-colors"
+                          aria-label={expanded ? "Collapse actions" : "Expand actions"}
+                        >
+                          {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        </button>
+                      </td>
+                      <td className="px-4 py-4">
+                        <span className="font-mono text-viton-red dark:text-orange-400 font-semibold text-xs">{row.po_number}</span>
+                      </td>
+                      <td className="px-4 py-4 text-viton-navy dark:text-gray-200">{row.vendor_name ?? row.vendor_id ?? "—"}</td>
+                      <td className="px-4 py-4 text-[#4a5578] dark:text-gray-400">{formatDate(row.created_at)}</td>
+                      <td className="px-4 py-4 text-viton-navy dark:text-gray-200 tabular-nums font-medium">{formatCurrency(row.total)}</td>
+                      <td className="px-4 py-4">
+                        <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                          row.status === "approved" || row.status === "confirmed"
+                            ? "bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400"
+                            : row.status === "cancelled"
+                            ? "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400"
+                            : "bg-[#f1f3f8] dark:bg-gray-800 text-[#4a5578] dark:text-gray-400"
+                        }`}>
+                          {row.status ?? "draft"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-4 w-12" />
+                    </tr>,
+                    ...(expanded ? [
+                      <tr key={`${row.id}-expanded`} className={`border-b border-[#dde1ea] dark:border-gray-800 ${i % 2 === 0 ? "bg-[#fafbfd] dark:bg-gray-950/40" : "bg-white dark:bg-gray-900"}`}>
+                        <td colSpan={7} className="px-4 py-4">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Link href={`/dashboard/po/new?id=${row.id}`} className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-500/10 dark:text-blue-300 dark:hover:bg-blue-500/20 text-sm font-semibold transition-colors">
+                              <Pencil size={14} /> Edit PO
+                            </Link>
+                            <button onClick={() => downloadRowCSV(row)} className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-[#dde1ea] text-viton-navy hover:bg-[#f7f8fb] dark:bg-gray-900 dark:border-gray-800 dark:text-white dark:hover:bg-gray-800 text-sm font-semibold transition-colors">
+                              <Download size={14} /> Download CSV
+                            </button>
+                            <button onClick={() => downloadRowPDF(row)} className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-[#dde1ea] text-viton-navy hover:bg-[#f7f8fb] dark:bg-gray-900 dark:border-gray-800 dark:text-white dark:hover:bg-gray-800 text-sm font-semibold transition-colors">
+                              <FileText size={14} /> Download PDF
+                            </button>
+                            <button onClick={() => handleDelete(row.id, row.po_number)} disabled={deletingId === row.id} className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-300 dark:hover:bg-red-500/20 text-sm font-semibold transition-colors disabled:opacity-50">
+                              <Trash2 size={14} /> {deletingId === row.id ? "Deleting..." : "Delete"}
+                            </button>
+                          </div>
                         </td>
                       </tr>
-                      {expanded && (
-                        <tr key={`${row.id}-expanded`} className={`border-b border-[#dde1ea] dark:border-gray-800 ${i % 2 === 0 ? "bg-[#fafbfd] dark:bg-gray-950/40" : "bg-white dark:bg-gray-900"}`}>
-                          <td colSpan={7} className="px-4 py-4">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <Link href={`/dashboard/po/new?id=${row.id}`} className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-500/10 dark:text-blue-300 dark:hover:bg-blue-500/20 text-sm font-semibold transition-colors">
-                                <Pencil size={14} /> Edit PO
-                              </Link>
-                              <button onClick={() => downloadRowCSV(row)} className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-[#dde1ea] text-viton-navy hover:bg-[#f7f8fb] dark:bg-gray-900 dark:border-gray-800 dark:text-white dark:hover:bg-gray-800 text-sm font-semibold transition-colors">
-                                <Download size={14} /> Download CSV
-                              </button>
-                              <button onClick={() => downloadRowPDF(row)} className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-[#dde1ea] text-viton-navy hover:bg-[#f7f8fb] dark:bg-gray-900 dark:border-gray-800 dark:text-white dark:hover:bg-gray-800 text-sm font-semibold transition-colors">
-                                <FileText size={14} /> Download PO
-                              </button>
-                              <button onClick={() => handleDelete(row.id, row.po_number)} disabled={deletingId === row.id} className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-300 dark:hover:bg-red-500/20 text-sm font-semibold transition-colors disabled:opacity-50">
-                                <Trash2 size={14} /> {deletingId === row.id ? "Deleting..." : "Delete"}
-                              </button>
-                              <Link href={`/dashboard/po/new?id=${row.id}`} className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#f1f3f8] text-[#4a5578] hover:bg-[#e7ebf3] dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 text-sm font-semibold transition-colors">
-                                <ExternalLink size={14} /> Open
-                              </Link>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </>
-                  );
+                    ] : [])
+                  ];
                 })}
               </tbody>
             </table>
