@@ -186,7 +186,7 @@ function buildPOYearInsights(rows: PurchaseOrderRow[]) {
     });
   });
 
-  const topItems: TopItem[] = [...itemFrequency.entries()]
+  const topItems: TopItem[] = Array.from(itemFrequency.entries())
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
     .map(([name, count]) => ({ name, count }));
