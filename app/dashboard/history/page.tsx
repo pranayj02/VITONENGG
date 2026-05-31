@@ -8,7 +8,7 @@ interface POSummary {
   id: string;
   po_number: string;
   vendor_id?: string | null;
-  grand_total?: number | null;
+  total?: number | null;
   po_date?: string | null;
   created_at?: string | null;
   status?: string | null;
@@ -26,10 +26,18 @@ export default function POHistoryPage() {
       const supabase = createClient();
       const { data, error } = await supabase
         .from("purchase_orders")
-        .select("id, po_number, vendor_id, grand_total, po_date, created_at, status")
+        .select("id, po_number, vendor_id, total, created_at, status")
         .order("created_at", { ascending: false });
       if (error) { setError(error.message); setLoading(false); return; }
-      const rows = (data ?? []) as unknown as POSummary[];
+      const rows = (data ?? []).map((row: any) => ({
+        id: String(row.id),
+        po_number: String(row.po_number ?? ""),
+        vendor_id: row.vendor_id ?? null,
+        total: row.total ?? null,
+        po_date: row.po_date ?? null,
+        created_at: row.created_at ?? null,
+        status: row.status ?? null,
+      })) as POSummary[];
       setRows(rows);
       setFiltered(rows);
       setLoading(false);
@@ -42,7 +50,7 @@ export default function POHistoryPage() {
     const q = search.toLowerCase();
     setFiltered(rows.filter((r) =>
       (r.po_number ?? "").toLowerCase().includes(q) ||
-      (r.vendor_name ?? "").toLowerCase().includes(q)
+      (r.vendor_id ?? "").toLowerCase().includes(q)
     ));
   }, [search, rows]);
 
@@ -107,13 +115,13 @@ export default function POHistoryPage() {
               </thead>
               <tbody>
                 {filtered.map((row, i) => (
-                  <tr key={row.id} className={`border-b border-[#dde1ea] dark:border-gray-800 last:border-0 hover:bg-[#f7f8fb] dark:hover:bg-gray-800/30 transition-colors ${i % 2 === 0 ? "" : "bg-[#fafbfd] dark:bg-transparent"}` }>
+                  <tr key={row.id} className={`border-b border-[#dde1ea] dark:border-gray-800 last:border-0 hover:bg-[#f7f8fb] dark:hover:bg-gray-800/30 transition-colors ${i % 2 === 0 ? "" : "bg-[#fafbfd] dark:bg-transparent"}`}>
                     <td className="px-5 py-4">
                       <span className="font-mono text-viton-red dark:text-orange-400 font-semibold text-xs">{row.po_number}</span>
                     </td>
-                    <td className="px-5 py-4 text-viton-navy dark:text-gray-200">{row.vendor_name ?? "—"}</td>
+                    <td className="px-5 py-4 text-viton-navy dark:text-gray-200">{row.vendor_id ?? "—"}</td>
                     <td className="px-5 py-4 text-[#4a5578] dark:text-gray-400">{formatDate(row.po_date ?? row.created_at)}</td>
-                    <td className="px-5 py-4 text-viton-navy dark:text-gray-200 tabular-nums font-medium">{formatCurrency(row.grand_total)}</td>
+                    <td className="px-5 py-4 text-viton-navy dark:text-gray-200 tabular-nums font-medium">{formatCurrency(row.total)}</td>
                     <td className="px-5 py-4">
                       <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
                         row.status === "approved"
