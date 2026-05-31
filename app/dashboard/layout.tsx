@@ -134,8 +134,8 @@ export default function DashboardLayout({
       <aside className="hidden md:flex flex-col w-72 bg-white dark:bg-gray-900 border-r border-[#dde1ea] dark:border-gray-800 fixed top-0 left-0 bottom-0 z-10">
         <div className="p-6 border-b border-[#dde1ea] dark:border-gray-800">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-viton-red dark:bg-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-red-500/20 dark:shadow-orange-500/20 flex-shrink-0">
-              <span className="text-white font-bold text-lg">V</span>
+            <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0 bg-white border border-[#dde1ea] dark:border-gray-700">
+              <img src="/Logo.JPG" alt="VITONENGG Logo" className="w-full h-full object-contain" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-viton-navy dark:text-white font-bold text-sm tracking-wide">VITONENGG</p>
@@ -170,8 +170,8 @@ export default function DashboardLayout({
       {/* Mobile Top Bar */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-20 bg-white dark:bg-gray-900 border-b border-[#dde1ea] dark:border-gray-800 px-4 h-14 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 bg-viton-red dark:bg-orange-500 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-sm">V</span>
+          <div className="w-7 h-7 rounded-lg overflow-hidden bg-white border border-[#dde1ea] dark:border-gray-700">
+            <img src="/Logo.JPG" alt="VITONENGG Logo" className="w-full h-full object-contain" />
           </div>
           <span className="text-viton-navy dark:text-white font-bold text-sm">VITONENGG</span>
         </div>
@@ -205,8 +205,8 @@ export default function DashboardLayout({
           >
             <div className="p-6 border-b border-[#dde1ea] dark:border-gray-800">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 bg-viton-red dark:bg-orange-500 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <span className="text-white font-bold text-lg">V</span>
+                <div className="w-9 h-9 rounded-xl overflow-hidden flex-shrink-0 bg-white border border-[#dde1ea] dark:border-gray-700">
+                  <img src="/Logo.JPG" alt="VITONENGG Logo" className="w-full h-full object-contain" />
                 </div>
                 <div>
                   <p className="text-viton-navy dark:text-white font-bold text-sm">VITONENGG</p>
@@ -239,3 +239,4 @@ export default function DashboardLayout({
     </div>
   );
 }
+
