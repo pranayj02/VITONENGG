@@ -1,7 +1,7 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
-import { Search, X, FileText, Pencil, Trash2, Download, ExternalLink } from "lucide-react";
+import { Search, X, FileText, Pencil, Trash2, ChevronDown, ChevronUp, Download, ExternalLink } from "lucide-react";
 import Link from "next/link";
 
 interface POSummary {
@@ -21,6 +21,7 @@ export default function POHistoryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -64,14 +65,6 @@ export default function POHistoryPage() {
     );
   }, [search, rows]);
 
-  const csvData = useMemo(() => filtered.map((row) => ({
-    po_number: row.po_number,
-    vendor: row.vendor_name ?? row.vendor_id ?? "",
-    date: formatDate(row.created_at),
-    amount: row.total ?? 0,
-    status: row.status ?? "draft",
-  })), [filtered]);
-
   function formatDate(val?: string | null) {
     if (!val) return "—";
     try {
@@ -86,29 +79,29 @@ export default function POHistoryPage() {
     return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(val);
   }
 
-  function handleDownloadCSV() {
+  function downloadRowCSV(row: POSummary) {
     const headers = ["PO Number", "Vendor", "Date", "Amount", "Status"];
-    const lines = csvData.map((row) => [
+    const values = [
       row.po_number,
-      row.vendor,
-      row.date,
-      String(row.amount),
-      row.status,
-    ]);
-    const csv = [headers, ...lines]
+      row.vendor_name ?? row.vendor_id ?? "",
+      formatDate(row.created_at),
+      String(row.total ?? 0),
+      row.status ?? "draft",
+    ];
+    const csv = [headers, values]
       .map((line) => line.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
       .join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `po-history-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `${row.po_number.replace(/\//g, "-")}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   }
 
-  function handleDownloadPDF() {
-    window.print();
+  function downloadRowPDF(row: POSummary) {
+    window.open(`/dashboard/po/new?id=${row.id}`, "_blank");
   }
 
   async function handleDelete(id: string, poNumber: string) {
@@ -129,6 +122,7 @@ export default function POHistoryPage() {
       const q = search.toLowerCase();
       return (r.po_number ?? "").toLowerCase().includes(q) || (r.vendor_name ?? r.vendor_id ?? "").toLowerCase().includes(q);
     }));
+    if (expandedId === id) setExpandedId(null);
     setDeletingId(null);
   }
 
@@ -139,18 +133,10 @@ export default function POHistoryPage() {
           <h1 className="text-viton-navy dark:text-white text-2xl font-bold">PO History</h1>
           <p className="text-[#8892a8] dark:text-gray-500 text-sm mt-1">{rows.length} purchase orders</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button onClick={handleDownloadCSV} className="inline-flex items-center gap-2 bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 text-viton-navy dark:text-white hover:bg-[#f7f8fb] dark:hover:bg-gray-800 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all">
-            <Download size={16} /> Download CSV
-          </button>
-          <button onClick={handleDownloadPDF} className="inline-flex items-center gap-2 bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 text-viton-navy dark:text-white hover:bg-[#f7f8fb] dark:hover:bg-gray-800 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all">
-            <FileText size={16} /> Download PDF
-          </button>
-          <Link href="/dashboard/po/new" className="inline-flex items-center gap-2 bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-all">
-            <FileText size={16} />
-            New PO
-          </Link>
-        </div>
+        <Link href="/dashboard/po/new" className="inline-flex w-fit items-center gap-2 bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-all">
+          <FileText size={16} />
+          New PO
+        </Link>
       </div>
 
       <div className="relative mb-6">
@@ -184,46 +170,79 @@ export default function POHistoryPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-[#f1f3f8] dark:bg-gray-800/50 border-b border-[#dde1ea] dark:border-gray-800">
-                  {["PO Number", "Vendor", "Date", "Amount", "Status", "Actions"].map((h) => (
-                    <th key={h} className="text-left px-5 py-3.5 text-[#4a5578] dark:text-gray-400 font-semibold text-xs uppercase tracking-wider">{h}</th>
+                  {["", "PO Number", "Vendor", "Date", "Amount", "Status", ""].map((h, idx) => (
+                    <th key={`${h}-${idx}`} className="text-left px-4 py-3.5 text-[#4a5578] dark:text-gray-400 font-semibold text-xs uppercase tracking-wider">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((row, i) => (
-                  <tr key={row.id} className={`border-b border-[#dde1ea] dark:border-gray-800 last:border-0 hover:bg-[#f7f8fb] dark:hover:bg-gray-800/30 transition-colors ${i % 2 === 0 ? "" : "bg-[#fafbfd] dark:bg-transparent"}`}>
-                    <td className="px-5 py-4">
-                      <span className="font-mono text-viton-red dark:text-orange-400 font-semibold text-xs">{row.po_number}</span>
-                    </td>
-                    <td className="px-5 py-4 text-viton-navy dark:text-gray-200">{row.vendor_name ?? row.vendor_id ?? "—"}</td>
-                    <td className="px-5 py-4 text-[#4a5578] dark:text-gray-400">{formatDate(row.created_at)}</td>
-                    <td className="px-5 py-4 text-viton-navy dark:text-gray-200 tabular-nums font-medium">{formatCurrency(row.total)}</td>
-                    <td className="px-5 py-4">
-                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
-                        row.status === "approved" || row.status === "confirmed"
-                          ? "bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400"
-                          : row.status === "cancelled"
-                          ? "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400"
-                          : "bg-[#f1f3f8] dark:bg-gray-800 text-[#4a5578] dark:text-gray-400"
-                      }`}>
-                        {row.status ?? "draft"}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-2">
-                        <Link href={`/dashboard/po/new?id=${row.id}`} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-500/10 dark:text-blue-300 dark:hover:bg-blue-500/20 text-xs font-semibold transition-colors">
-                          <Pencil size={13} /> Edit
-                        </Link>
-                        <button onClick={() => handleDelete(row.id, row.po_number)} disabled={deletingId === row.id} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-300 dark:hover:bg-red-500/20 text-xs font-semibold transition-colors disabled:opacity-50">
-                          <Trash2 size={13} /> {deletingId === row.id ? "Deleting..." : "Delete"}
-                        </button>
-                        <Link href={`/dashboard/po/new?id=${row.id}&preview=1`} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#f1f3f8] text-[#4a5578] hover:bg-[#e7ebf3] dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 text-xs font-semibold transition-colors">
-                          <ExternalLink size={13} /> Open
-                        </Link>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {filtered.map((row, i) => {
+                  const expanded = expandedId === row.id;
+                  return (
+                    <>
+                      <tr key={row.id} className={`border-b border-[#dde1ea] dark:border-gray-800 hover:bg-[#f7f8fb] dark:hover:bg-gray-800/30 transition-colors ${i % 2 === 0 ? "" : "bg-[#fafbfd] dark:bg-transparent"}`}>
+                        <td className="px-4 py-4 w-12">
+                          <button
+                            onClick={() => setExpandedId(expanded ? null : row.id)}
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-[#f1f3f8] hover:bg-[#e7ebf3] text-[#4a5578] dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-300 transition-colors"
+                            aria-label={expanded ? "Collapse actions" : "Expand actions"}
+                          >
+                            {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                          </button>
+                        </td>
+                        <td className="px-4 py-4">
+                          <span className="font-mono text-viton-red dark:text-orange-400 font-semibold text-xs">{row.po_number}</span>
+                        </td>
+                        <td className="px-4 py-4 text-viton-navy dark:text-gray-200">{row.vendor_name ?? row.vendor_id ?? "—"}</td>
+                        <td className="px-4 py-4 text-[#4a5578] dark:text-gray-400">{formatDate(row.created_at)}</td>
+                        <td className="px-4 py-4 text-viton-navy dark:text-gray-200 tabular-nums font-medium">{formatCurrency(row.total)}</td>
+                        <td className="px-4 py-4">
+                          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
+                            row.status === "approved" || row.status === "confirmed"
+                              ? "bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400"
+                              : row.status === "cancelled"
+                              ? "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400"
+                              : "bg-[#f1f3f8] dark:bg-gray-800 text-[#4a5578] dark:text-gray-400"
+                          }`}>
+                            {row.status ?? "draft"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 w-12 text-right">
+                          <button
+                            onClick={() => setExpandedId(expanded ? null : row.id)}
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-lg hover:bg-[#f1f3f8] text-[#8892a8] dark:hover:bg-gray-800 dark:text-gray-400 transition-colors"
+                            aria-label="Toggle row actions"
+                          >
+                            <ExternalLink size={15} />
+                          </button>
+                        </td>
+                      </tr>
+                      {expanded && (
+                        <tr key={`${row.id}-expanded`} className={`border-b border-[#dde1ea] dark:border-gray-800 ${i % 2 === 0 ? "bg-[#fafbfd] dark:bg-gray-950/40" : "bg-white dark:bg-gray-900"}`}>
+                          <td colSpan={7} className="px-4 py-4">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Link href={`/dashboard/po/new?id=${row.id}`} className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-500/10 dark:text-blue-300 dark:hover:bg-blue-500/20 text-sm font-semibold transition-colors">
+                                <Pencil size={14} /> Edit PO
+                              </Link>
+                              <button onClick={() => downloadRowCSV(row)} className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-[#dde1ea] text-viton-navy hover:bg-[#f7f8fb] dark:bg-gray-900 dark:border-gray-800 dark:text-white dark:hover:bg-gray-800 text-sm font-semibold transition-colors">
+                                <Download size={14} /> Download CSV
+                              </button>
+                              <button onClick={() => downloadRowPDF(row)} className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white border border-[#dde1ea] text-viton-navy hover:bg-[#f7f8fb] dark:bg-gray-900 dark:border-gray-800 dark:text-white dark:hover:bg-gray-800 text-sm font-semibold transition-colors">
+                                <FileText size={14} /> Download PO
+                              </button>
+                              <button onClick={() => handleDelete(row.id, row.po_number)} disabled={deletingId === row.id} className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-300 dark:hover:bg-red-500/20 text-sm font-semibold transition-colors disabled:opacity-50">
+                                <Trash2 size={14} /> {deletingId === row.id ? "Deleting..." : "Delete"}
+                              </button>
+                              <Link href={`/dashboard/po/new?id=${row.id}`} className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#f1f3f8] text-[#4a5578] hover:bg-[#e7ebf3] dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 text-sm font-semibold transition-colors">
+                                <ExternalLink size={14} /> Open
+                              </Link>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </>
+                  );
+                })}
               </tbody>
             </table>
           </div>
