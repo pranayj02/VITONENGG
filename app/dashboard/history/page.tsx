@@ -97,8 +97,7 @@ export default function POHistoryPage() {
     ]);
     const csv = [headers, ...lines]
       .map((line) => line.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
-      .join("
-");
+      .join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
