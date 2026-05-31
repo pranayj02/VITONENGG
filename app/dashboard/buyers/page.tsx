@@ -37,7 +37,8 @@ export default function BuyersPage() {
     const supabase = createClient();
     const { data, error } = await supabase.from("buyers").select("*").order("name");
     if (error) { setError(error.message); setBuyers([]); setFiltered([]); setLoading(false); return; }
-    setBuyers(data ?? []); setFiltered(data ?? []); setLoading(false);
+    const rows = (data ?? []) as unknown as Buyer[];
+    setBuyers(rows); setFiltered(rows); setLoading(false);
   }
 
   useEffect(() => { loadBuyers(); }, []);
