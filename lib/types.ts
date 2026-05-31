@@ -19,6 +19,7 @@ export interface Item {
   unit: string;
   category: string | null;
   specs: Record<string, unknown> | null;
+  default_rate?: number | null;
 }
 
 export interface Vendor {
