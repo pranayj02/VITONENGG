@@ -30,7 +30,6 @@ type InvoiceRow = {
   igst?: number | null;
   total?: number | null;
   created_at?: string | null;
-  updated_at?: string | null;
 };
 
 function toPreview(invoice: InvoiceRow): InvoicePreview {
@@ -125,7 +124,7 @@ export default function InvoiceHistoryPage() {
     const supabase = createClient();
     const { data, error } = await supabase
       .from("invoices")
-      .select("id, invoice_number, invoice_date, buyers_po_number, fy_label, fy_serial, status, buyer_id, buyer_name, buyer_display_name, notes, line_items, dispatch_meta, subtotal, cgst, sgst, igst, total, created_at, updated_at")
+      .select("id, invoice_number, invoice_date, buyers_po_number, fy_label, fy_serial, status, buyer_id, buyer_name, buyer_display_name, notes, line_items, dispatch_meta, subtotal, cgst, sgst, igst, total, created_at")
       .order("created_at", { ascending: false });
     if (error) {
       setError(error.message);
@@ -152,7 +151,6 @@ export default function InvoiceHistoryPage() {
       igst: row.igst ?? null,
       total: row.total ?? null,
       created_at: row.created_at ?? null,
-      updated_at: row.updated_at ?? null,
     })) as InvoiceRow[];
     setRows(mapped);
     setFiltered(mapped);
