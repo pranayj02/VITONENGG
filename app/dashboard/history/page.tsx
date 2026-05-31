@@ -8,8 +8,8 @@ interface POSummary {
   id: string;
   po_number: string;
   vendor_id?: string | null;
+  vendor_name?: string | null;
   total?: number | null;
-  po_date?: string | null;
   created_at?: string | null;
   status?: string | null;
 }
@@ -26,15 +26,15 @@ export default function POHistoryPage() {
       const supabase = createClient();
       const { data, error } = await supabase
         .from("purchase_orders")
-        .select("id, po_number, vendor_id, total, created_at, status")
+        .select("id, po_number, vendor_id, total, created_at, status, vendors(name)")
         .order("created_at", { ascending: false });
       if (error) { setError(error.message); setLoading(false); return; }
       const rows = (data ?? []).map((row: any) => ({
         id: String(row.id),
         po_number: String(row.po_number ?? ""),
         vendor_id: row.vendor_id ?? null,
+        vendor_name: row.vendors?.name ?? null,
         total: row.total ?? null,
-        po_date: row.po_date ?? null,
         created_at: row.created_at ?? null,
         status: row.status ?? null,
       })) as POSummary[];
@@ -50,7 +50,7 @@ export default function POHistoryPage() {
     const q = search.toLowerCase();
     setFiltered(rows.filter((r) =>
       (r.po_number ?? "").toLowerCase().includes(q) ||
-      (r.vendor_id ?? "").toLowerCase().includes(q)
+      (r.vendor_name ?? r.vendor_id ?? "").toLowerCase().includes(q)
     ));
   }, [search, rows]);
 
@@ -119,12 +119,12 @@ export default function POHistoryPage() {
                     <td className="px-5 py-4">
                       <span className="font-mono text-viton-red dark:text-orange-400 font-semibold text-xs">{row.po_number}</span>
                     </td>
-                    <td className="px-5 py-4 text-viton-navy dark:text-gray-200">{row.vendor_id ?? "—"}</td>
-                    <td className="px-5 py-4 text-[#4a5578] dark:text-gray-400">{formatDate(row.po_date ?? row.created_at)}</td>
+                    <td className="px-5 py-4 text-viton-navy dark:text-gray-200">{row.vendor_name ?? row.vendor_id ?? "—"}</td>
+                    <td className="px-5 py-4 text-[#4a5578] dark:text-gray-400">{formatDate(row.created_at)}</td>
                     <td className="px-5 py-4 text-viton-navy dark:text-gray-200 tabular-nums font-medium">{formatCurrency(row.total)}</td>
                     <td className="px-5 py-4">
                       <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
-                        row.status === "approved"
+                        row.status === "approved" || row.status === "confirmed"
                           ? "bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400"
                           : row.status === "cancelled"
                           ? "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400"
