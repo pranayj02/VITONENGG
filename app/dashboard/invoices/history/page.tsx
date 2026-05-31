@@ -29,8 +29,9 @@ export default function InvoiceHistoryPage() {
         .select("id, invoice_number, buyer_name, grand_total, invoice_date, created_at, status")
         .order("created_at", { ascending: false });
       if (error) { setError(error.message); setLoading(false); return; }
-      setRows(data ?? []);
-      setFiltered(data ?? []);
+      const rows = (data ?? []) as unknown as InvoiceSummary[];
+      setRows(rows);
+      setFiltered(rows);
       setLoading(false);
     }
     load();
