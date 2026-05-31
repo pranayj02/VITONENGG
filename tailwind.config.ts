@@ -7,8 +7,20 @@ const config: Config = {
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
     "./lib/**/*.{js,ts,jsx,tsx,mdx}",
   ],
+  darkMode: "class",
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        viton: {
+          navy: "#1a2744",
+          red: "#d4222a",
+          "red-hover": "#b81c22",
+          "red-active": "#9a161b",
+          "navy-light": "#243259",
+          "navy-muted": "#3d4f7a",
+        },
+      },
+    },
   },
   plugins: [],
 };

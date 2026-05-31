@@ -8,5 +8,21 @@
 
 body {
   margin: 0;
+  background-color: #f1f3f8;
+}
+
+.dark body {
   background-color: #030712;
+}
+
+:root {
+  --viton-navy: #1a2744;
+  --viton-red: #d4222a;
+  --viton-red-hover: #b81c22;
+  --viton-surface: #ffffff;
+  --viton-surface-2: #f1f3f8;
+  --viton-border: #dde1ea;
+  --viton-text: #1a2744;
+  --viton-text-muted: #4a5578;
+  --viton-text-faint: #8892a8;
 }

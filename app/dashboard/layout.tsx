@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
+import { useTheme } from "@/components/ThemeProvider";
 import {
   LayoutDashboard,
   Package,
@@ -14,6 +15,8 @@ import {
   LogOut,
   Menu,
   X,
+  Sun,
+  Moon,
 } from "lucide-react";
 
 const navSections = [
@@ -61,6 +64,7 @@ export default function DashboardLayout({
   const [mobileOpen, setMobileOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+  const { theme, toggle } = useTheme();
 
   useEffect(() => {
     const supabase = createClient();
@@ -81,8 +85,8 @@ export default function DashboardLayout({
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-[#f1f3f8] dark:bg-gray-950 flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-viton-red dark:border-orange-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -92,7 +96,7 @@ export default function DashboardLayout({
       <div className="space-y-5">
         {navSections.map((section) => (
           <div key={section.title}>
-            <p className="px-4 mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-gray-600">
+            <p className="px-4 mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8892a8] dark:text-gray-600">
               {section.title}
             </p>
 
@@ -108,8 +112,8 @@ export default function DashboardLayout({
                     onClick={onLinkClick}
                     className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-150 ${
                       isActive
-                        ? "bg-orange-500 text-white shadow-lg shadow-orange-500/20"
-                        : "text-gray-400 hover:text-white hover:bg-gray-800"
+                        ? "bg-viton-red dark:bg-orange-500 text-white shadow-lg shadow-red-500/20 dark:shadow-orange-500/20"
+                        : "text-[#4a5578] dark:text-gray-400 hover:text-viton-navy dark:hover:text-white hover:bg-[#e8eaf2] dark:hover:bg-gray-800"
                     }`}
                   >
                     <Icon size={18} />
@@ -125,18 +129,26 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 flex">
+    <div className="min-h-screen bg-[#f1f3f8] dark:bg-gray-950 flex">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-72 bg-gray-900 border-r border-gray-800 fixed top-0 left-0 bottom-0 z-10">
-        <div className="p-6 border-b border-gray-800">
+      <aside className="hidden md:flex flex-col w-72 bg-white dark:bg-gray-900 border-r border-[#dde1ea] dark:border-gray-800 fixed top-0 left-0 bottom-0 z-10">
+        <div className="p-6 border-b border-[#dde1ea] dark:border-gray-800">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-orange-500/20 flex-shrink-0">
+            <div className="w-10 h-10 bg-viton-red dark:bg-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-red-500/20 dark:shadow-orange-500/20 flex-shrink-0">
               <span className="text-white font-bold text-lg">V</span>
             </div>
-            <div>
-              <p className="text-white font-bold text-sm tracking-wide">VITONENGG</p>
-              <p className="text-gray-500 text-xs">Procurement Portal</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-viton-navy dark:text-white font-bold text-sm tracking-wide">VITONENGG</p>
+              <p className="text-[#8892a8] dark:text-gray-500 text-xs">Procurement Portal</p>
             </div>
+            {/* Theme Toggle */}
+            <button
+              onClick={toggle}
+              aria-label="Toggle theme"
+              className="p-1.5 rounded-lg text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white hover:bg-[#e8eaf2] dark:hover:bg-gray-800 transition-all flex-shrink-0"
+            >
+              {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
           </div>
         </div>
 
@@ -144,10 +156,10 @@ export default function DashboardLayout({
           <NavLinks />
         </nav>
 
-        <div className="p-4 border-t border-gray-800">
+        <div className="p-4 border-t border-[#dde1ea] dark:border-gray-800">
           <button
             onClick={handleSignOut}
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:text-red-400 hover:bg-gray-800 transition-all w-full"
+            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-[#4a5578] dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-[#e8eaf2] dark:hover:bg-gray-800 transition-all w-full"
           >
             <LogOut size={18} />
             Sign Out
@@ -156,40 +168,49 @@ export default function DashboardLayout({
       </aside>
 
       {/* Mobile Top Bar */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-20 bg-gray-900 border-b border-gray-800 px-4 h-14 flex items-center justify-between">
+      <div className="md:hidden fixed top-0 left-0 right-0 z-20 bg-white dark:bg-gray-900 border-b border-[#dde1ea] dark:border-gray-800 px-4 h-14 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 bg-orange-500 rounded-lg flex items-center justify-center">
+          <div className="w-7 h-7 bg-viton-red dark:bg-orange-500 rounded-lg flex items-center justify-center">
             <span className="text-white font-bold text-sm">V</span>
           </div>
-          <span className="text-white font-bold text-sm">VITONENGG</span>
+          <span className="text-viton-navy dark:text-white font-bold text-sm">VITONENGG</span>
         </div>
 
-        <button
-          onClick={() => setMobileOpen(!mobileOpen)}
-          className="text-gray-400 hover:text-white p-1"
-        >
-          {mobileOpen ? <X size={22} /> : <Menu size={22} />}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={toggle}
+            aria-label="Toggle theme"
+            className="p-1.5 rounded-lg text-[#8892a8] dark:text-gray-400 hover:bg-[#e8eaf2] dark:hover:bg-gray-800 transition-all"
+          >
+            {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+          </button>
+          <button
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="text-[#4a5578] dark:text-gray-400 hover:text-viton-navy dark:hover:text-white p-1"
+          >
+            {mobileOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
+        </div>
       </div>
 
       {/* Mobile Sidebar Overlay */}
       {mobileOpen && (
         <div
-          className="md:hidden fixed inset-0 z-30 bg-black/70"
+          className="md:hidden fixed inset-0 z-30 bg-black/50 dark:bg-black/70"
           onClick={() => setMobileOpen(false)}
         >
           <aside
-            className="absolute left-0 top-0 bottom-0 w-72 bg-gray-900 border-r border-gray-800 flex flex-col"
+            className="absolute left-0 top-0 bottom-0 w-72 bg-white dark:bg-gray-900 border-r border-[#dde1ea] dark:border-gray-800 flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-6 border-b border-gray-800">
+            <div className="p-6 border-b border-[#dde1ea] dark:border-gray-800">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 bg-orange-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                <div className="w-9 h-9 bg-viton-red dark:bg-orange-500 rounded-xl flex items-center justify-center flex-shrink-0">
                   <span className="text-white font-bold text-lg">V</span>
                 </div>
                 <div>
-                  <p className="text-white font-bold text-sm">VITONENGG</p>
-                  <p className="text-gray-500 text-xs">Procurement Portal</p>
+                  <p className="text-viton-navy dark:text-white font-bold text-sm">VITONENGG</p>
+                  <p className="text-[#8892a8] dark:text-gray-500 text-xs">Procurement Portal</p>
                 </div>
               </div>
             </div>
@@ -198,10 +219,10 @@ export default function DashboardLayout({
               <NavLinks onLinkClick={() => setMobileOpen(false)} />
             </nav>
 
-            <div className="p-4 border-t border-gray-800">
+            <div className="p-4 border-t border-[#dde1ea] dark:border-gray-800">
               <button
                 onClick={handleSignOut}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray-400 hover:text-red-400 hover:bg-gray-800 transition-all w-full"
+                className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-[#4a5578] dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-[#e8eaf2] dark:hover:bg-gray-800 transition-all w-full"
               >
                 <LogOut size={18} />
                 Sign Out
