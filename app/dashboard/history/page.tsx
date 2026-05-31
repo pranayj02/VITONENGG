@@ -29,8 +29,9 @@ export default function POHistoryPage() {
         .select("id, po_number, vendor_name, grand_total, po_date, created_at, status")
         .order("created_at", { ascending: false });
       if (error) { setError(error.message); setLoading(false); return; }
-      setRows(data ?? []);
-      setFiltered(data ?? []);
+      const rows = (data ?? []) as unknown as POSummary[];
+      setRows(rows);
+      setFiltered(rows);
       setLoading(false);
     }
     load();
