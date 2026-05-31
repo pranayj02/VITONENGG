@@ -164,19 +164,44 @@ function getPOAmount(row: PurchaseOrderRow): number {
   }, 0);
 }
 
+/**
+ * Returns the current Indian Financial Year label (e.g. "FY26")
+ * and the start/end Date boundaries for that FY.
+ *
+ * Indian FY runs April 1 → March 31.
+ * FY26 = Apr 1 2025 – Mar 31 2026
+ */
+function getCurrentFY(): { label: string; start: Date; end: Date } {
+  const today = new Date();
+  const month = today.getMonth(); // 0-indexed; March = 2, April = 3
+  const year = today.getFullYear();
+
+  // If today is Jan–Mar, FY started in the previous calendar year
+  const fyStartYear = month < 3 ? year - 1 : year;
+  const fyEndYear = fyStartYear + 1;
+
+  return {
+    label: `FY${String(fyEndYear).slice(-2)}`,
+    start: new Date(fyStartYear, 3, 1),   // Apr 1 of start year
+    end: new Date(fyEndYear, 2, 31, 23, 59, 59, 999), // Mar 31 of end year
+  };
+}
+
 function buildPOYearInsights(rows: PurchaseOrderRow[]) {
-  const currentYear = new Date().getFullYear();
-  const currentYearPOs = rows.filter((row) => {
+  const { label: fyLabel, start: fyStart, end: fyEnd } = getCurrentFY();
+
+  const currentFYPOs = rows.filter((row) => {
     const date = getPODate(row);
-    return date?.getFullYear() === currentYear;
+    if (!date) return false;
+    return date >= fyStart && date <= fyEnd;
   });
 
-  const totalValue = currentYearPOs.reduce((sum, row) => sum + getPOAmount(row), 0);
-  const avgValue = currentYearPOs.length ? totalValue / currentYearPOs.length : 0;
+  const totalValue = currentFYPOs.reduce((sum, row) => sum + getPOAmount(row), 0);
+  const avgValue = currentFYPOs.length ? totalValue / currentFYPOs.length : 0;
 
   const itemFrequency = new Map<string, number>();
 
-  currentYearPOs.forEach((row) => {
+  currentFYPOs.forEach((row) => {
     const items = getLineItems(row);
 
     items.forEach((item) => {
@@ -192,8 +217,8 @@ function buildPOYearInsights(rows: PurchaseOrderRow[]) {
     .map(([name, count]) => ({ name, count }));
 
   return {
-    year: currentYear,
-    count: currentYearPOs.length,
+    fyLabel,
+    count: currentFYPOs.length,
     totalValue,
     avgValue,
     topItems,
@@ -209,7 +234,7 @@ export default function DashboardPage() {
   });
   const [statsLoading, setStatsLoading] = useState(true);
   const [poYearInsights, setPoYearInsights] = useState({
-    year: new Date().getFullYear(),
+    fyLabel: getCurrentFY().label,
     count: 0,
     totalValue: 0,
     avgValue: 0,
@@ -363,13 +388,13 @@ export default function DashboardPage() {
         <div className="flex items-end justify-between gap-4 flex-wrap mb-4">
           <div>
             <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest mb-2">
-              POs Raised This Year
+              POs Raised This Financial Year
             </p>
             <h2 className="text-white text-xl font-semibold tracking-tight">
-              Purchase order snapshot for {poYearInsights.year}
+              Purchase order snapshot for {poYearInsights.fyLabel}
             </h2>
             <p className="text-gray-500 text-sm mt-1">
-              Volume, value, and item trends from POs raised this year
+              Volume, value, and item trends from POs raised in {poYearInsights.fyLabel} (Apr–Mar)
             </p>
           </div>
 
@@ -393,7 +418,7 @@ export default function DashboardPage() {
                 poYearInsights.count
               )}
             </p>
-            <p className="text-gray-500 text-xs mt-1">POs raised in {poYearInsights.year}</p>
+            <p className="text-gray-500 text-xs mt-1">POs raised in {poYearInsights.fyLabel}</p>
           </div>
 
           <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 xl:col-span-1">
@@ -432,7 +457,7 @@ export default function DashboardPage() {
                 </div>
                 <p className="text-white text-base font-semibold">Most Common Items</p>
                 <p className="text-gray-500 text-xs mt-1">
-                  Based on line items found inside this year's POs
+                  Based on line items found inside {poYearInsights.fyLabel} POs
                 </p>
               </div>
             </div>
@@ -469,7 +494,7 @@ export default function DashboardPage() {
             ) : (
               <div className="rounded-xl border border-dashed border-gray-800 bg-gray-950/50 p-4">
                 <p className="text-sm text-gray-400">
-                  No item-level PO trend data found for this year yet.
+                  No item-level PO trend data found for {poYearInsights.fyLabel} yet.
                 </p>
               </div>
             )}
