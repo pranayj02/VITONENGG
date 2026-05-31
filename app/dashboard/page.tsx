@@ -211,9 +211,10 @@ function buildPOYearInsights(rows: PurchaseOrderRow[]) {
     });
   });
 
+  // Top 3 only
   const topItems: TopItem[] = Array.from(itemFrequency.entries())
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
+    .slice(0, 3)
     .map(([name, count]) => ({ name, count }));
 
   return {
@@ -385,17 +386,14 @@ export default function DashboardPage() {
 
       {/* PO Insights */}
       <div className="mb-10">
-        <div className="flex items-end justify-between gap-4 flex-wrap mb-4">
+        <div className="flex items-end justify-between gap-4 flex-wrap mb-3">
           <div>
-            <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest mb-2">
+            <p className="text-gray-400 text-xs font-semibold uppercase tracking-widest mb-1">
               POs Raised This Financial Year
             </p>
             <h2 className="text-white text-xl font-semibold tracking-tight">
               Purchase order snapshot for {poYearInsights.fyLabel}
             </h2>
-            <p className="text-gray-500 text-sm mt-1">
-              Volume, value, and item trends from POs raised in {poYearInsights.fyLabel} (Apr–Mar)
-            </p>
           </div>
 
           <Link
@@ -406,97 +404,101 @@ export default function DashboardPage() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 xl:col-span-1">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3 bg-orange-500/10 text-orange-400">
-              <FileText size={20} />
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
+          {/* PO Count */}
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 xl:col-span-1 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-orange-500/10 text-orange-400">
+              <FileText size={16} />
             </div>
-            <p className="text-white text-2xl font-bold tabular-nums">
-              {poYearLoading ? (
-                <span className="inline-block w-12 h-6 bg-gray-800 rounded animate-pulse" />
-              ) : (
-                poYearInsights.count
-              )}
-            </p>
-            <p className="text-gray-500 text-xs mt-1">POs raised in {poYearInsights.fyLabel}</p>
+            <div className="min-w-0">
+              <p className="text-white text-xl font-bold tabular-nums leading-tight">
+                {poYearLoading ? (
+                  <span className="inline-block w-10 h-5 bg-gray-800 rounded animate-pulse" />
+                ) : (
+                  poYearInsights.count
+                )}
+              </p>
+              <p className="text-gray-500 text-xs">POs in {poYearInsights.fyLabel}</p>
+            </div>
           </div>
 
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 xl:col-span-1">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3 bg-emerald-500/10 text-emerald-400">
-              <IndianRupee size={20} />
+          {/* Total Value */}
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 xl:col-span-1 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-emerald-500/10 text-emerald-400">
+              <IndianRupee size={16} />
             </div>
-            <p className="text-white text-2xl font-bold tabular-nums leading-tight">
-              {poYearLoading ? (
-                <span className="inline-block w-24 h-6 bg-gray-800 rounded animate-pulse" />
-              ) : (
-                formatCurrency(poYearInsights.totalValue)
-              )}
-            </p>
-            <p className="text-gray-500 text-xs mt-1">Collective PO value</p>
+            <div className="min-w-0">
+              <p className="text-white text-xl font-bold tabular-nums leading-tight truncate">
+                {poYearLoading ? (
+                  <span className="inline-block w-20 h-5 bg-gray-800 rounded animate-pulse" />
+                ) : (
+                  formatCurrency(poYearInsights.totalValue)
+                )}
+              </p>
+              <p className="text-gray-500 text-xs">Total PO value</p>
+            </div>
           </div>
 
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 xl:col-span-1">
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3 bg-blue-500/10 text-blue-400">
-              <TrendingUp size={20} />
+          {/* Avg Value */}
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 xl:col-span-1 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-blue-500/10 text-blue-400">
+              <TrendingUp size={16} />
             </div>
-            <p className="text-white text-2xl font-bold tabular-nums leading-tight">
-              {poYearLoading ? (
-                <span className="inline-block w-24 h-6 bg-gray-800 rounded animate-pulse" />
-              ) : (
-                formatCurrency(poYearInsights.avgValue)
-              )}
-            </p>
-            <p className="text-gray-500 text-xs mt-1">Average PO value</p>
+            <div className="min-w-0">
+              <p className="text-white text-xl font-bold tabular-nums leading-tight truncate">
+                {poYearLoading ? (
+                  <span className="inline-block w-20 h-5 bg-gray-800 rounded animate-pulse" />
+                ) : (
+                  formatCurrency(poYearInsights.avgValue)
+                )}
+              </p>
+              <p className="text-gray-500 text-xs">Avg PO value</p>
+            </div>
           </div>
 
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 xl:col-span-2">
-            <div className="flex items-start justify-between gap-3 mb-4">
-              <div>
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3 bg-purple-500/10 text-purple-400">
-                  <BarChart3 size={20} />
-                </div>
-                <p className="text-white text-base font-semibold">Most Common Items</p>
-                <p className="text-gray-500 text-xs mt-1">
-                  Based on line items found inside {poYearInsights.fyLabel} POs
-                </p>
+          {/* Most Common Items */}
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-4 xl:col-span-2">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-6 h-6 rounded-md flex items-center justify-center bg-purple-500/10 text-purple-400">
+                <BarChart3 size={13} />
               </div>
+              <p className="text-white text-sm font-semibold">Top Items</p>
+              <span className="text-gray-600 text-xs ml-auto">{poYearInsights.fyLabel}</span>
             </div>
 
             {poYearLoading ? (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-gray-800 animate-pulse" />
-                    <div className="flex-1 h-4 rounded bg-gray-800 animate-pulse" />
-                    <div className="w-10 h-4 rounded bg-gray-800 animate-pulse" />
+                  <div key={i} className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-md bg-gray-800 animate-pulse flex-shrink-0" />
+                    <div className="flex-1 h-3.5 rounded bg-gray-800 animate-pulse" />
+                    <div className="w-8 h-3.5 rounded bg-gray-800 animate-pulse" />
                   </div>
                 ))}
               </div>
             ) : poYearInsights.topItems.length > 0 ? (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {poYearInsights.topItems.map((item, index) => (
                   <div
                     key={`${item.name}-${index}`}
-                    className="flex items-center justify-between gap-3"
+                    className="flex items-center justify-between gap-2"
                   >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-8 h-8 rounded-lg bg-gray-800 text-gray-300 text-xs font-semibold flex items-center justify-center flex-shrink-0">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-6 h-6 rounded-md bg-gray-800 text-gray-400 text-xs font-semibold flex items-center justify-center flex-shrink-0">
                         {index + 1}
                       </div>
                       <p className="text-sm text-gray-200 truncate">{item.name}</p>
                     </div>
-                    <span className="text-xs font-medium text-orange-300 bg-orange-500/10 border border-orange-500/20 rounded-full px-2.5 py-1 flex-shrink-0">
+                    <span className="text-xs font-medium text-orange-300 bg-orange-500/10 border border-orange-500/20 rounded-full px-2 py-0.5 flex-shrink-0">
                       {item.count} {item.count === 1 ? "PO" : "POs"}
                     </span>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="rounded-xl border border-dashed border-gray-800 bg-gray-950/50 p-4">
-                <p className="text-sm text-gray-400">
-                  No item-level PO trend data found for {poYearInsights.fyLabel} yet.
-                </p>
-              </div>
+              <p className="text-xs text-gray-500">
+                No trend data for {poYearInsights.fyLabel} yet.
+              </p>
             )}
           </div>
         </div>
