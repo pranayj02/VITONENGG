@@ -8,7 +8,7 @@ interface InvoiceSummary {
   id: string;
   invoice_number: string;
   buyer_name?: string | null;
-  grand_total?: number | null;
+  total?: number | null;
   invoice_date?: string | null;
   created_at?: string | null;
   status?: string | null;
@@ -33,7 +33,7 @@ export default function InvoiceHistoryPage() {
         id: String(row.id),
         invoice_number: String(row.invoice_number ?? ""),
         buyer_name: row.buyer_name ?? null,
-        grand_total: row.total ?? row.grand_total ?? null,
+        total: row.total ?? null,
         invoice_date: row.invoice_date ?? null,
         created_at: row.created_at ?? null,
         status: row.status ?? null,
@@ -50,7 +50,7 @@ export default function InvoiceHistoryPage() {
     const q = search.toLowerCase();
     setFiltered(rows.filter((r) =>
       (r.invoice_number ?? "").toLowerCase().includes(q) ||
-      (r.invoice_number ?? "").toLowerCase().includes(q) || (r.buyer_name ?? "").toLowerCase().includes(q)
+      (r.buyer_name ?? "").toLowerCase().includes(q)
     ));
   }, [search, rows]);
 
