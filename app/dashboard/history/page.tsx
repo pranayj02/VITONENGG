@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
-import { Search, X, FileText, ExternalLink } from "lucide-react";
+import { Search, X, FileText, Pencil, Trash2, Download, ExternalLink } from "lucide-react";
 import Link from "next/link";
 
 interface POSummary {
@@ -20,6 +20,7 @@ export default function POHistoryPage() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -75,14 +76,80 @@ export default function POHistoryPage() {
     return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(val);
   }
 
+  function downloadRowCSV(row: POSummary) {
+    const headers = ["PO Number", "Vendor", "Date", "Amount", "Status"];
+    const values = [
+      row.po_number,
+      row.vendor_name ?? row.vendor_id ?? "",
+      formatDate(row.created_at),
+      String(row.total ?? 0),
+      row.status ?? "draft",
+    ];
+    const csv = [headers, values]
+      .map((line) => line.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${row.po_number.replace(/\//g, "-")}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function downloadRowPDF(row: POSummary) {
+    const reactPdf = await import("@react-pdf/renderer");
+    const { POPdfDocument } = await import("@/components/POPdf");
+    const po = {
+      po_number: row.po_number,
+      created_at: row.created_at ?? new Date().toISOString(),
+      subtotal: row.total ?? 0,
+      total: row.total ?? 0,
+      notes: "",
+      line_items: [],
+      dispatch_meta: {},
+      vendors: row.vendor_name ? { name: row.vendor_name } : null,
+      quot_no: null,
+      quot_date: null,
+    };
+    const blob = await reactPdf.pdf(<POPdfDocument po={po as any} />).toBlob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${row.po_number.replace(/\//g, "-")}.pdf`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function handleDelete(id: string, poNumber: string) {
+    const ok = window.confirm(`Delete PO ${poNumber}? This cannot be undone.`);
+    if (!ok) return;
+    setDeletingId(id);
+    const supabase = createClient();
+    const { error } = await supabase.from("purchase_orders").delete().eq("id", id);
+    if (error) {
+      setError(error.message);
+      setDeletingId(null);
+      return;
+    }
+    const next = rows.filter((row) => row.id !== id);
+    setRows(next);
+    setFiltered(next.filter((r) => {
+      if (!search.trim()) return true;
+      const q = search.toLowerCase();
+      return (r.po_number ?? "").toLowerCase().includes(q) || (r.vendor_name ?? r.vendor_id ?? "").toLowerCase().includes(q);
+    }));
+    setDeletingId(null);
+  }
+
   return (
-    <div className="p-6 lg:p-8 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-6 gap-4">
+    <div className="p-6 lg:p-8 max-w-6xl mx-auto">
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between mb-6 gap-4">
         <div>
           <h1 className="text-viton-navy dark:text-white text-2xl font-bold">PO History</h1>
           <p className="text-[#8892a8] dark:text-gray-500 text-sm mt-1">{rows.length} purchase orders</p>
         </div>
-        <Link href="/dashboard/po/new" className="flex items-center gap-2 bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-all">
+        <Link href="/dashboard/po/new" className="inline-flex w-fit items-center gap-2 bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-all">
           <FileText size={16} />
           New PO
         </Link>
@@ -119,7 +186,7 @@ export default function POHistoryPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-[#f1f3f8] dark:bg-gray-800/50 border-b border-[#dde1ea] dark:border-gray-800">
-                  {["PO Number", "Vendor", "Date", "Amount", "Status", ""].map((h) => (
+                  {["PO Number", "Vendor", "Date", "Amount", "Status", "Actions"].map((h) => (
                     <th key={h} className="text-left px-5 py-3.5 text-[#4a5578] dark:text-gray-400 font-semibold text-xs uppercase tracking-wider">{h}</th>
                   ))}
                 </tr>
@@ -145,9 +212,23 @@ export default function POHistoryPage() {
                       </span>
                     </td>
                     <td className="px-5 py-4">
-                      <Link href={`/dashboard/po/${row.id}`} className="text-[#8892a8] dark:text-gray-500 hover:text-viton-red dark:hover:text-orange-400 transition-colors">
-                        <ExternalLink size={15} />
-                      </Link>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Link href={`/dashboard/po/new?id=${row.id}`} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-500/10 dark:text-blue-300 dark:hover:bg-blue-500/20 text-xs font-semibold transition-colors">
+                          <Pencil size={13} /> Edit
+                        </Link>
+                        <button onClick={() => downloadRowCSV(row)} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#f1f3f8] text-[#4a5578] hover:bg-[#e7ebf3] dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 text-xs font-semibold transition-colors">
+                          <Download size={13} /> CSV
+                        </button>
+                        <button onClick={() => downloadRowPDF(row)} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#f1f3f8] text-[#4a5578] hover:bg-[#e7ebf3] dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 text-xs font-semibold transition-colors">
+                          <FileText size={13} /> PDF
+                        </button>
+                        <button onClick={() => handleDelete(row.id, row.po_number)} disabled={deletingId === row.id} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-300 dark:hover:bg-red-500/20 text-xs font-semibold transition-colors disabled:opacity-50">
+                          <Trash2 size={13} /> {deletingId === row.id ? "Deleting..." : "Delete"}
+                        </button>
+                        <Link href={`/dashboard/po/${row.id}`} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#f1f3f8] text-[#4a5578] hover:bg-[#e7ebf3] dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 text-xs font-semibold transition-colors">
+                          <ExternalLink size={13} /> Open
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))}
