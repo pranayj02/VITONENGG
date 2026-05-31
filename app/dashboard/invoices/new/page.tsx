@@ -208,7 +208,6 @@ function normalizeBuyer(row: BuyerRow): Buyer {
   const displayName =
     row.display_name?.trim() || (branchName ? `${companyName} - ${branchName}` : companyName);
 
-  // Derive state_code from state name if not stored
   const state = row.state ?? null;
   const stateCode =
     row.state_code?.trim() || (state ? STATE_CODES[state] ?? null : null);
@@ -275,6 +274,15 @@ function openInvoicePrint(id: string) {
     "noopener,noreferrer"
   );
 }
+
+// ─── Shared input/textarea class helpers ─────────────────────────────────────
+const inputCls = "w-full bg-[#f1f3f8] dark:bg-gray-950 border border-[#dde1ea] dark:border-gray-800 rounded-xl px-4 py-3 text-viton-navy dark:text-white text-sm placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500";
+const cardCls = "bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl";
+const innerCardCls = "bg-[#f7f8fb] dark:bg-gray-950 border border-[#dde1ea] dark:border-gray-800 rounded-2xl";
+const labelCls = "block text-sm text-[#4a5578] dark:text-gray-300 font-medium mb-2";
+const labelSmCls = "block text-xs text-[#8892a8] dark:text-gray-500 mb-1";
+const headingCls = "text-viton-navy dark:text-white font-bold text-lg mb-4";
+const subTextCls = "text-[#8892a8] dark:text-gray-500 text-sm";
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -427,8 +435,6 @@ export default function NewInvoicePage() {
       .includes(buyerSearch.toLowerCase())
   );
 
-  // ── Tax calculation — uses actual gst_rate from first valid line ────────────
-
   const taxMode =
     selectedBuyer?.state_code && selectedBuyer.state_code !== MAHARASHTRA_STATE_CODE
       ? "inter"
@@ -439,7 +445,6 @@ export default function NewInvoicePage() {
   const otherCharges = Number(dispatchMeta.other_charges || 0);
   const taxableBase = Number((subtotal + freightPacking + otherCharges).toFixed(2));
 
-  // Derive GST rate from line items — use first line with a valid rate, default 18
   const lineGstRate = lineItems.find((l) => Number(l.gst_rate) > 0)?.gst_rate ?? 18;
   const halfRate = lineGstRate / 2 / 100;
   const fullRate = lineGstRate / 100;
@@ -448,8 +453,6 @@ export default function NewInvoicePage() {
   const sgst = taxMode === "intra" ? Number((taxableBase * halfRate).toFixed(2)) : 0;
   const igst = taxMode === "inter" ? Number((taxableBase * fullRate).toFixed(2)) : 0;
   const total = Number((taxableBase + cgst + sgst + igst).toFixed(2));
-
-  // ── Line item helpers ────────────────────────────────────────────────────────
 
   function updateLine(index: number, patch: Partial<InvoiceLine>) {
     setLineItems((prev) =>
@@ -581,7 +584,6 @@ export default function NewInvoicePage() {
 
       if (result.error) throw result.error;
 
-      // ── Buyer item memory: update existing records, insert only new ones ──
       for (const line of previewData.line_items) {
         if (!line.description.trim()) continue;
 
@@ -592,7 +594,6 @@ export default function NewInvoicePage() {
         );
 
         if (existing) {
-          // Only update if price has changed
           if (existing.last_price !== Number(line.unit_rate)) {
             await supabase
               .from("buyer_items")
@@ -637,21 +638,21 @@ export default function NewInvoicePage() {
         <div className="min-h-screen flex items-center justify-center p-4">
           <div className="text-center max-w-lg">
             <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CheckCircle size={32} className="text-green-400" />
+              <CheckCircle size={32} className="text-green-500 dark:text-green-400" />
             </div>
 
-            <h2 className="text-white text-xl font-bold mb-1">
+            <h2 className="text-viton-navy dark:text-white text-xl font-bold mb-1">
               {editId ? "Invoice Updated!" : "Invoice Created!"}
             </h2>
-            <p className="text-gray-400 text-sm font-mono mb-2">{invoiceNumber}</p>
-            <p className="text-gray-500 text-sm mb-6">
+            <p className="text-viton-red dark:text-orange-400 text-sm font-mono mb-2">{invoiceNumber}</p>
+            <p className="text-[#8892a8] dark:text-gray-500 text-sm mb-6">
               Saved as {invoiceStatus === "draft" ? "draft" : "confirmed"} · {selectedBuyer?.display_name}
             </p>
 
             <div className="flex flex-wrap gap-3 justify-center">
               <button
                 onClick={() => savedInvoiceId && openInvoicePrint(savedInvoiceId)}
-                className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-5 py-2.5 rounded-xl text-sm flex items-center gap-2"
+                className="bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 text-white font-semibold px-5 py-2.5 rounded-xl text-sm flex items-center gap-2"
               >
                 <Printer size={15} />
                 Print Invoice
@@ -659,7 +660,7 @@ export default function NewInvoicePage() {
 
               <a
                 href="/dashboard/invoices/new"
-                className="bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold px-5 py-2.5 rounded-xl text-sm flex items-center gap-2"
+                className="bg-[#f1f3f8] dark:bg-gray-800 hover:bg-[#e8eaf2] dark:hover:bg-gray-700 text-[#4a5578] dark:text-gray-300 font-semibold px-5 py-2.5 rounded-xl text-sm flex items-center gap-2"
               >
                 <Plus size={15} />
                 New Invoice
@@ -667,7 +668,7 @@ export default function NewInvoicePage() {
 
               <a
                 href="/dashboard/invoices/history"
-                className="bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold px-5 py-2.5 rounded-xl text-sm flex items-center gap-2"
+                className="bg-[#f1f3f8] dark:bg-gray-800 hover:bg-[#e8eaf2] dark:hover:bg-gray-700 text-[#4a5578] dark:text-gray-300 font-semibold px-5 py-2.5 rounded-xl text-sm flex items-center gap-2"
               >
                 <History size={15} />
                 View History
@@ -689,8 +690,8 @@ export default function NewInvoicePage() {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
         <div className="text-center">
-          <div className="w-7 h-7 border-2 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-gray-400 text-sm">Loading invoice builder...</p>
+          <div className="w-7 h-7 border-2 border-viton-red dark:border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-[#8892a8] dark:text-gray-400 text-sm">Loading invoice builder...</p>
         </div>
       </div>
     );
@@ -703,22 +704,22 @@ export default function NewInvoicePage() {
       <div className="p-6 lg:p-8 max-w-7xl mx-auto">
         <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-white text-2xl font-bold">
+            <h1 className="text-viton-navy dark:text-white text-2xl font-bold">
               {editId ? "Edit Invoice" : "New Invoice"}
             </h1>
-            <p className="text-gray-500 text-sm mt-1">
+            <p className={subTextCls + " mt-1"}>
               Fast entry for invoice creation with buyer branch memory and print preview.
             </p>
           </div>
 
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl px-4 py-3 min-w-[240px]">
-            <p className="text-gray-500 text-xs uppercase tracking-wider">Invoice Number</p>
-            <p className="text-white font-semibold font-mono mt-1">{invoiceNumber || "—"}</p>
+          <div className={cardCls + " px-4 py-3 min-w-[240px]"}>
+            <p className="text-[#8892a8] dark:text-gray-500 text-xs uppercase tracking-wider">Invoice Number</p>
+            <p className="text-viton-navy dark:text-white font-semibold font-mono mt-1">{invoiceNumber || "—"}</p>
           </div>
         </div>
 
         {error ? (
-          <div className="mb-4 bg-red-500/10 border border-red-500/30 rounded-xl p-3 text-red-300 text-sm">
+          <div className="mb-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-xl p-3 text-red-600 dark:text-red-300 text-sm">
             {error}
           </div>
         ) : null}
@@ -727,15 +728,15 @@ export default function NewInvoicePage() {
           <div className="space-y-6">
 
             {/* ── Buyer Branch ── */}
-            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
-              <h2 className="text-white font-bold text-lg mb-4">Buyer Branch</h2>
+            <div className={cardCls + " p-5"}>
+              <h2 className={headingCls}>Buyer Branch</h2>
 
               <div className="relative">
-                <label className="block text-sm text-gray-300 font-medium mb-2">
+                <label className={labelCls}>
                   Select Buyer *
                 </label>
 
-                <Search size={16} className="absolute left-4 top-[46px] text-gray-500" />
+                <Search size={16} className="absolute left-4 top-[46px] text-[#8892a8] dark:text-gray-500" />
 
                 <input
                   value={buyerSearch}
@@ -749,7 +750,7 @@ export default function NewInvoicePage() {
                   }}
                   onFocus={() => setBuyerDropdownOpen(true)}
                   placeholder="Search company, branch, GSTIN or state"
-                  className="w-full bg-gray-950 border border-gray-800 rounded-xl pl-10 pr-10 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className={inputCls + " pl-10 pr-10"}
                 />
 
                 {buyerSearch ? (
@@ -761,29 +762,29 @@ export default function NewInvoicePage() {
                       setBuyerItems([]);
                       setBuyerDropdownOpen(false);
                     }}
-                    className="absolute right-4 top-[45px] text-gray-500 hover:text-white"
+                    className="absolute right-4 top-[45px] text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white"
                   >
                     <X size={16} />
                   </button>
                 ) : null}
 
                 {buyerDropdownOpen && buyerSearch.trim() && filteredBuyers.length > 0 ? (
-                  <div className="absolute z-20 mt-2 w-full bg-gray-950 border border-gray-800 rounded-2xl overflow-hidden shadow-2xl max-h-80 overflow-y-auto">
+                  <div className="absolute z-20 mt-2 w-full bg-white dark:bg-gray-950 border border-[#dde1ea] dark:border-gray-800 rounded-2xl overflow-hidden shadow-2xl max-h-80 overflow-y-auto">
                     {filteredBuyers.slice(0, 10).map((buyer) => (
                       <button
                         key={buyer.id}
                         type="button"
                         onClick={() => handleSelectBuyer(buyer)}
-                        className="w-full text-left px-4 py-3 hover:bg-gray-900 border-b border-gray-800 last:border-0"
+                        className="w-full text-left px-4 py-3 hover:bg-[#f1f3f8] dark:hover:bg-gray-900 border-b border-[#dde1ea] dark:border-gray-800 last:border-0"
                       >
-                        <p className="text-white font-medium">{buyer.company_name}</p>
-                        <p className="text-gray-400 text-xs mt-1">
+                        <p className="text-viton-navy dark:text-white font-medium">{buyer.company_name}</p>
+                        <p className="text-[#8892a8] dark:text-gray-400 text-xs mt-1">
                           {buyer.branch_name || buyer.state || "Main Branch"} ·{" "}
                           {buyer.gstin || "No GSTIN"}
                           {buyer.state_code ? ` · Code ${buyer.state_code}` : ""}
                         </p>
                         {buyer.address ? (
-                          <p className="text-gray-500 text-xs mt-1 line-clamp-2">{buyer.address}</p>
+                          <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-1 line-clamp-2">{buyer.address}</p>
                         ) : null}
                       </button>
                     ))}
@@ -792,11 +793,11 @@ export default function NewInvoicePage() {
               </div>
 
               {selectedBuyer ? (
-                <div className="mt-4 bg-gray-950 border border-gray-800 rounded-2xl p-4 space-y-2">
+                <div className={innerCardCls + " mt-4 p-4 space-y-2"}>
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <p className="text-white font-semibold">{selectedBuyer.company_name}</p>
-                      <p className="text-gray-500 text-xs mt-1">
+                      <p className="text-viton-navy dark:text-white font-semibold">{selectedBuyer.company_name}</p>
+                      <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-1">
                         {selectedBuyer.branch_name || "Main Branch"}
                       </p>
                     </div>
@@ -804,8 +805,8 @@ export default function NewInvoicePage() {
                     <span
                       className={`text-xs font-semibold px-2.5 py-1 rounded-lg ${
                         taxMode === "intra"
-                          ? "bg-green-500/10 text-green-400"
-                          : "bg-blue-500/10 text-blue-400"
+                          ? "bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400"
+                          : "bg-blue-50 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400"
                       }`}
                     >
                       {taxMode === "intra"
@@ -814,11 +815,11 @@ export default function NewInvoicePage() {
                     </span>
                   </div>
 
-                  <p className="text-gray-400 text-sm whitespace-pre-line">
+                  <p className="text-[#4a5578] dark:text-gray-400 text-sm whitespace-pre-line">
                     {selectedBuyer.address || "No address"}
                   </p>
 
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-400">
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-[#4a5578] dark:text-gray-400">
                     <span>GSTIN: {selectedBuyer.gstin || "—"}</span>
                     <span>
                       State: {selectedBuyer.state || "—"}{" "}
@@ -830,9 +831,7 @@ export default function NewInvoicePage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                 <div>
-                  <label className="block text-sm text-gray-300 font-medium mb-2">
-                    Invoice Date
-                  </label>
+                  <label className={labelCls}>Invoice Date</label>
                   <input
                     type="date"
                     value={invoiceDate}
@@ -842,37 +841,35 @@ export default function NewInvoicePage() {
                         void generateNextInvoiceNumber(e.target.value).catch(() => null);
                       }
                     }}
-                    className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className={inputCls}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm text-gray-300 font-medium mb-2">
-                    Buyer PO No.
-                  </label>
+                  <label className={labelCls}>Buyer PO No.</label>
                   <input
                     value={buyersPoNumber}
                     onChange={(e) => setBuyersPoNumber(e.target.value)}
                     placeholder="Customer PO reference"
-                    className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className={inputCls}
                   />
                 </div>
               </div>
             </div>
 
             {/* ── Line Items ── */}
-            <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
-              <div className="px-5 py-4 border-b border-gray-800 flex items-center justify-between">
+            <div className={cardCls + " overflow-hidden"}>
+              <div className="px-5 py-4 border-b border-[#dde1ea] dark:border-gray-800 flex items-center justify-between">
                 <div>
-                  <h2 className="text-white font-bold text-lg">Line Items</h2>
-                  <p className="text-gray-500 text-sm mt-1">
+                  <h2 className="text-viton-navy dark:text-white font-bold text-lg">Line Items</h2>
+                  <p className={subTextCls + " mt-1"}>
                     Description stays wide for readability and printing.
                   </p>
                 </div>
 
                 <button
                   onClick={addLine}
-                  className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2 rounded-xl text-sm transition"
+                  className="flex items-center gap-2 bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 text-white font-semibold px-4 py-2 rounded-xl text-sm transition"
                 >
                   <Plus size={14} />
                   Add Line
@@ -891,15 +888,15 @@ export default function NewInvoicePage() {
                   return (
                     <div
                       key={index}
-                      className="bg-gray-950 border border-gray-800 rounded-2xl p-4"
+                      className={innerCardCls + " p-4"}
                     >
                       <div className="flex items-center justify-between mb-4">
-                        <p className="text-white font-semibold">Line {index + 1}</p>
+                        <p className="text-viton-navy dark:text-white font-semibold">Line {index + 1}</p>
 
                         <button
                           type="button"
                           onClick={() => removeLine(index)}
-                          className="flex items-center gap-2 bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/30 hover:border-red-500 font-semibold px-3 py-2 rounded-xl text-sm transition"
+                          className="flex items-center gap-2 bg-red-50 dark:bg-red-500/10 hover:bg-red-500 text-red-600 dark:text-red-400 hover:text-white border border-red-200 dark:border-red-500/30 hover:border-red-500 font-semibold px-3 py-2 rounded-xl text-sm transition"
                         >
                           <Trash2 size={14} />
                           Remove
@@ -908,81 +905,75 @@ export default function NewInvoicePage() {
 
                       <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
                         <div>
-                          <label className="block text-xs text-gray-500 mb-1">
-                            Buyer PO Sr. No.
-                          </label>
+                          <label className={labelSmCls}>Buyer PO Sr. No.</label>
                           <input
                             value={line.buyer_po_sr_no}
                             onChange={(e) => updateLine(index, { buyer_po_sr_no: e.target.value })}
                             placeholder="00010"
-                            className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            className={inputCls}
                           />
                         </div>
 
                         <div>
-                          <label className="block text-xs text-gray-500 mb-1">
-                            Buyer Item Code
-                          </label>
+                          <label className={labelSmCls}>Buyer Item Code</label>
                           <input
                             value={line.buyer_item_code}
                             onChange={(e) => updateLine(index, { buyer_item_code: e.target.value })}
                             placeholder="Optional"
-                            className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            className={inputCls}
                           />
                         </div>
 
                         <div>
-                          <label className="block text-xs text-gray-500 mb-1">HSN Code</label>
+                          <label className={labelSmCls}>HSN Code</label>
                           <input
                             value={line.hsn_code}
                             onChange={(e) => updateLine(index, { hsn_code: e.target.value })}
                             placeholder="84818030"
-                            className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            className={inputCls}
                           />
                         </div>
 
                         <div>
-                          <label className="block text-xs text-gray-500 mb-1">GST %</label>
+                          <label className={labelSmCls}>GST %</label>
                           <input
                             type="number"
                             value={line.gst_rate}
                             onChange={(e) =>
                               updateLine(index, { gst_rate: Number(e.target.value) })
                             }
-                            className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            className={inputCls}
                           />
                         </div>
                       </div>
 
                       <div className="mb-3">
-                        <label className="block text-xs text-gray-500 mb-1">
-                          Description of Goods
-                        </label>
+                        <label className={labelSmCls}>Description of Goods</label>
                         <textarea
                           value={line.description}
                           onChange={(e) => updateLine(index, { description: e.target.value })}
                           placeholder="Type the full item description here"
-                          className="w-full min-h-[120px] bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500 resize-y"
+                          className={inputCls + " min-h-[120px] resize-y"}
                         />
                       </div>
 
                       {selectedBuyer && line.description.trim() && suggestions.length > 0 ? (
-                        <div className="mb-3 bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+                        <div className={cardCls + " mb-3 overflow-hidden"}>
                           {suggestions.slice(0, 5).map((item) => (
                             <button
                               key={item.id}
                               type="button"
                               onClick={() => applyBuyerItem(index, item)}
-                              className="w-full text-left px-4 py-3 hover:bg-gray-800 border-b border-gray-800 last:border-0"
+                              className="w-full text-left px-4 py-3 hover:bg-[#f1f3f8] dark:hover:bg-gray-800 border-b border-[#dde1ea] dark:border-gray-800 last:border-0"
                             >
-                              <p className="text-white text-sm font-medium">
+                              <p className="text-viton-navy dark:text-white text-sm font-medium">
                                 {item.buyer_item_code || "No code"}
                               </p>
-                              <p className="text-gray-400 text-xs mt-1 line-clamp-2">
+                              <p className="text-[#8892a8] dark:text-gray-400 text-xs mt-1 line-clamp-2">
                                 {item.description}
                               </p>
                               {item.last_price ? (
-                                <p className="text-orange-400 text-xs mt-0.5 font-mono">
+                                <p className="text-viton-red dark:text-orange-400 text-xs mt-0.5 font-mono">
                                   Last: Rs. {item.last_price.toLocaleString("en-IN")}
                                 </p>
                               ) : null}
@@ -993,7 +984,7 @@ export default function NewInvoicePage() {
 
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         <div>
-                          <label className="block text-xs text-gray-500 mb-1">Quantity</label>
+                          <label className={labelSmCls}>Quantity</label>
                           <input
                             type="number"
                             min="0"
@@ -1001,24 +992,22 @@ export default function NewInvoicePage() {
                             onChange={(e) =>
                               updateLine(index, { quantity: Number(e.target.value) })
                             }
-                            className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            className={inputCls}
                           />
                         </div>
 
                         <div>
-                          <label className="block text-xs text-gray-500 mb-1">Unit</label>
+                          <label className={labelSmCls}>Unit</label>
                           <input
                             value={line.unit}
                             onChange={(e) => updateLine(index, { unit: e.target.value })}
                             placeholder="Nos."
-                            className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            className={inputCls}
                           />
                         </div>
 
                         <div>
-                          <label className="block text-xs text-gray-500 mb-1">
-                            Unit Rate (Rs.)
-                          </label>
+                          <label className={labelSmCls}>Unit Rate (Rs.)</label>
                           <input
                             type="number"
                             min="0"
@@ -1027,19 +1016,17 @@ export default function NewInvoicePage() {
                             onChange={(e) =>
                               updateLine(index, { unit_rate: Number(e.target.value) })
                             }
-                            className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                            className={inputCls}
                           />
                         </div>
 
                         <div>
-                          <label className="block text-xs text-gray-500 mb-1">
-                            Taxable Value
-                          </label>
+                          <label className={labelSmCls}>Taxable Value</label>
                           <input
                             type="number"
                             readOnly
                             value={line.taxable_value}
-                            className="w-full bg-gray-800 border border-gray-800 rounded-xl px-4 py-3 text-white text-sm cursor-not-allowed"
+                            className="w-full bg-[#eceef4] dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-800 rounded-xl px-4 py-3 text-[#4a5578] dark:text-white text-sm cursor-not-allowed"
                           />
                         </div>
                       </div>
@@ -1052,221 +1039,105 @@ export default function NewInvoicePage() {
 
           {/* ── Right panel ── */}
           <div className="space-y-6">
-            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
-              <h2 className="text-white font-bold text-lg mb-4">Dispatch and Notes</h2>
+            <div className={cardCls + " p-5"}>
+              <h2 className={headingCls}>Dispatch and Notes</h2>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-gray-300 font-medium mb-2">
-                    Place of Supply
-                  </label>
-                  <input
-                    value={dispatchMeta.place_of_supply}
-                    onChange={(e) =>
-                      setDispatchMeta((prev) => ({ ...prev, place_of_supply: e.target.value }))
-                    }
-                    className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-300 font-medium mb-2">PO Date</label>
-                  <input
-                    type="date"
-                    value={dispatchMeta.po_date}
-                    onChange={(e) =>
-                      setDispatchMeta((prev) => ({ ...prev, po_date: e.target.value }))
-                    }
-                    className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-300 font-medium mb-2">
-                    Date / Time of Supply
-                  </label>
-                  <input
-                    value={dispatchMeta.date_time_of_supply}
-                    onChange={(e) =>
-                      setDispatchMeta((prev) => ({ ...prev, date_time_of_supply: e.target.value }))
-                    }
-                    placeholder="24.03.2026 AT 13.00 Hr."
-                    className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-300 font-medium mb-2">
-                    Documents Through
-                  </label>
-                  <input
-                    value={dispatchMeta.documents_through}
-                    onChange={(e) =>
-                      setDispatchMeta((prev) => ({ ...prev, documents_through: e.target.value }))
-                    }
-                    className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-300 font-medium mb-2">
-                    Transportation
-                  </label>
-                  <input
-                    value={dispatchMeta.transportation}
-                    onChange={(e) =>
-                      setDispatchMeta((prev) => ({ ...prev, transportation: e.target.value }))
-                    }
-                    placeholder="VEPL Scope / VRL / Self"
-                    className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-300 font-medium mb-2">L.R. No.</label>
-                  <input
-                    value={dispatchMeta.lr_no}
-                    onChange={(e) =>
-                      setDispatchMeta((prev) => ({ ...prev, lr_no: e.target.value }))
-                    }
-                    className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-300 font-medium mb-2">
-                    Mode of Dispatch
-                  </label>
-                  <input
-                    value={dispatchMeta.mode_of_dispatch}
-                    onChange={(e) =>
-                      setDispatchMeta((prev) => ({ ...prev, mode_of_dispatch: e.target.value }))
-                    }
-                    className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-300 font-medium mb-2">
-                    Vehicle No.
-                  </label>
-                  <input
-                    value={dispatchMeta.vehicle_no}
-                    onChange={(e) =>
-                      setDispatchMeta((prev) => ({ ...prev, vehicle_no: e.target.value }))
-                    }
-                    className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-300 font-medium mb-2">
-                    Freight / Packing
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={dispatchMeta.freight_packing}
-                    onChange={(e) =>
-                      setDispatchMeta((prev) => ({
-                        ...prev,
-                        freight_packing: Number(e.target.value),
-                      }))
-                    }
-                    className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-300 font-medium mb-2">
-                    Other Charges
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={dispatchMeta.other_charges}
-                    onChange={(e) =>
-                      setDispatchMeta((prev) => ({
-                        ...prev,
-                        other_charges: Number(e.target.value),
-                      }))
-                    }
-                    className="w-full bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white text-sm"
-                  />
-                </div>
+                {[
+                  { label: "Place of Supply", key: "place_of_supply", placeholder: "" },
+                  { label: "PO Date", key: "po_date", type: "date" },
+                  { label: "Date / Time of Supply", key: "date_time_of_supply", placeholder: "24.03.2026 AT 13.00 Hr." },
+                  { label: "Documents Through", key: "documents_through", placeholder: "" },
+                  { label: "Transportation", key: "transportation", placeholder: "VEPL Scope / VRL / Self" },
+                  { label: "L.R. No.", key: "lr_no", placeholder: "" },
+                  { label: "Mode of Dispatch", key: "mode_of_dispatch", placeholder: "" },
+                  { label: "Vehicle No.", key: "vehicle_no", placeholder: "" },
+                  { label: "Freight / Packing", key: "freight_packing", type: "number" },
+                  { label: "Other Charges", key: "other_charges", type: "number" },
+                ].map((field) => (
+                  <div key={field.key}>
+                    <label className={labelCls}>{field.label}</label>
+                    <input
+                      type={field.type || "text"}
+                      min={field.type === "number" ? "0" : undefined}
+                      step={field.type === "number" ? "0.01" : undefined}
+                      value={(dispatchMeta as any)[field.key]}
+                      onChange={(e) =>
+                        setDispatchMeta((prev) => ({
+                          ...prev,
+                          [field.key]: field.type === "number" ? Number(e.target.value) : e.target.value,
+                        }))
+                      }
+                      placeholder={field.placeholder}
+                      className={inputCls}
+                    />
+                  </div>
+                ))}
               </div>
 
               <div className="mt-4 space-y-4">
-                <div>
-                  <label className="block text-sm text-gray-300 font-medium mb-2">Billed To</label>
-                  <textarea
-                    value={dispatchMeta.billed_to}
-                    onChange={(e) =>
-                      setDispatchMeta((prev) => ({ ...prev, billed_to: e.target.value }))
-                    }
-                    className="w-full min-h-[88px] bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white text-sm resize-none"
-                  />
-                </div>
+                {[
+                  { label: "Billed To", key: "billed_to" },
+                  { label: "Shipped To", key: "shipped_to" },
+                ].map((field) => (
+                  <div key={field.key}>
+                    <label className={labelCls}>{field.label}</label>
+                    <textarea
+                      value={(dispatchMeta as any)[field.key]}
+                      onChange={(e) =>
+                        setDispatchMeta((prev) => ({ ...prev, [field.key]: e.target.value }))
+                      }
+                      className={inputCls + " min-h-[88px] resize-none"}
+                    />
+                  </div>
+                ))}
 
                 <div>
-                  <label className="block text-sm text-gray-300 font-medium mb-2">Shipped To</label>
-                  <textarea
-                    value={dispatchMeta.shipped_to}
-                    onChange={(e) =>
-                      setDispatchMeta((prev) => ({ ...prev, shipped_to: e.target.value }))
-                    }
-                    className="w-full min-h-[88px] bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white text-sm resize-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-gray-300 font-medium mb-2">Notes</label>
+                  <label className={labelCls}>Notes</label>
                   <textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder="Optional notes..."
-                    className="w-full min-h-[110px] bg-gray-950 border border-gray-800 rounded-xl px-4 py-3 text-white text-sm resize-none"
+                    className={inputCls + " min-h-[110px] resize-none"}
                   />
                 </div>
               </div>
             </div>
 
             {/* ── Totals ── */}
-            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
-              <h2 className="text-white font-bold text-lg mb-4">Totals</h2>
+            <div className={cardCls + " p-5"}>
+              <h2 className={headingCls}>Totals</h2>
 
               <div className="space-y-2 text-sm">
-                <div className="flex items-center justify-between text-gray-400">
+                <div className="flex items-center justify-between text-[#4a5578] dark:text-gray-400">
                   <span>Items Subtotal</span>
                   <span>Rs. {money(subtotal)}</span>
                 </div>
-                <div className="flex items-center justify-between text-gray-400">
+                <div className="flex items-center justify-between text-[#4a5578] dark:text-gray-400">
                   <span>Freight / Packing</span>
                   <span>Rs. {money(freightPacking)}</span>
                 </div>
-                <div className="flex items-center justify-between text-gray-400">
+                <div className="flex items-center justify-between text-[#4a5578] dark:text-gray-400">
                   <span>Other Charges</span>
                   <span>Rs. {money(otherCharges)}</span>
                 </div>
-                <div className="flex items-center justify-between text-gray-300 border-t border-gray-800 pt-2">
+                <div className="flex items-center justify-between text-[#4a5578] dark:text-gray-300 border-t border-[#dde1ea] dark:border-gray-800 pt-2">
                   <span>Taxable Base</span>
                   <span>Rs. {money(taxableBase)}</span>
                 </div>
-                <div className="flex items-center justify-between text-gray-400">
+                <div className="flex items-center justify-between text-[#4a5578] dark:text-gray-400">
                   <span>CGST ({lineGstRate / 2}%)</span>
                   <span>Rs. {money(cgst)}</span>
                 </div>
-                <div className="flex items-center justify-between text-gray-400">
+                <div className="flex items-center justify-between text-[#4a5578] dark:text-gray-400">
                   <span>SGST ({lineGstRate / 2}%)</span>
                   <span>Rs. {money(sgst)}</span>
                 </div>
-                <div className="flex items-center justify-between text-gray-400">
+                <div className="flex items-center justify-between text-[#4a5578] dark:text-gray-400">
                   <span>IGST ({lineGstRate}%)</span>
                   <span>Rs. {money(igst)}</span>
                 </div>
-                <div className="flex items-center justify-between text-white font-bold text-base pt-2 border-t border-gray-800">
+                <div className="flex items-center justify-between text-viton-navy dark:text-white font-bold text-base pt-2 border-t border-[#dde1ea] dark:border-gray-800">
                   <span>Total</span>
                   <span>Rs. {money(total)}</span>
                 </div>
@@ -1283,7 +1154,7 @@ export default function NewInvoicePage() {
                     setPreviewOpen(true);
                   }}
                   disabled={!previewable}
-                  className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-white font-semibold px-5 py-3 rounded-xl text-sm transition"
+                  className="flex items-center gap-2 bg-[#f1f3f8] dark:bg-gray-800 hover:bg-[#e8eaf2] dark:hover:bg-gray-700 disabled:opacity-50 text-[#4a5578] dark:text-white font-semibold px-5 py-3 rounded-xl text-sm transition"
                 >
                   <Eye size={15} />
                   Preview
@@ -1293,7 +1164,7 @@ export default function NewInvoicePage() {
                   type="button"
                   onClick={() => void handleSaveInvoice("draft")}
                   disabled={saving}
-                  className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 disabled:opacity-60 text-white font-semibold px-5 py-3 rounded-xl text-sm transition"
+                  className="flex items-center gap-2 bg-[#f1f3f8] dark:bg-gray-800 hover:bg-[#e8eaf2] dark:hover:bg-gray-700 disabled:opacity-60 text-[#4a5578] dark:text-white font-semibold px-5 py-3 rounded-xl text-sm transition"
                 >
                   <Save size={15} />
                   {saving ? "Saving..." : "Save Draft"}
@@ -1303,7 +1174,7 @@ export default function NewInvoicePage() {
                   type="button"
                   onClick={() => void handleSaveInvoice("confirmed")}
                   disabled={saving}
-                  className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-60 text-white font-semibold px-5 py-3 rounded-xl text-sm transition"
+                  className="flex items-center gap-2 bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 disabled:opacity-60 text-white font-semibold px-5 py-3 rounded-xl text-sm transition"
                 >
                   <FileText size={15} />
                   {saving ? "Saving..." : editId ? "Save Changes" : "Create Invoice"}
