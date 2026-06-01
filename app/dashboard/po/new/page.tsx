@@ -693,7 +693,7 @@ export default function NewPOPage() {
       <div className="grid gap-5">
 
         {/* Vendor */}
-        <div className="bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl p-6">
+        <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl p-6">
           <h2 className="text-viton-navy dark:text-viton-navy dark:text-white font-semibold mb-4">Vendor</h2>
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
@@ -795,7 +795,7 @@ export default function NewPOPage() {
         </div>
 
         {/* Item Search */}
-        <div className="bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl p-6">
+        <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl p-6">
           <h2 className="text-viton-navy dark:text-viton-navy dark:text-white font-semibold mb-4">Add Items</h2>
           <div className="relative" ref={searchContainerRef}>
             <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8892a8] dark:text-gray-500 z-10" />
@@ -883,7 +883,7 @@ export default function NewPOPage() {
 
         {/* Line Items Table */}
         {lineItems.length > 0 && (
-          <div className="bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl overflow-hidden">
+          <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl overflow-hidden">
             <div className="px-6 py-4 border-b border-[#dde1ea] dark:border-gray-800 flex items-center justify-between">
               <h2 className="text-viton-navy dark:text-viton-navy dark:text-white font-semibold">Line Items</h2>
               <span className="bg-orange-500/10 text-viton-red dark:text-orange-400 text-xs font-semibold px-2.5 py-1 rounded-lg">
@@ -980,7 +980,7 @@ export default function NewPOPage() {
         )}
 
         {/* Dispatch & Delivery */}
-        <div className="bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl overflow-hidden">
+        <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl overflow-hidden">
           <button
             onClick={() => setShowDispatch(!showDispatch)}
             className="w-full flex items-center justify-between px-6 py-4 hover:bg-[#f7f8fb] dark:bg-[#f8fafc] dark:bg-gray-800/50 transition-colors"
@@ -1048,7 +1048,7 @@ export default function NewPOPage() {
         </div>
 
         {/* Notes */}
-        <div className="bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl p-6">
+        <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl p-6">
           <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">General Notes / Terms</label>
           <textarea
             value={notes}
