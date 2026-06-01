@@ -43,7 +43,7 @@ export default function LoginPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-viton-red dark:bg-orange-500 rounded-2xl mb-4 shadow-lg shadow-red-500/20 dark:shadow-orange-500/20">
             <span className="text-white text-3xl font-bold">V</span>
           </div>
-          <h1 className="text-viton-navy dark:text-white text-3xl font-bold tracking-tight">VITONENGG</h1>
+          <h1 className="text-viton-navy dark:text-white text-3xl font-bold tracking-tight">VITON ENGINEERS</h1>
           <p className="text-viton-text-faint dark:text-gray-500 mt-2 text-sm">Procurement &amp; Invoice Portal</p>
         </div>
 
