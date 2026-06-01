@@ -944,7 +944,7 @@ export default function NewPOPage() {
                             value={line.custom_note}
                             onChange={(e) => updateLineNote(i, e.target.value)}
                             placeholder="Add custom note for this line item..."
-                            className="w-full bg-[#f7f8fb] dark:bg-[#f7f8fb] dark:bg-gray-800/50 border border-gray-700/50 rounded-lg px-3 py-1.5 text-gray-300 text-xs placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-viton-red dark:focus:ring-orange-500/50"
+                            className="w-full bg-[#f7f8fb] dark:bg-[#f8fafc] dark:bg-gray-800/50 border border-gray-700/50 rounded-lg px-3 py-1.5 text-gray-300 text-xs placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-viton-red dark:focus:ring-orange-500/50"
                           />
                         </td>
                       </tr>
@@ -983,7 +983,7 @@ export default function NewPOPage() {
         <div className="bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl overflow-hidden">
           <button
             onClick={() => setShowDispatch(!showDispatch)}
-            className="w-full flex items-center justify-between px-6 py-4 hover:bg-[#f7f8fb] dark:bg-[#f7f8fb] dark:bg-gray-800/50 transition-colors"
+            className="w-full flex items-center justify-between px-6 py-4 hover:bg-[#f7f8fb] dark:bg-[#f8fafc] dark:bg-gray-800/50 transition-colors"
           >
             <h2 className="text-viton-navy dark:text-viton-navy dark:text-white font-semibold">Dispatch, Delivery &amp; Terms</h2>
             {showDispatch ? <ChevronUp size={18} className="text-[#8892a8] dark:text-gray-500" /> : <ChevronDown size={18} className="text-[#8892a8] dark:text-gray-500" />}
