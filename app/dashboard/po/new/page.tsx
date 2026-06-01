@@ -1064,21 +1064,21 @@ export default function NewPOPage() {
           <button
             onClick={() => setShowPreview(true)}
             disabled={lineItems.length === 0}
-            className="bg-[#f7f8fb] dark:bg-gray-800 hover:bg-gray-700 disabled:opacity-40 text-gray-300 font-semibold px-5 py-3 rounded-xl text-sm flex items-center gap-2"
+            className="bg-white dark:bg-gray-800 border border-[#d9dee8] dark:border-gray-700 hover:bg-[#f3f6fb] dark:hover:bg-gray-700 disabled:opacity-40 text-[#7b8497] dark:text-gray-300 font-semibold px-5 py-3 rounded-xl text-sm flex items-center gap-2"
           >
             <Printer size={15} /> Preview
           </button>
           <button
             onClick={() => handleSave("draft")}
             disabled={saving}
-            className="bg-[#f7f8fb] dark:bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300 font-semibold px-5 py-3 rounded-xl text-sm flex items-center gap-2"
+            className="bg-white dark:bg-gray-800 border border-[#d9dee8] dark:border-gray-700 hover:bg-[#f3f6fb] dark:hover:bg-gray-700 disabled:opacity-50 text-[#5f6b85] dark:text-gray-300 font-semibold px-5 py-3 rounded-xl text-sm flex items-center gap-2"
           >
             <Save size={15} /> Save Draft
           </button>
           <button
             onClick={() => handleSave("confirmed")}
             disabled={saving}
-            className="bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 disabled:opacity-50 text-viton-navy dark:text-viton-navy dark:text-white font-semibold px-8 py-3 rounded-xl text-sm flex items-center gap-2 shadow-lg shadow-orange-500/20"
+            className="bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 disabled:opacity-50 text-white dark:text-white font-semibold px-8 py-3 rounded-xl text-sm flex items-center gap-2 shadow-lg shadow-orange-500/20"
           >
             <FileText size={15} />
             {saving
