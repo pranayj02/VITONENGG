@@ -311,11 +311,11 @@ function POPreviewModal({
               <PDFDownloadLink
                 document={<POPdfDocument po={poData} />}
                 fileName={`${poNumber.replace(/\//g, "-")}.pdf`}
-                className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-all"
+                className="flex items-center gap-2 bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 text-viton-navy dark:text-viton-navy dark:text-white font-semibold px-4 py-2 rounded-xl text-sm transition-all"
               >
                 <Printer size={15} /> Download PDF
               </PDFDownloadLink>
-              <button onClick={onClose} className="p-2 rounded-xl hover:bg-gray-100 text-gray-500 transition-all">
+              <button onClick={onClose} className="p-2 rounded-xl hover:bg-gray-100 text-[#8892a8] dark:text-gray-500 transition-all">
                 <X size={18} />
               </button>
             </div>
@@ -636,27 +636,27 @@ export default function NewPOPage() {
           <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle size={32} className="text-green-400" />
           </div>
-          <h2 className="text-white text-xl font-bold mb-1">
+          <h2 className="text-viton-navy dark:text-white text-xl font-bold mb-1">
             {editId ? "PO Updated!" : "PO Created!"}
           </h2>
           <p className="text-gray-400 text-sm font-mono mb-6">{poNumber}</p>
           <div className="flex flex-wrap gap-3 justify-center">
             <button
               onClick={() => setShowPreview(true)}
-              className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-5 py-2.5 rounded-xl text-sm flex items-center gap-2"
+              className="bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 text-viton-navy dark:text-viton-navy dark:text-white font-semibold px-5 py-2.5 rounded-xl text-sm flex items-center gap-2"
             >
               <Printer size={15} /> Preview and Print
             </button>
-            <a href="/dashboard/po/new" className="bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold px-5 py-2.5 rounded-xl text-sm flex items-center gap-2">
+            <a href="/dashboard/po/new" className="bg-[#f7f8fb] dark:bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold px-5 py-2.5 rounded-xl text-sm flex items-center gap-2">
               <Plus size={15} /> New PO
             </a>
-            <a href="/dashboard/history" className="bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold px-5 py-2.5 rounded-xl text-sm">
+            <a href="/dashboard/history" className="bg-[#f7f8fb] dark:bg-gray-800 hover:bg-gray-700 text-gray-300 font-semibold px-5 py-2.5 rounded-xl text-sm">
               View History
             </a>
             {editId && (
               <a
                 href={`/dashboard/history?updated=1&po=${encodeURIComponent(poNumber)}`}
-                className="bg-green-500/20 hover:bg-green-500 text-green-300 hover:text-white border border-green-500/40 font-semibold px-5 py-2.5 rounded-xl text-sm"
+                className="bg-green-500/20 hover:bg-green-500 text-green-300 hover:text-viton-navy dark:text-white border border-green-500/40 font-semibold px-5 py-2.5 rounded-xl text-sm"
               >
                 Back to History (with update notice)
               </a>
@@ -678,11 +678,11 @@ export default function NewPOPage() {
   return (
     <div className="p-6 lg:p-8 max-w-5xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-white text-2xl font-bold">
+        <h1 className="text-viton-navy dark:text-white text-2xl font-bold">
           {editId ? "Edit Purchase Order" : "New Purchase Order"}
         </h1>
-        <p className="text-gray-500 text-sm mt-1">
-          PO No: <span className="text-orange-400 font-mono font-semibold">{poNumber}</span>
+        <p className="text-[#8892a8] dark:text-[#8892a8] dark:text-gray-500 text-sm mt-1">
+          PO No: <span className="text-viton-red dark:text-orange-400 font-mono font-semibold">{poNumber}</span>
         </p>
       </div>
 
@@ -693,8 +693,8 @@ export default function NewPOPage() {
       <div className="grid gap-5">
 
         {/* Vendor */}
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
-          <h2 className="text-white font-semibold mb-4">Vendor</h2>
+        <div className="bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl p-6">
+          <h2 className="text-viton-navy dark:text-viton-navy dark:text-white font-semibold mb-4">Vendor</h2>
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Select Vendor *</label>
@@ -702,7 +702,7 @@ export default function NewPOPage() {
                 <select
                   value={selectedVendorId}
                   onChange={(e) => setSelectedVendorId(e.target.value)}
-                  className="w-full appearance-none bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 pr-10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer"
+                  className="w-full appearance-none bg-[#f7f8fb] dark:bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 pr-10 text-viton-navy dark:text-viton-navy dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500 cursor-pointer"
                 >
                   <option value="">— select vendor —</option>
                   {vendors.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
@@ -727,7 +727,7 @@ export default function NewPOPage() {
                     setFyLabel(match[2]);
                   }
                 }}
-                className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full bg-[#f7f8fb] dark:bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-viton-navy dark:text-viton-navy dark:text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
               />
             </div>
             <div>
@@ -736,7 +736,7 @@ export default function NewPOPage() {
                 value={quotNo}
                 onChange={(e) => setQuotNo(e.target.value)}
                 placeholder="Leave blank if none"
-                className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full bg-[#f7f8fb] dark:bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-viton-navy dark:text-viton-navy dark:text-white text-sm placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
               />
             </div>
             <div>
@@ -745,13 +745,13 @@ export default function NewPOPage() {
                 type="date"
                 value={quotDate}
                 onChange={(e) => setQuotDate(e.target.value)}
-                className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full bg-[#f7f8fb] dark:bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-viton-navy dark:text-viton-navy dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
               />
             </div>
           </div>
 
           {selectedVendor && (
-            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-[#8892a8] dark:text-gray-500">
               {selectedVendor.address && <span>{selectedVendor.address}</span>}
               {selectedVendor.contact_name && <span>{selectedVendor.contact_name}</span>}
               {selectedVendor.contact_phone && <span>{selectedVendor.contact_phone}</span>}
@@ -762,32 +762,32 @@ export default function NewPOPage() {
           {selectedVendor && (
             <div className="mt-3 grid grid-cols-1 gap-3">
               <div>
-                <label className="text-xs text-gray-500 mb-1 block">Other Party Delivery Address</label>
+                <label className="text-xs text-[#8892a8] dark:text-gray-500 mb-1 block">Other Party Delivery Address</label>
                 <textarea
                   value={deliveryAddress}
                   onChange={(e) => setDeliveryAddress(e.target.value)}
                   placeholder="Enter delivery address (saved for next time)"
                   rows={2}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full bg-[#f7f8fb] dark:bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-viton-navy dark:text-viton-navy dark:text-white text-sm placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
                 />
               </div>
               <div>
-                <label className="text-xs text-gray-500 mb-1 block">Other Party GSTIN (Delivery GSTIN)</label>
+                <label className="text-xs text-[#8892a8] dark:text-gray-500 mb-1 block">Other Party GSTIN (Delivery GSTIN)</label>
                 <input
                   value={deliveryGstin}
                   onChange={(e) => setDeliveryGstin(e.target.value)}
                   placeholder="GST number at delivery location"
-                  className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full bg-[#f7f8fb] dark:bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-viton-navy dark:text-viton-navy dark:text-white text-sm placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
                 />
               </div>
               {/* NEW: Editable payment terms, pre-filled from vendor */}
               <div>
-                <label className="text-xs text-gray-500 mb-1 block">Payment Terms</label>
+                <label className="text-xs text-[#8892a8] dark:text-gray-500 mb-1 block">Payment Terms</label>
                 <input
                   value={paymentTerms}
                   onChange={(e) => setPaymentTerms(e.target.value)}
                   placeholder="e.g. 60 Days, 100% Against Dispatch"
-                  className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full bg-[#f7f8fb] dark:bg-gray-800 border border-gray-700 rounded-xl px-3 py-2 text-viton-navy dark:text-viton-navy dark:text-white text-sm placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
                 />
               </div>
             </div>
@@ -795,18 +795,18 @@ export default function NewPOPage() {
         </div>
 
         {/* Item Search */}
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
-          <h2 className="text-white font-semibold mb-4">Add Items</h2>
+        <div className="bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl p-6">
+          <h2 className="text-viton-navy dark:text-viton-navy dark:text-white font-semibold mb-4">Add Items</h2>
           <div className="relative" ref={searchContainerRef}>
-            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 z-10" />
+            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8892a8] dark:text-gray-500 z-10" />
             <input
               value={searchQuery}
               onChange={(e) => { setSearchQuery(e.target.value); setSelectedItem(null); }}
               placeholder="Search by serial ID or item name..."
-              className="w-full bg-gray-800 border border-gray-700 rounded-xl pl-10 pr-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500"
+              className="w-full bg-[#f7f8fb] dark:bg-gray-800 border border-gray-700 rounded-xl pl-10 pr-4 py-3 text-viton-navy dark:text-viton-navy dark:text-white text-sm placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
             />
             {showSearch && searchResults.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-xl overflow-hidden z-50 shadow-2xl">
+              <div className="absolute top-full left-0 right-0 mt-1 bg-[#f7f8fb] dark:bg-gray-800 border border-gray-700 rounded-xl overflow-hidden z-50 shadow-2xl">
                 {searchResults.map((item) => (
                   <button
                     key={item.id}
@@ -814,10 +814,10 @@ export default function NewPOPage() {
                     className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-700 transition-colors text-left border-b border-gray-700/40 last:border-0"
                   >
                     <div>
-                      <p className="text-orange-400 font-mono text-xs font-semibold">{item.serial_id}</p>
-                      <p className="text-white text-sm mt-0.5">{item.name}</p>
+                      <p className="text-viton-red dark:text-orange-400 font-mono text-xs font-semibold">{item.serial_id}</p>
+                      <p className="text-viton-navy dark:text-viton-navy dark:text-white text-sm mt-0.5">{item.name}</p>
                     </div>
-                    <span className="text-gray-500 text-xs ml-4 flex-shrink-0 bg-gray-700 px-2 py-0.5 rounded-lg">{item.unit}</span>
+                    <span className="text-[#8892a8] dark:text-[#8892a8] dark:text-gray-500 text-xs ml-4 flex-shrink-0 bg-gray-700 px-2 py-0.5 rounded-lg">{item.unit}</span>
                   </button>
                 ))}
               </div>
@@ -825,29 +825,29 @@ export default function NewPOPage() {
           </div>
 
           {selectedItem && (
-            <div className="mt-4 bg-gray-800/60 border border-orange-500/30 rounded-xl p-4">
+            <div className="mt-4 bg-[#f7f8fb] dark:bg-gray-800/60 border border-orange-500/30 rounded-xl p-4">
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <p className="text-orange-400 font-mono text-xs font-semibold">{selectedItem.serial_id}</p>
-                  <p className="text-white font-medium mt-0.5">{selectedItem.name}</p>
-                  {selectedItem.description && <p className="text-gray-500 text-xs mt-1">{selectedItem.description}</p>}
+                  <p className="text-viton-red dark:text-orange-400 font-mono text-xs font-semibold">{selectedItem.serial_id}</p>
+                  <p className="text-viton-navy dark:text-white font-medium mt-0.5">{selectedItem.name}</p>
+                  {selectedItem.description && <p className="text-[#8892a8] dark:text-[#8892a8] dark:text-gray-500 text-xs mt-1">{selectedItem.description}</p>}
                 </div>
-                <button onClick={() => { setSelectedItem(null); setSearchQuery(""); }} className="text-gray-500 hover:text-white ml-3">
+                <button onClick={() => { setSelectedItem(null); setSearchQuery(""); }} className="text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:text-white ml-3">
                   <X size={16} />
                 </button>
               </div>
               <div className="grid grid-cols-3 gap-3 mb-3">
                 <div>
-                  <label className="block text-gray-500 text-xs mb-1.5">Quantity</label>
+                  <label className="block text-[#8892a8] dark:text-[#8892a8] dark:text-gray-500 text-xs mb-1.5">Quantity</label>
                   <input type="number" min="1" value={itemQty} onChange={(e) => setItemQty(Number(e.target.value))}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                    className="w-full bg-[#f7f8fb] dark:bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-viton-navy dark:text-viton-navy dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500" />
                 </div>
                 <div>
-                  <label className="block text-gray-500 text-xs mb-1.5">Unit</label>
-                  <div className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-gray-400 text-sm">{selectedItem.unit}</div>
+                  <label className="block text-[#8892a8] dark:text-[#8892a8] dark:text-gray-500 text-xs mb-1.5">Unit</label>
+                  <div className="bg-[#f7f8fb] dark:bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-gray-400 text-sm">{selectedItem.unit}</div>
                 </div>
                 <div>
-                  <label className="block text-gray-500 text-xs mb-1.5">
+                  <label className="block text-[#8892a8] dark:text-[#8892a8] dark:text-gray-500 text-xs mb-1.5">
                     Unit Price (Rs.){" "}
                     {lastPrice !== null && (
                       <span className="text-green-400 ml-1">
@@ -857,23 +857,23 @@ export default function NewPOPage() {
                     )}
                   </label>
                   <input type="number" min="0" step="0.01" value={itemPrice} onChange={(e) => setItemPrice(Number(e.target.value))}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500" />
+                    className="w-full bg-[#f7f8fb] dark:bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-viton-navy dark:text-viton-navy dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500" />
                 </div>
               </div>
               <div className="mb-4">
-                <label className="block text-gray-500 text-xs mb-1.5">Custom note for this line item (optional)</label>
+                <label className="block text-[#8892a8] dark:text-[#8892a8] dark:text-gray-500 text-xs mb-1.5">Custom note for this line item (optional)</label>
                 <input
                   value={itemNote}
                   onChange={(e) => setItemNote(e.target.value)}
                   placeholder="e.g. IGC Practice B test to be carried out."
-                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full bg-[#f7f8fb] dark:bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-viton-navy dark:text-viton-navy dark:text-white text-sm placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
                 />
               </div>
               <div className="flex items-center justify-between">
                 <p className="text-gray-400 text-sm">
-                  Line Total: <span className="text-white font-bold text-base">Rs. {(itemQty * itemPrice).toLocaleString("en-IN")}</span>
+                  Line Total: <span className="text-viton-navy dark:text-white font-bold text-base">Rs. {(itemQty * itemPrice).toLocaleString("en-IN")}</span>
                 </p>
-                <button onClick={addLineItem} className="bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-5 py-2.5 rounded-xl flex items-center gap-2">
+                <button onClick={addLineItem} className="bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 text-viton-navy dark:text-viton-navy dark:text-white text-sm font-semibold px-5 py-2.5 rounded-xl flex items-center gap-2">
                   <Plus size={15} /> Add to PO
                 </button>
               </div>
@@ -883,40 +883,40 @@ export default function NewPOPage() {
 
         {/* Line Items Table */}
         {lineItems.length > 0 && (
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-800 flex items-center justify-between">
-              <h2 className="text-white font-semibold">Line Items</h2>
-              <span className="bg-orange-500/10 text-orange-400 text-xs font-semibold px-2.5 py-1 rounded-lg">
+          <div className="bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-[#dde1ea] dark:border-gray-800 flex items-center justify-between">
+              <h2 className="text-viton-navy dark:text-viton-navy dark:text-white font-semibold">Line Items</h2>
+              <span className="bg-orange-500/10 text-viton-red dark:text-orange-400 text-xs font-semibold px-2.5 py-1 rounded-lg">
                 {lineItems.length} item{lineItems.length > 1 ? "s" : ""}
               </span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-800">
-                    <th className="text-left text-gray-500 text-xs font-semibold uppercase tracking-wider px-5 py-3">#</th>
-                    <th className="text-left text-gray-500 text-xs font-semibold uppercase tracking-wider px-5 py-3">Item</th>
-                    <th className="text-left text-gray-500 text-xs font-semibold uppercase tracking-wider px-5 py-3">Qty</th>
-                    <th className="text-right text-gray-500 text-xs font-semibold uppercase tracking-wider px-5 py-3">Rate</th>
-                    <th className="text-right text-gray-500 text-xs font-semibold uppercase tracking-wider px-5 py-3">Total</th>
+                  <tr className="border-b border-[#dde1ea] dark:border-gray-800">
+                    <th className="text-left text-[#8892a8] dark:text-[#8892a8] dark:text-gray-500 text-xs font-semibold uppercase tracking-wider px-5 py-3">#</th>
+                    <th className="text-left text-[#8892a8] dark:text-[#8892a8] dark:text-gray-500 text-xs font-semibold uppercase tracking-wider px-5 py-3">Item</th>
+                    <th className="text-left text-[#8892a8] dark:text-[#8892a8] dark:text-gray-500 text-xs font-semibold uppercase tracking-wider px-5 py-3">Qty</th>
+                    <th className="text-right text-[#8892a8] dark:text-[#8892a8] dark:text-gray-500 text-xs font-semibold uppercase tracking-wider px-5 py-3">Rate</th>
+                    <th className="text-right text-[#8892a8] dark:text-[#8892a8] dark:text-gray-500 text-xs font-semibold uppercase tracking-wider px-5 py-3">Total</th>
                     <th className="px-4 py-3"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {lineItems.map((line, i) => (
                     <React.Fragment key={i}>
-                      <tr className="border-b border-gray-800/30 hover:bg-gray-800/30 transition-colors">
-                        <td className="px-5 py-3 text-gray-500 align-top">{i + 1}</td>
+                      <tr className="border-b border-[#dde1ea] dark:border-gray-800/30 hover:bg-[#f7f8fb] dark:bg-gray-800/30 transition-colors">
+                        <td className="px-5 py-3 text-[#8892a8] dark:text-gray-500 align-top">{i + 1}</td>
                         <td className="px-5 py-3 align-top">
-                          <p className="text-orange-400 font-mono text-xs font-semibold">{line.serial_id}</p>
-                          <p className="text-white text-sm">{line.name}</p>
+                          <p className="text-viton-red dark:text-orange-400 font-mono text-xs font-semibold">{line.serial_id}</p>
+                          <p className="text-viton-navy dark:text-viton-navy dark:text-white text-sm">{line.name}</p>
                         </td>
-                        <td className="px-5 py-3 text-white align-top">
+                        <td className="px-5 py-3 text-viton-navy dark:text-white align-top">
                           <div className="flex items-center gap-2">
                             <input
                               type="number" min="1" value={line.quantity}
                               onChange={(e) => updateLineItem(i, "quantity", Number(e.target.value))}
-                              className="w-20 bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-white text-xs focus:outline-none focus:ring-1 focus:ring-orange-500"
+                              className="w-20 bg-[#f7f8fb] dark:bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-viton-navy dark:text-white text-xs focus:outline-none focus:ring-1 focus:ring-viton-red dark:focus:ring-orange-500"
                             />
                             <span>{line.unit}</span>
                           </div>
@@ -926,25 +926,25 @@ export default function NewPOPage() {
                             <input
                               type="number" min="0" step="0.01" value={line.unit_price}
                               onChange={(e) => updateLineItem(i, "unit_price", Number(e.target.value))}
-                              className="w-28 bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-white text-xs text-right focus:outline-none focus:ring-1 focus:ring-orange-500"
+                              className="w-28 bg-[#f7f8fb] dark:bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-viton-navy dark:text-white text-xs text-right focus:outline-none focus:ring-1 focus:ring-viton-red dark:focus:ring-orange-500"
                             />
                           </div>
                         </td>
-                        <td className="px-5 py-3 text-right text-white font-semibold align-top">Rs. {Number(line.total || 0).toLocaleString("en-IN")}</td>
+                        <td className="px-5 py-3 text-right text-viton-navy dark:text-viton-navy dark:text-white font-semibold align-top">Rs. {Number(line.total || 0).toLocaleString("en-IN")}</td>
                         <td className="px-4 py-3 align-top">
                           <button onClick={() => removeLineItem(i)} className="text-gray-600 hover:text-red-400 transition-colors p-1">
                             <Trash2 size={14} />
                           </button>
                         </td>
                       </tr>
-                      <tr className="border-b border-gray-800/30">
+                      <tr className="border-b border-[#dde1ea] dark:border-gray-800/30">
                         <td></td>
                         <td colSpan={5} className="px-5 pb-3 pt-1">
                           <input
                             value={line.custom_note}
                             onChange={(e) => updateLineNote(i, e.target.value)}
                             placeholder="Add custom note for this line item..."
-                            className="w-full bg-gray-800/50 border border-gray-700/50 rounded-lg px-3 py-1.5 text-gray-300 text-xs placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-orange-500/50"
+                            className="w-full bg-[#f7f8fb] dark:bg-[#f7f8fb] dark:bg-gray-800/50 border border-gray-700/50 rounded-lg px-3 py-1.5 text-gray-300 text-xs placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-viton-red dark:focus:ring-orange-500/50"
                           />
                         </td>
                       </tr>
@@ -970,7 +970,7 @@ export default function NewPOPage() {
                   )}
                   <tr className="border-t-2 border-gray-700">
                     <td colSpan={4} className="px-5 py-4 text-right text-gray-400 font-semibold text-sm">Grand Total</td>
-                    <td className="px-5 py-4 text-right text-white font-bold text-xl">Rs. {grandTotal.toLocaleString("en-IN")}</td>
+                    <td className="px-5 py-4 text-right text-viton-navy dark:text-viton-navy dark:text-white font-bold text-xl">Rs. {grandTotal.toLocaleString("en-IN")}</td>
                     <td></td>
                   </tr>
                 </tfoot>
@@ -980,16 +980,16 @@ export default function NewPOPage() {
         )}
 
         {/* Dispatch & Delivery */}
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+        <div className="bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl overflow-hidden">
           <button
             onClick={() => setShowDispatch(!showDispatch)}
-            className="w-full flex items-center justify-between px-6 py-4 hover:bg-gray-800/50 transition-colors"
+            className="w-full flex items-center justify-between px-6 py-4 hover:bg-[#f7f8fb] dark:bg-[#f7f8fb] dark:bg-gray-800/50 transition-colors"
           >
-            <h2 className="text-white font-semibold">Dispatch, Delivery &amp; Terms</h2>
-            {showDispatch ? <ChevronUp size={18} className="text-gray-500" /> : <ChevronDown size={18} className="text-gray-500" />}
+            <h2 className="text-viton-navy dark:text-viton-navy dark:text-white font-semibold">Dispatch, Delivery &amp; Terms</h2>
+            {showDispatch ? <ChevronUp size={18} className="text-[#8892a8] dark:text-gray-500" /> : <ChevronDown size={18} className="text-[#8892a8] dark:text-gray-500" />}
           </button>
           {showDispatch && (
-            <div className="px-6 pb-6 pt-0 border-t border-gray-800 grid sm:grid-cols-2 gap-4">
+            <div className="px-6 pb-6 pt-0 border-t border-[#dde1ea] dark:border-gray-800 grid sm:grid-cols-2 gap-4">
               {[
                 { label: "Delivery", key: "delivery" as const, placeholder: "e.g. Urgent / Within 8-10 Days" },
                 { label: "Inspection", key: "inspection" as const, placeholder: "e.g. By VITON" },
@@ -1004,7 +1004,7 @@ export default function NewPOPage() {
                     value={dispatch[f.key] as string}
                     onChange={(e) => setDispatchField(f.key, e.target.value)}
                     placeholder={f.placeholder}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    className="w-full bg-[#f7f8fb] dark:bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-viton-navy dark:text-viton-navy dark:text-white text-sm placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
                   />
                 </div>
               ))}
@@ -1015,7 +1015,7 @@ export default function NewPOPage() {
                     <select
                       value={dispatch.pf_mode}
                       onChange={(e) => setDispatchField("pf_mode", e.target.value as DispatchMeta["pf_mode"])}
-                      className="w-full appearance-none bg-gray-800 border border-gray-700 rounded-xl px-3 py-3 pr-10 text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer"
+                      className="w-full appearance-none bg-[#f7f8fb] dark:bg-gray-800 border border-gray-700 rounded-xl px-3 py-3 pr-10 text-viton-navy dark:text-viton-navy dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500 cursor-pointer"
                     >
                       <option value="nil">Nil</option>
                       <option value="percent">Percentage (%)</option>
@@ -1033,12 +1033,12 @@ export default function NewPOPage() {
                       value={dispatch.pf_value}
                       onChange={(e) => setDispatchField("pf_value", Number(e.target.value))}
                       placeholder={dispatch.pf_mode === "percent" ? "e.g. 1.5" : "e.g. 500"}
-                      className="w-28 bg-gray-800 border border-gray-700 rounded-xl px-3 py-3 text-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                      className="w-28 bg-[#f7f8fb] dark:bg-gray-800 border border-gray-700 rounded-xl px-3 py-3 text-viton-navy dark:text-viton-navy dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
                     />
                   )}
                 </div>
                 {pfAmount > 0 && (
-                  <p className="text-orange-400 text-xs mt-1.5 font-mono">
+                  <p className="text-viton-red dark:text-orange-400 text-xs mt-1.5 font-mono">
                     P&amp;F = Rs. {pfAmount.toLocaleString("en-IN")} → Total = Rs. {grandTotal.toLocaleString("en-IN")}
                   </p>
                 )}
@@ -1048,14 +1048,14 @@ export default function NewPOPage() {
         </div>
 
         {/* Notes */}
-        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+        <div className="bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl p-6">
           <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">General Notes / Terms</label>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
             placeholder="e.g. Material TC to be provided along with supply."
-            className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none"
+            className="w-full bg-[#f7f8fb] dark:bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-viton-navy dark:text-viton-navy dark:text-white text-sm placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500 resize-none"
           />
         </div>
 
@@ -1064,21 +1064,21 @@ export default function NewPOPage() {
           <button
             onClick={() => setShowPreview(true)}
             disabled={lineItems.length === 0}
-            className="bg-gray-800 hover:bg-gray-700 disabled:opacity-40 text-gray-300 font-semibold px-5 py-3 rounded-xl text-sm flex items-center gap-2"
+            className="bg-[#f7f8fb] dark:bg-gray-800 hover:bg-gray-700 disabled:opacity-40 text-gray-300 font-semibold px-5 py-3 rounded-xl text-sm flex items-center gap-2"
           >
             <Printer size={15} /> Preview
           </button>
           <button
             onClick={() => handleSave("draft")}
             disabled={saving}
-            className="bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300 font-semibold px-5 py-3 rounded-xl text-sm flex items-center gap-2"
+            className="bg-[#f7f8fb] dark:bg-gray-800 hover:bg-gray-700 disabled:opacity-50 text-gray-300 font-semibold px-5 py-3 rounded-xl text-sm flex items-center gap-2"
           >
             <Save size={15} /> Save Draft
           </button>
           <button
             onClick={() => handleSave("confirmed")}
             disabled={saving}
-            className="bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-semibold px-8 py-3 rounded-xl text-sm flex items-center gap-2 shadow-lg shadow-orange-500/20"
+            className="bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 disabled:opacity-50 text-viton-navy dark:text-viton-navy dark:text-white font-semibold px-8 py-3 rounded-xl text-sm flex items-center gap-2 shadow-lg shadow-orange-500/20"
           >
             <FileText size={15} />
             {saving
