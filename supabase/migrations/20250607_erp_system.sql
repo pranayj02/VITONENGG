@@ -135,8 +135,10 @@ create table if not exists public.grn (
   approved_by uuid references auth.users,
   approved_by_name text,
   approved_at timestamptz,
-  line_items jsonb default '[]',         -- { item_id, serial_id, name, po_qty, received_qty, accepted_qty, rejected_qty, rejection_reason, unit }
+  line_items jsonb default '[]',         -- { item_id, serial_id, name, po_qty, received_qty, accepted_qty, rejected_qty, rejection_reason, unit, challan_weight, challan_nos, counted_nos }
   status text default 'pending' check (status in ('pending','inspected','approved','rejected','partial')),
+  challan_no text,
+  challan_date text,
   inspection_notes text,
   documents jsonb default '[]',          -- e.g. [{type:'photo',url:'...'}]
   created_at timestamptz default now(),

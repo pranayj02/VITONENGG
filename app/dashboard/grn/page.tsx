@@ -237,6 +237,8 @@ export default function GRNPage() {
       line_items: grnLines,
       status: "pending" as const,
       inspection_notes: inspectionNotes.trim() || null,
+      challan_no: challanNo.trim() || null,
+      challan_date: challanDate.trim() || null,
     };
 
     const { error: saveErr, data } = await supabase.from("grn").insert(payload).select("id").single();

@@ -137,6 +137,8 @@ export interface GRN {
   line_items: GRNLineItem[];
   status: "pending" | "inspected" | "approved" | "rejected" | "partial";
   inspection_notes?: string | null;
+  challan_no?: string | null;
+  challan_date?: string | null;
   documents?: unknown[] | null;
   created_at: string;
   updated_at?: string | null;

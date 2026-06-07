@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { createClient } from "@/lib/supabase";
-import type { GRN, GRNLineItem } from "@/lib/types";
+import type { GRN, GRNLineItem, Vendor } from "@/lib/types";
 
 interface PORef {
   po_number: string;
@@ -12,6 +12,7 @@ interface PORef {
 export default function GRNPrintPage({ params }: { params: { id: string } }) {
   const [grn, setGrn] = useState<GRN | null>(null);
   const [po, setPo] = useState<PORef | null>(null);
+  const [vendor, setVendor] = useState<Vendor | null>(null);
   const [loading, setLoading] = useState(true);
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -33,6 +34,14 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
           .eq("id", grnData.po_id)
           .single();
         setPo(poData ?? null);
+      }
+      if (grnData?.vendor_id) {
+        const { data: vendorData } = await supabase
+          .from("vendors")
+          .select("*")
+          .eq("id", grnData.vendor_id)
+          .single();
+        setVendor(vendorData ?? null);
       }
       setLoading(false);
     }
@@ -228,8 +237,10 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
             </td>
           </tr>
           <tr>
-            <td style={{ ...labelCell(), border: "1px solid #000" }}>Challan / Inv No.</td>
-            <td style={{ ...valueCell(), border: "1px solid #000" }}>—</td>
+            <td style={{ ...labelCell(), border: "1px solid #000" }}>Supplier Address</td>
+            <td style={{ ...valueCell(), border: "1px solid #000", fontSize: "7.5pt", lineHeight: 1.5 }}>
+              {vendor?.address ?? "—"}
+            </td>
             <td style={{ width: "4%" }} />
             <td style={{ ...labelCell(), border: "1px solid #000" }}>Address</td>
             <td style={{ ...valueCell(), border: "1px solid #000", fontSize: "7.5pt", lineHeight: 1.5 }}>
@@ -238,11 +249,31 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
             </td>
           </tr>
           <tr>
-            <td style={{ ...labelCell(), border: "1px solid #000" }}>Challan / Inv Date</td>
-            <td style={{ ...valueCell(), border: "1px solid #000" }}>—</td>
+            <td style={{ ...labelCell(), border: "1px solid #000" }}>Supplier GSTIN</td>
+            <td style={{ ...valueCell(), border: "1px solid #000", fontWeight: "700" }}>
+              {vendor?.gstin ?? "—"}
+            </td>
             <td style={{ width: "4%" }} />
             <td style={{ ...labelCell(), border: "1px solid #000" }}>Email</td>
             <td style={{ ...valueCell(), border: "1px solid #000" }}>viton.engg@gmail.com</td>
+          </tr>
+          <tr>
+            <td style={{ ...labelCell(), border: "1px solid #000" }}>Challan / Inv No.</td>
+            <td style={{ ...valueCell(), border: "1px solid #000", fontWeight: "700" }}>
+              {grn.challan_no ?? "—"}
+            </td>
+            <td style={{ width: "4%" }} />
+            <td style={{ ...labelCell(), border: "1px solid #000" }}>GST No.</td>
+            <td style={{ ...valueCell(), border: "1px solid #000", fontWeight: "700" }}>27AACCV7755N1ZK</td>
+          </tr>
+          <tr>
+            <td style={{ ...labelCell(), border: "1px solid #000" }}>Challan / Inv Date</td>
+            <td style={{ ...valueCell(), border: "1px solid #000" }}>
+              {grn.challan_date ?? "—"}
+            </td>
+            <td style={{ width: "4%" }} />
+            <td style={{ ...labelCell(), border: "1px solid #000" }}>Received By</td>
+            <td style={{ ...valueCell(), border: "1px solid #000" }}>{grn.received_by_name ?? "—"}</td>
           </tr>
           <tr>
             <td style={{ ...labelCell(), border: "1px solid #000" }}>PO No.</td>
@@ -250,15 +281,13 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
               {po?.po_number ?? (grn.po_id ? "Linked" : "Direct Receipt")}
             </td>
             <td style={{ width: "4%" }} />
-            <td style={{ ...labelCell(), border: "1px solid #000" }}>GST No.</td>
-            <td style={{ ...valueCell(), border: "1px solid #000", fontWeight: "700" }}>27AACCV7755N1ZK</td>
+            <td colSpan={2} style={{ border: "none" }} />
           </tr>
           <tr>
             <td style={{ ...labelCell(), border: "1px solid #000" }}>PO Date</td>
             <td style={{ ...valueCell(), border: "1px solid #000" }}>{poDate}</td>
             <td style={{ width: "4%" }} />
-            <td style={{ ...labelCell(), border: "1px solid #000" }}>Received By</td>
-            <td style={{ ...valueCell(), border: "1px solid #000" }}>{grn.received_by_name ?? "—"}</td>
+            <td colSpan={2} style={{ border: "none" }} />
           </tr>
           <tr>
             <td style={{ ...labelCell(), border: "1px solid #000" }}>Inspected By</td>
@@ -319,13 +348,13 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
                 {line ? poDate : ""}
               </td>
               <td style={{ border: "1px solid #ccc", padding: "4px 5px", textAlign: "center", fontSize: "8pt" }}>
-                {(line as any)?.challan_weight ?? ""}
+                {line?.challan_weight ?? ""}
               </td>
               <td style={{ border: "1px solid #ccc", padding: "4px 5px", textAlign: "center", fontSize: "8pt" }}>
-                {(line as any)?.challan_nos ?? line?.received_qty ?? ""}
+                {line?.challan_nos ?? line?.received_qty ?? ""}
               </td>
               <td style={{ border: "1px solid #ccc", padding: "4px 5px", textAlign: "center", fontSize: "8pt" }}>
-                {(line as any)?.counted_nos ?? line?.received_qty ?? ""}
+                {line?.counted_nos ?? line?.received_qty ?? ""}
               </td>
               <td style={{ border: "1px solid #ccc", padding: "4px 5px", textAlign: "center", fontSize: "8pt", fontWeight: line && (line.accepted_qty ?? 0) > 0 ? "700" : "400", color: line && (line.accepted_qty ?? 0) > 0 ? "#006400" : "#000" }}>
                 {line?.accepted_qty ?? ""}
