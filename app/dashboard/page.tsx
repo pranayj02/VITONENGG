@@ -177,7 +177,7 @@ export default function DashboardPage() {
   useEffect(() => {
     async function load() {
       const supabase = createClient();
-      const [a, b, c, d, poRowsResponse, reqRes, activityRes, stockRes] = await Promise.all([
+      const [a, b, c, d, poRowsResponse, reqRes, activityRes] = await Promise.all([
         supabase.from("items").select("id", { count: "exact", head: true }),
         supabase.from("vendors").select("id", { count: "exact", head: true }),
         supabase.from("purchase_orders").select("id", { count: "exact", head: true }),
@@ -185,7 +185,6 @@ export default function DashboardPage() {
         supabase.from("purchase_orders").select("*"),
         supabase.from("requisitions").select("*").in("status", ["pending", "under_review"]).order("created_at", { ascending: false }).limit(5),
         supabase.from("activity_logs").select("*").order("created_at", { ascending: false }).limit(6),
-        supabase.rpc("get_stock_summary").then((r: any) => r).catch(() => ({ data: [] })),
       ]);
       setStats({ items: a.count ?? 0, vendors: b.count ?? 0, pos: c.count ?? 0, invoices: d.count ?? 0 });
       setStatsLoading(false);
@@ -197,8 +196,14 @@ export default function DashboardPage() {
       setPendingReqsLoading(false);
       setRecentActivity((activityRes.data ?? []) as unknown as ActivityLog[]);
       setActivityLoading(false);
-      const stockRows = (stockRes.data ?? []) as unknown as StockSummary[];
-      setStockAlerts(stockRows.filter((s: StockSummary) => s.balance >= 0 && s.balance < 5));
+
+      try {
+        const { data: stockData } = await supabase.rpc("get_stock_summary");
+        const stockRows = (stockData ?? []) as unknown as StockSummary[];
+        setStockAlerts(stockRows.filter((s: StockSummary) => s.balance >= 0 && s.balance < 5));
+      } catch {
+        setStockAlerts([]);
+      }
       setStockAlertsLoading(false);
     }
     load();
