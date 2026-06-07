@@ -91,7 +91,7 @@ export function useRole() {
         .select("*")
         .eq("id", user.id)
         .single();
-      setProfile((data as Profile) ?? null);
+      setProfile((data as unknown as Profile) ?? null);
       setLoading(false);
     }
     load();
