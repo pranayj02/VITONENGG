@@ -443,6 +443,31 @@ export default function NewPOPage() {
       } else {
         setPoNumber(`VEPL/PUR/${nextSerial}/${currentFY}`);
       }
+
+      // Handle conversion from requisition
+      const fromReq = searchParams.get("from_req");
+      const reqItems = searchParams.get("items");
+      const reqNotes = searchParams.get("notes");
+      if (fromReq && reqItems) {
+        try {
+          const parsedItems = JSON.parse(reqItems);
+          const mappedLines: LineItemWithNote[] = parsedItems.map((li: any) => ({
+            item_id: li.item_id || li.id || "",
+            serial_id: li.serial_id || "",
+            name: li.name || li.description || "",
+            hsn_code: li.hsn_code || "",
+            unit: li.unit || "NOS",
+            quantity: li.qty_requested || li.quantity || 1,
+            unit_price: li.unit_price || 0,
+            total: (li.qty_requested || li.quantity || 1) * (li.unit_price || 0),
+            custom_note: li.custom_note || "",
+          }));
+          setLineItems(mappedLines);
+          if (reqNotes) setNotes(reqNotes);
+        } catch {
+          // ignore parse error
+        }
+      }
     }
     init();
   }, [editId]);

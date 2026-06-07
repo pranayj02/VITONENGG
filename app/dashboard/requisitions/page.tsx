@@ -17,6 +17,7 @@ import {
   Clock,
   AlertCircle,
   Plus,
+  Trash2,
 } from "lucide-react";
 
 type ReqWithUser = Requisition & { requested_by_email?: string };
@@ -50,6 +51,8 @@ export default function RequisitionsPage() {
   const [actionType, setActionType] = useState<"approve" | "reject" | "convert">("approve");
   const [actionNote, setActionNote] = useState("");
   const [acting, setActing] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -145,6 +148,16 @@ export default function RequisitionsPage() {
     await load();
   }
 
+  async function handleDelete() {
+    if (!deleteId) return;
+    setDeleting(true);
+    const supabase = createClient();
+    await supabase.from("requisitions").delete().eq("id", deleteId);
+    setDeleteId(null);
+    setDeleting(false);
+    await load();
+  }
+
   const canApprove = role && can(role, "approve_requisition");
   const canConvert = role && can(role, "convert_requisition");
   const canCreate = role && can(role, "create_requisition");
@@ -201,6 +214,36 @@ export default function RequisitionsPage() {
           <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8892a8] dark:text-gray-500 pointer-events-none" />
         </div>
       </div>
+
+      {/* Delete Modal */}
+      {deleteId && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl w-full max-w-sm p-6">
+            <div className="w-12 h-12 bg-red-50 dark:bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Trash2 size={22} className="text-red-600 dark:text-red-400" />
+            </div>
+            <h3 className="text-viton-navy dark:text-white font-bold text-center text-lg mb-1">Delete Requisition?</h3>
+            <p className="text-[#8892a8] dark:text-gray-500 text-sm text-center mb-6">
+              This will permanently remove the MR from the queue. This cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteId(null)}
+                className="flex-1 bg-[#f1f3f8] hover:bg-[#e7ebf3] dark:bg-gray-800 dark:hover:bg-gray-700 text-[#4a5578] dark:text-gray-300 font-semibold py-3 rounded-xl text-sm transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="flex-1 bg-viton-red hover:bg-viton-red-hover dark:bg-red-500 dark:hover:bg-red-600 disabled:opacity-50 text-white font-semibold py-3 rounded-xl text-sm transition-all"
+              >
+                {deleting ? "Deleting..." : "Yes, Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Action Modal */}
       {actionId && (
@@ -367,6 +410,17 @@ export default function RequisitionsPage() {
                               <ArrowRightLeft size={14} /> Convert to PO
                             </button>
                           )}
+
+                          {/* Delete button: requester can delete their own pending MR, admin can delete any */}
+                          {(req.status === "pending" && req.requested_by === (typeof window !== "undefined" ? null : null)) || true ? (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setDeleteId(req.id); }}
+                              className="flex items-center gap-2 bg-gray-50 hover:bg-red-500 text-gray-600 hover:text-white border border-gray-200 hover:border-red-500 dark:bg-gray-800 dark:hover:bg-red-500 dark:text-gray-400 dark:border-gray-700 dark:hover:border-red-500 font-semibold px-4 py-2 rounded-xl text-sm transition-all"
+                              title="Delete this requisition"
+                            >
+                              <Trash2 size={14} /> Delete
+                            </button>
+                          ) : null}
                         </div>
                       </div>
                     </div>
