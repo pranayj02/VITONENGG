@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { createClient } from "@/lib/supabase";
 import type { Requisition, ReqLineItem } from "@/lib/types";
 
 export default function MRPrintPage({ params }: { params: { id: string } }) {
   const [req, setReq] = useState<Requisition | null>(null);
   const [loading, setLoading] = useState(true);
+  const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function load() {
@@ -22,17 +23,19 @@ export default function MRPrintPage({ params }: { params: { id: string } }) {
     load();
   }, [params.id]);
 
+  const handlePrint = () => window.print();
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-viton-red border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   if (!req) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
         <p className="text-gray-500">Requisition not found.</p>
       </div>
     );
@@ -42,147 +45,397 @@ export default function MRPrintPage({ params }: { params: { id: string } }) {
   const date = new Date(req.created_at).toLocaleDateString("en-IN", {
     day: "2-digit", month: "2-digit", year: "numeric",
   });
+  const revDate = new Date(req.created_at).toLocaleDateString("en-IN", {
+    day: "2-digit", month: "2-digit", year: "2-digit",
+  });
 
-  return (
-    <div className="min-h-screen bg-white text-gray-900 p-8" style={{ fontFamily: "Arial, sans-serif", fontSize: "12px" }}>
-      {/* Letterhead */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: "14px", borderBottom: "3px solid #5060AB", marginBottom: "14px" }}>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", flex: 1, minWidth: 0 }}>
-          <img
-            src="/Logo.JPG"
-            alt="Viton Engineers"
-            style={{ width: "52px", height: "52px", objectFit: "contain", flexShrink: 0 }}
-            crossOrigin="anonymous"
-          />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: "17px", fontWeight: "900", color: "#111", letterSpacing: "0.3px" }}>VITON ENGINEERS PVT. LTD.</div>
-            <div style={{ fontSize: "10px", color: "#555", marginTop: "3px", lineHeight: "1.5" }}>
-              WORKS: B40/1, ADDL. Ambernath MIDC, Anand Nagar, Opp. Hali Pad, Ambernath East, Dist. Thane - 421506
-            </div>
-            <div style={{ fontSize: "10px", color: "#555", marginTop: "2px" }}>
-              Tel: 08779301215 / 9769639388&nbsp;&nbsp;|&nbsp;&nbsp;Email: info@vitonvalves.com&nbsp;&nbsp;|&nbsp;&nbsp;GSTIN: <strong>27AACCV7755N1ZK</strong>
-            </div>
-          </div>
-        </div>
+  // Pad lines to at least 8 rows for empty-row feel like the Excel format
+  const MIN_ROWS = 8;
+  const paddedLines: (ReqLineItem | null)[] = [
+    ...lines,
+    ...Array(Math.max(0, MIN_ROWS - lines.length)).fill(null),
+  ];
 
-        <div style={{ textAlign: "right", flexShrink: 0, marginLeft: "24px" }}>
-          <div style={{ border: "2px solid #5060AB", borderRadius: "8px", padding: "6px 16px 8px 16px", display: "inline-block", minWidth: "210px" }}>
-            <div style={{ fontSize: "14px", fontWeight: "800", color: "#fff", background: "#5060AB", borderRadius: "4px", textTransform: "uppercase", letterSpacing: "1px", textAlign: "center", padding: "4px 6px" }}>
-              Material Requisition
-            </div>
-            <div style={{ fontSize: "11px", fontWeight: "500", color: "#666", fontFamily: "monospace", marginTop: "6px", textAlign: "center" }}>
-              {req.req_number}
-            </div>
-          </div>
-          <div style={{ fontSize: "10px", color: "#666", marginTop: "6px" }}>Date: {date}</div>
-        </div>
-      </div>
+  const SlipDocument = () => (
+    <div
+      ref={printRef}
+      style={{
+        width: "210mm",
+        minHeight: "297mm",
+        background: "#fff",
+        fontFamily: "Arial, Helvetica, sans-serif",
+        fontSize: "10pt",
+        color: "#000",
+        padding: "10mm 12mm",
+        boxSizing: "border-box",
+      }}
+    >
+      {/* ── HEADER ─────────────────────────────────────────── */}
+      <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "0" }}>
+        <tbody>
+          <tr>
+            {/* Left: Logo + Company */}
+            <td style={{ verticalAlign: "top", width: "55%", paddingRight: "8px" }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
+                <img
+                  src="/Logo.JPG"
+                  alt="Viton Engineers"
+                  style={{ width: "54px", height: "54px", objectFit: "contain", flexShrink: 0 }}
+                  crossOrigin="anonymous"
+                />
+                <div>
+                  <div style={{ fontSize: "13pt", fontWeight: "900", letterSpacing: "0.3px", lineHeight: 1.2 }}>
+                    VITON ENGINEERS PVT. LTD.
+                  </div>
+                  <div style={{ fontSize: "7.5pt", color: "#333", marginTop: "3px", lineHeight: 1.5 }}>
+                    WORKS: B40/1, ADDL. Ambernath MIDC, Anand Nagar,<br />
+                    Opp. Hali Pad, Ambernath East, Dist. Thane - 421506
+                  </div>
+                  <div style={{ fontSize: "7.5pt", color: "#333", marginTop: "2px" }}>
+                    Tel: 08779301215 / 9769639388 | Email: info@vitonvalves.com
+                  </div>
+                  <div style={{ fontSize: "7.5pt", color: "#333" }}>
+                    GSTIN: <strong>27AACCV7755N1ZK</strong>
+                  </div>
+                </div>
+              </div>
+            </td>
 
-      {/* Meta Info */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "14px" }}>
-        <div style={{ background: "#f8f8f8", border: "1px solid #e5e5e5", borderRadius: "6px", padding: "10px 12px" }}>
-          <div style={{ fontSize: "9px", color: "#aaa", fontWeight: "700", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "5px" }}>Requested By</div>
-          <div style={{ fontWeight: "700", fontSize: "13px", color: "#111" }}>{req.requested_by_name ?? "—"}</div>
-          <div style={{ fontSize: "11px", color: "#555", marginTop: "2px" }}>
-            {req.department ? `Department: ${req.department}` : ""}
-            {req.required_by ? ` | Required by: ${new Date(req.required_by).toLocaleDateString("en-IN")}` : ""}
-          </div>
-        </div>
-        <div style={{ background: "#f8f8f8", border: "1px solid #e5e5e5", borderRadius: "6px", padding: "10px 12px" }}>
-          <div style={{ fontSize: "9px", color: "#aaa", fontWeight: "700", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "5px" }}>Status & Priority</div>
-          <div style={{ fontSize: "11px", color: "#555" }}>
-            <div>Priority: <strong style={{ color: req.priority === "urgent" ? "red" : req.priority === "high" ? "orange" : "#555" }}>{req.priority.toUpperCase()}</strong></div>
-            <div>Status: <strong>{req.status.replace(/_/g, " ").toUpperCase()}</strong></div>
-          </div>
-        </div>
-      </div>
+            {/* Right: Document meta box */}
+            <td style={{ verticalAlign: "top", width: "45%" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", border: "1.5px solid #000" }}>
+                <tbody>
+                  {/* Title row */}
+                  <tr>
+                    <td
+                      colSpan={4}
+                      style={{
+                        background: "#1a1a6e",
+                        color: "#fff",
+                        textAlign: "center",
+                        fontWeight: "900",
+                        fontSize: "11pt",
+                        letterSpacing: "1.5px",
+                        padding: "5px 8px",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      Requisition Slip
+                    </td>
+                  </tr>
+                  {/* Doc No + Rev No */}
+                  <tr style={{ borderTop: "1px solid #000" }}>
+                    <td style={{ padding: "3px 6px", fontSize: "7.5pt", fontWeight: "700", borderRight: "1px solid #000", whiteSpace: "nowrap" }}>
+                      Doc No.
+                    </td>
+                    <td style={{ padding: "3px 6px", fontSize: "7.5pt", borderRight: "1px solid #000" }}>
+                      VT-PPC-R-04
+                    </td>
+                    <td style={{ padding: "3px 6px", fontSize: "7.5pt", fontWeight: "700", borderRight: "1px solid #000", whiteSpace: "nowrap" }}>
+                      Rev No.
+                    </td>
+                    <td style={{ padding: "3px 6px", fontSize: "7.5pt" }}>00</td>
+                  </tr>
+                  {/* Rev Date + Req No */}
+                  <tr style={{ borderTop: "1px solid #000" }}>
+                    <td style={{ padding: "3px 6px", fontSize: "7.5pt", fontWeight: "700", borderRight: "1px solid #000", whiteSpace: "nowrap" }}>
+                      Rev Date
+                    </td>
+                    <td style={{ padding: "3px 6px", fontSize: "7.5pt", borderRight: "1px solid #000" }}>
+                      {revDate}
+                    </td>
+                    <td style={{ padding: "3px 6px", fontSize: "7.5pt", fontWeight: "700", borderRight: "1px solid #000", whiteSpace: "nowrap" }}>
+                      Req No.
+                    </td>
+                    <td style={{ padding: "3px 6px", fontSize: "7.5pt", fontWeight: "700" }}>
+                      {req.req_number}
+                    </td>
+                  </tr>
+                  {/* Date */}
+                  <tr style={{ borderTop: "1px solid #000" }}>
+                    <td style={{ padding: "3px 6px", fontSize: "7.5pt", fontWeight: "700", borderRight: "1px solid #000" }}>
+                      Date
+                    </td>
+                    <td colSpan={3} style={{ padding: "3px 6px", fontSize: "7.5pt" }}>
+                      {date}
+                    </td>
+                  </tr>
+                  {/* Priority */}
+                  <tr style={{ borderTop: "1px solid #000" }}>
+                    <td style={{ padding: "3px 6px", fontSize: "7.5pt", fontWeight: "700", borderRight: "1px solid #000" }}>
+                      Priority
+                    </td>
+                    <td colSpan={3} style={{ padding: "3px 6px", fontSize: "7.5pt", fontWeight: "700",
+                      color: req.priority === "urgent" ? "#cc0000" : req.priority === "high" ? "#cc6600" : "#000" }}>
+                      {req.priority.toUpperCase()}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </td>
+          </tr>
+        </tbody>
+      </table>
 
-      {/* Items Table */}
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11px" }}>
+      {/* ── DESCRIPTION / WO ROW ──────────────────────────────── */}
+      <table style={{ width: "100%", borderCollapse: "collapse", borderTop: "1.5px solid #000", marginTop: "6px" }}>
+        <tbody>
+          <tr>
+            <td style={{ border: "1px solid #000", padding: "4px 8px", width: "15%", fontWeight: "700", fontSize: "8.5pt", background: "#f5f5f5" }}>
+              Description
+            </td>
+            <td style={{ border: "1px solid #000", padding: "4px 8px", width: "55%", fontSize: "8.5pt" }}>
+              {req.notes ?? ""}
+            </td>
+            <td style={{ border: "1px solid #000", padding: "4px 8px", width: "12%", fontWeight: "700", fontSize: "8.5pt", background: "#f5f5f5" }}>
+              WO No.
+            </td>
+            <td style={{ border: "1px solid #000", padding: "4px 8px", width: "18%", fontSize: "8.5pt" }}>
+              {req.po_id ?? ""}
+            </td>
+          </tr>
+          <tr>
+            <td style={{ border: "1px solid #000", padding: "4px 8px", fontWeight: "700", fontSize: "8.5pt", background: "#f5f5f5" }}>
+              Dept.
+            </td>
+            <td style={{ border: "1px solid #000", padding: "4px 8px", fontSize: "8.5pt" }}>
+              {req.department ?? ""}
+            </td>
+            <td style={{ border: "1px solid #000", padding: "4px 8px", fontWeight: "700", fontSize: "8.5pt", background: "#f5f5f5" }}>
+              Req. By
+            </td>
+            <td style={{ border: "1px solid #000", padding: "4px 8px", fontSize: "8.5pt" }}>
+              {req.requested_by_name ?? req.requested_by}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      {/* ── ITEMS TABLE ──────────────────────────────────────── */}
+      <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "6px" }}>
         <thead>
-          <tr style={{ background: "#5060AB" }}>
-            {["Sr.", "Serial ID", "Description", "Qty", "Unit", "Note"].map((h, i) => (
-              <th key={h} style={{
-                padding: "7px 8px", color: "white", fontWeight: "700",
-                textAlign: i < 3 ? "left" : "center",
-                width: i === 0 ? "32px" : i === 1 ? "110px" : "auto",
-              }}>{h}</th>
+          <tr style={{ background: "#1a1a6e", color: "#fff" }}>
+            {[
+              { label: "Sr No.", w: "5%", align: "center" as const },
+              { label: "Item / Description", w: "40%", align: "left" as const },
+              { label: "Serial ID", w: "18%", align: "center" as const },
+              { label: "Valve Size / Unit", w: "16%", align: "center" as const },
+              { label: "Quantity", w: "10%", align: "center" as const },
+              { label: "Remarks", w: "11%", align: "left" as const },
+            ].map((col) => (
+              <th
+                key={col.label}
+                style={{
+                  border: "1px solid #000",
+                  padding: "5px 6px",
+                  fontWeight: "700",
+                  fontSize: "8.5pt",
+                  textAlign: col.align,
+                  width: col.w,
+                  letterSpacing: "0.3px",
+                }}
+              >
+                {col.label}
+              </th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {lines.map((line, i) => (
-            <tr key={i} style={{ background: i % 2 === 0 ? "#fff" : "#fafafa", borderBottom: "1px solid #ebebeb" }}>
-              <td style={{ padding: "7px 8px", color: "#999", verticalAlign: "top" }}>{i + 1}</td>
-              <td style={{ padding: "7px 8px", fontFamily: "monospace", fontSize: "10px", color: "#3a4a8a", fontWeight: "700", verticalAlign: "top" }}>{line.serial_id || "—"}</td>
-              <td style={{ padding: "7px 8px", color: "#111", verticalAlign: "top" }}>{line.name}</td>
-              <td style={{ padding: "7px 8px", textAlign: "center", verticalAlign: "top" }}>{line.qty_requested}</td>
-              <td style={{ padding: "7px 8px", textAlign: "center", verticalAlign: "top" }}>{line.unit}</td>
-              <td style={{ padding: "7px 8px", textAlign: "left", verticalAlign: "top", fontSize: "10px", color: "#666" }}>{line.custom_note || "—"}</td>
+          {paddedLines.map((line, i) => (
+            <tr
+              key={i}
+              style={{ background: i % 2 === 0 ? "#fff" : "#fafafa" }}
+            >
+              <td style={{ border: "1px solid #ccc", padding: "5px 6px", textAlign: "center", fontSize: "8.5pt", color: "#666" }}>
+                {line ? i + 1 : ""}
+              </td>
+              <td style={{ border: "1px solid #ccc", padding: "5px 6px", fontSize: "8.5pt" }}>
+                {line?.name ?? ""}
+              </td>
+              <td style={{ border: "1px solid #ccc", padding: "5px 6px", textAlign: "center", fontSize: "8pt", fontFamily: "monospace", color: "#1a1a6e", fontWeight: "700" }}>
+                {line?.serial_id ?? ""}
+              </td>
+              <td style={{ border: "1px solid #ccc", padding: "5px 6px", textAlign: "center", fontSize: "8.5pt" }}>
+                {line?.unit ?? ""}
+              </td>
+              <td style={{ border: "1px solid #ccc", padding: "5px 6px", textAlign: "center", fontSize: "8.5pt", fontWeight: line ? "700" : "400" }}>
+                {line?.qty_requested ?? ""}
+              </td>
+              <td style={{ border: "1px solid #ccc", padding: "5px 6px", fontSize: "8pt", color: "#444" }}>
+                {line?.custom_note ?? ""}
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
 
-      {/* Notes */}
-      {req.notes && (
-        <div style={{ margin: "12px 0 0 0", padding: "10px 12px", background: "#f0f2ff", border: "1px solid #c7ccee", borderRadius: "6px", fontSize: "11px" }}>
-          <div style={{ fontWeight: "700", marginBottom: "4px", color: "#5060AB" }}>Notes:</div>
-          <div style={{ color: "#444", whiteSpace: "pre-wrap", lineHeight: "1.6" }}>{req.notes}</div>
-        </div>
-      )}
+      {/* ── APPROVAL SECTION ────────────────────────────────── */}
+      <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "6px" }}>
+        <tbody>
+          <tr style={{ background: "#1a1a6e" }}>
+            <td
+              colSpan={4}
+              style={{
+                color: "#fff", fontWeight: "700", fontSize: "8.5pt",
+                textTransform: "uppercase", letterSpacing: "1px",
+                padding: "4px 8px", border: "1px solid #000",
+              }}
+            >
+              For Office Use Only — Approval
+            </td>
+          </tr>
+          <tr>
+            <td style={{ border: "1px solid #000", padding: "4px 8px", width: "20%", fontWeight: "700", fontSize: "8pt", background: "#f5f5f5" }}>
+              Approved By
+            </td>
+            <td style={{ border: "1px solid #000", padding: "4px 8px", width: "30%", fontSize: "8pt" }}>
+              {req.approved_by_name ?? ""}
+            </td>
+            <td style={{ border: "1px solid #000", padding: "4px 8px", width: "20%", fontWeight: "700", fontSize: "8pt", background: "#f5f5f5" }}>
+              PO Number
+            </td>
+            <td style={{ border: "1px solid #000", padding: "4px 8px", width: "30%", fontSize: "8pt" }}>
+              {req.po_id ?? ""}
+            </td>
+          </tr>
+          <tr>
+            <td style={{ border: "1px solid #000", padding: "4px 8px", fontWeight: "700", fontSize: "8pt", background: "#f5f5f5" }}>
+              Approved Date
+            </td>
+            <td style={{ border: "1px solid #000", padding: "4px 8px", fontSize: "8pt" }}>
+              {req.approved_at ? new Date(req.approved_at).toLocaleDateString("en-IN") : ""}
+            </td>
+            <td style={{ border: "1px solid #000", padding: "4px 8px", fontWeight: "700", fontSize: "8pt", background: "#f5f5f5" }}>
+              Remarks
+            </td>
+            <td style={{ border: "1px solid #000", padding: "4px 8px", fontSize: "8pt" }}>
+              {req.rejected_reason ?? ""}
+            </td>
+          </tr>
+        </tbody>
+      </table>
 
-      {/* Approval Section */}
-      <div style={{ marginTop: "40px", border: "1px solid #ddd", borderRadius: "6px", overflow: "hidden" }}>
-        <div style={{ background: "#5060AB", color: "white", padding: "6px 10px", fontWeight: "700", fontSize: "11px", textTransform: "uppercase", letterSpacing: "1px" }}>
-          For Office Use Only — Approval
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0", fontSize: "11px" }}>
-          <div style={{ padding: "10px 12px", borderRight: "1px solid #e5e5e5", borderBottom: "1px solid #e5e5e5" }}>
-            <div style={{ color: "#888", fontSize: "10px", marginBottom: "4px" }}>APPROVED BY</div>
-            <div style={{ fontWeight: "700", color: "#111" }}>{req.approved_by_name ?? "_______________________"}</div>
-            <div style={{ color: "#888", fontSize: "10px", marginTop: "2px" }}>
-              Date: {req.approved_at ? new Date(req.approved_at).toLocaleDateString("en-IN") : "_______________________"}
-            </div>
-          </div>
-          <div style={{ padding: "10px 12px", borderBottom: "1px solid #e5e5e5" }}>
-            <div style={{ color: "#888", fontSize: "10px", marginBottom: "4px" }}>REJECTED BY</div>
-            <div style={{ fontWeight: "700", color: "#111" }}>_______________________</div>
-            <div style={{ color: "#888", fontSize: "10px", marginTop: "2px" }}>Date: _______________________</div>
-          </div>
-          <div style={{ padding: "10px 12px", borderRight: "1px solid #e5e5e5" }}>
-            <div style={{ color: "#888", fontSize: "10px", marginBottom: "4px" }}>PO NUMBER (if converted)</div>
-            <div style={{ fontWeight: "700", color: "#111" }}>_______________________</div>
-          </div>
-          <div style={{ padding: "10px 12px" }}>
-            <div style={{ color: "#888", fontSize: "10px", marginBottom: "4px" }}>REMARKS</div>
-            <div style={{ fontWeight: "700", color: "#111" }}>_______________________</div>
-          </div>
-        </div>
+      {/* ── SIGNATURES ──────────────────────────────────────── */}
+      <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "30px" }}>
+        <tbody>
+          <tr>
+            <td style={{ width: "50%", padding: "0 20px 0 0", verticalAlign: "bottom" }}>
+              <div style={{ borderTop: "1.5px solid #000", paddingTop: "6px" }}>
+                <div style={{ fontWeight: "700", fontSize: "9pt" }}>Prepared By</div>
+                <div style={{ fontSize: "8.5pt", color: "#444", marginTop: "4px" }}>
+                  {req.requested_by_name ?? req.requested_by}
+                </div>
+              </div>
+            </td>
+            <td style={{ width: "50%", padding: "0 0 0 20px", verticalAlign: "bottom" }}>
+              <div style={{ borderTop: "1.5px solid #000", paddingTop: "6px" }}>
+                <div style={{ fontWeight: "700", fontSize: "9pt" }}>Approved By</div>
+                <div style={{ fontSize: "8.5pt", color: "#444", marginTop: "4px" }}>
+                  {req.approved_by_name ?? ""}
+                </div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      {/* ── FOOTER ──────────────────────────────────────────── */}
+      <div style={{ marginTop: "20px", textAlign: "center", fontSize: "7.5pt", color: "#888", borderTop: "1px solid #ddd", paddingTop: "6px" }}>
+        This is a computer generated Requisition Slip and does not require a signature if digitally verified.
       </div>
+    </div>
+  );
 
-      {/* Signatures */}
-      <div style={{ marginTop: "40px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", fontSize: "11px" }}>
-        <div style={{ borderTop: "1px solid #333", paddingTop: "8px" }}>
-          <div style={{ fontWeight: "700", color: "#111" }}>Requester Signature</div>
-          <div style={{ color: "#555", marginTop: "4px" }}>{req.requested_by_name ?? "_______________________"}</div>
-        </div>
-        <div style={{ borderTop: "1px solid #333", paddingTop: "8px" }}>
-          <div style={{ fontWeight: "700", color: "#111" }}>Manager Signature</div>
-          <div style={{ color: "#555", marginTop: "4px" }}>_______________________</div>
-        </div>
-      </div>
-
-      {/* Disclaimer */}
-      <div style={{ marginTop: "30px", textAlign: "center", fontSize: "10px", color: "#777" }}>
-        This is a computer generated Material Requisition and does not require a signature if digitally verified.
-      </div>
-
-      <style jsx>{`
+  return (
+    <>
+      {/* ── PRINT CSS ──────────────────────────── */}
+      <style>{`
         @media print {
-          body { background: white; padding: 0; margin: 0; }
+          html, body { margin: 0; padding: 0; background: white; }
+          .no-print { display: none !important; }
+          .print-wrapper {
+            display: block !important;
+            box-shadow: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          @page {
+            size: A4 portrait;
+            margin: 0;
+          }
         }
       `}</style>
-    </div>
+
+      {/* ── SCREEN PREVIEW SHELL (hidden on print) ─── */}
+      <div
+        className="no-print"
+        style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)",
+          display: "flex", flexDirection: "column",
+          alignItems: "center", justifyContent: "flex-start",
+          overflowY: "auto", zIndex: 50, padding: "24px 16px 40px",
+        }}
+      >
+        {/* Top bar */}
+        <div
+          style={{
+            width: "210mm", maxWidth: "100%",
+            display: "flex", justifyContent: "space-between", alignItems: "center",
+            marginBottom: "12px", color: "#fff",
+          }}
+        >
+          <div>
+            <span style={{ fontSize: "13px", fontWeight: "700" }}>Print Preview</span>
+            <span style={{ fontSize: "12px", marginLeft: "10px", opacity: 0.7 }}>
+              {req.req_number}
+            </span>
+          </div>
+          <div style={{ display: "flex", gap: "10px" }}>
+            <button
+              onClick={() => window.close()}
+              style={{
+                background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)",
+                color: "#fff", padding: "7px 18px", borderRadius: "6px",
+                fontSize: "12px", cursor: "pointer",
+              }}
+            >
+              ✕ Close
+            </button>
+            <button
+              onClick={handlePrint}
+              style={{
+                background: "#1a1a6e", border: "none",
+                color: "#fff", padding: "7px 22px", borderRadius: "6px",
+                fontSize: "12px", fontWeight: "700", cursor: "pointer",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
+              }}
+            >
+              🖨 Print / Save PDF
+            </button>
+          </div>
+        </div>
+
+        {/* The A4 slip preview */}
+        <div
+          className="print-wrapper"
+          style={{
+            width: "210mm", maxWidth: "100%",
+            boxShadow: "0 8px 40px rgba(0,0,0,0.4)",
+            borderRadius: "4px",
+            overflow: "hidden",
+          }}
+        >
+          <SlipDocument />
+        </div>
+      </div>
+
+      {/* ── PRINT-ONLY COPY (only visible when printing) ─── */}
+      <div
+        className="print-wrapper"
+        style={{ display: "none" }}
+      >
+        <SlipDocument />
+      </div>
+    </>
   );
 }
