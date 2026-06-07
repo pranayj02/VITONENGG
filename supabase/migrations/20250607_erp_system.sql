@@ -118,15 +118,16 @@ create policy "Requester or admin can update their own requisition"
 
 
 -- 4. GOODS RECEIPT NOTE (GRN)
--- Store receives against PO. Decouples "ordered" from "actually arrived".
+-- Store receives against PO OR direct (without PO). Decouples "ordered" from "actually arrived".
 -- ------------------------------------------------------------
 create table if not exists public.grn (
   id uuid default gen_random_uuid() primary key,
   grn_number text unique not null,       -- e.g. GRN/001/26-27
   fy_label text,
   fy_serial int,
-  po_id uuid references public.purchase_orders not null,
+  po_id uuid references public.purchase_orders on delete set null,  -- NULLABLE: allows direct receipt without PO
   vendor_id uuid references public.vendors,
+  vendor_name text,                       -- Fallback if vendor not in master list
   received_by uuid references auth.users,
   received_by_name text,
   inspected_by uuid references auth.users,
@@ -138,6 +139,14 @@ create table if not exists public.grn (
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
+
+-- Make po_id nullable if table already exists from prior migration
+do $$
+begin
+  alter table public.grn alter column po_id drop not null;
+exception
+  when others then null;
+end $$;
 
 alter table public.grn enable row level security;
 
