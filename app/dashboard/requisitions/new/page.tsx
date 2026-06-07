@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useRef } from "react";
 import { createClient } from "@/lib/supabase";
-import { useRouter } from "next/navigation";
 import { getCurrentFY } from "@/lib/fy";
 import type { Item, ReqLineItem } from "@/lib/types";
 import {
@@ -20,7 +19,6 @@ interface LineForm extends ReqLineItem {
 }
 
 export default function NewRequisitionPage() {
-  const router = useRouter();
   const [items, setItems] = useState<Item[]>([]);
   const [search, setSearch] = useState("");
   const [showSearch, setShowSearch] = useState(false);
@@ -30,6 +28,7 @@ export default function NewRequisitionPage() {
   const [department, setDepartment] = useState("");
   const [priority, setPriority] = useState<"low" | "normal" | "high" | "urgent">("normal");
   const [requiredBy, setRequiredBy] = useState("");
+  const [woNumber, setWoNumber] = useState("");
   const [reqNumber, setReqNumber] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -125,6 +124,7 @@ export default function NewRequisitionPage() {
       line_items: lines.map(({ tempId, ...rest }) => rest),
       notes: notes.trim() || null,
       required_by: requiredBy || null,
+      po_id: woNumber.trim() || null,
     };
 
     const { error: saveErr } = await supabase.from("requisitions").insert(payload);
@@ -159,90 +159,245 @@ export default function NewRequisitionPage() {
     );
   }
 
+  const MIN_ROWS = 8;
+  const displayRows = [...lines, ...Array(Math.max(0, MIN_ROWS - lines.length)).fill(null)];
+  const fy = getCurrentFY();
+  const revDate = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "2-digit" });
+  const date = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" });
+
   return (
-    <div className="p-6 lg:p-8 max-w-5xl mx-auto">
-      <div className="mb-6">
+    <div className="p-4 lg:p-8 max-w-5xl mx-auto">
+      <div className="mb-4">
         <a href="/dashboard/requisitions" className="text-sm text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white flex items-center gap-1 mb-2">
           <ArrowLeft size={14} /> Back to Requisitions
         </a>
-        <h1 className="text-viton-navy dark:text-white text-2xl font-bold">New Material Requisition</h1>
-        <p className="text-[#8892a8] dark:text-gray-500 text-sm mt-1">
-          MR No: <span className="text-viton-red dark:text-orange-400 font-mono font-semibold">{reqNumber}</span>
-        </p>
       </div>
 
       {error && (
         <div className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-xl p-3 text-red-600 dark:text-red-300 text-sm mb-6">{error}</div>
       )}
 
-      <div className="grid gap-5">
-        {/* Meta */}
-        <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl p-6">
-          <h2 className="text-viton-navy dark:text-white font-semibold mb-4">Details</h2>
-          <div className="grid sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-[#8892a8] dark:text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2">Department</label>
-              <input
-                value={department}
-                onChange={(e) => setDepartment(e.target.value)}
-                placeholder="e.g. Production, Assembly"
-                className="w-full bg-[#f1f3f8] dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-viton-navy dark:text-white placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
-              />
-            </div>
-            <div>
-              <label className="block text-[#8892a8] dark:text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2">Priority</label>
-              <div className="grid grid-cols-4 gap-2">
-                {(["low", "normal", "high", "urgent"] as const).map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => setPriority(p)}
-                    className={`py-2 rounded-xl text-xs font-semibold border transition-all ${
-                      priority === p
-                        ? "bg-viton-red border-viton-red text-white dark:bg-orange-500 dark:border-orange-500"
-                        : "bg-[#f7f8fb] dark:bg-gray-800 border-[#dde1ea] dark:border-gray-700 text-[#4a5578] dark:text-gray-400 hover:text-viton-navy dark:hover:text-white"
-                    }`}
-                  >
-                    {p}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
-              <label className="block text-[#8892a8] dark:text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2">Required By</label>
-              <input
-                type="date"
-                value={requiredBy}
-                onChange={(e) => setRequiredBy(e.target.value)}
-                className="w-full bg-[#f1f3f8] dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-viton-navy dark:text-white focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
-              />
-            </div>
-          </div>
-        </div>
+      {/* ── A4 FORM ── */}
+      <div
+        style={{
+          background: "#fff",
+          fontFamily: "Arial, Helvetica, sans-serif",
+          fontSize: "10pt",
+          color: "#000",
+          padding: "10mm 12mm",
+          boxSizing: "border-box",
+          border: "1px solid #ddd",
+          borderRadius: "4px",
+        }}
+      >
+        {/* Header */}
+        <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "0" }}>
+          <tbody>
+            <tr>
+              <td style={{ verticalAlign: "top", width: "55%", paddingRight: "8px" }}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
+                  <img
+                    src="/Logo.JPG"
+                    alt="Viton Engineers"
+                    style={{ width: "54px", height: "54px", objectFit: "contain", flexShrink: 0 }}
+                    crossOrigin="anonymous"
+                  />
+                  <div>
+                    <div style={{ fontSize: "13pt", fontWeight: "900", letterSpacing: "0.3px", lineHeight: 1.2 }}>
+                      VITON ENGINEERS PVT. LTD.
+                    </div>
+                    <div style={{ fontSize: "7.5pt", color: "#333", marginTop: "3px", lineHeight: 1.5 }}>
+                      WORKS: B40/1, ADDL. Ambernath MIDC, Anand Nagar,<br />
+                      Opp. Hali Pad, Ambernath East, Dist. Thane - 421506
+                    </div>
+                    <div style={{ fontSize: "7.5pt", color: "#333", marginTop: "2px" }}>
+                      Tel: 08779301215 / 9769639388 | Email: info@vitonvalves.com
+                    </div>
+                    <div style={{ fontSize: "7.5pt", color: "#333" }}>
+                      GSTIN: <strong>27AACCV7755N1ZK</strong>
+                    </div>
+                  </div>
+                </div>
+              </td>
+
+              <td style={{ verticalAlign: "top", width: "45%" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", border: "1.5px solid #000" }}>
+                  <tbody>
+                    <tr>
+                      <td
+                        colSpan={4}
+                        style={{
+                          background: "#1a1a6e",
+                          color: "#fff",
+                          textAlign: "center",
+                          fontWeight: "900",
+                          fontSize: "11pt",
+                          letterSpacing: "1.5px",
+                          padding: "5px 8px",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        Requisition Slip
+                      </td>
+                    </tr>
+                    <tr style={{ borderTop: "1px solid #000" }}>
+                      <td style={{ padding: "3px 6px", fontSize: "7.5pt", fontWeight: "700", borderRight: "1px solid #000", whiteSpace: "nowrap" }}>
+                        Doc No.
+                      </td>
+                      <td style={{ padding: "3px 6px", fontSize: "7.5pt", borderRight: "1px solid #000" }}>
+                        VT-PPC-R-04
+                      </td>
+                      <td style={{ padding: "3px 6px", fontSize: "7.5pt", fontWeight: "700", borderRight: "1px solid #000", whiteSpace: "nowrap" }}>
+                        Rev No.
+                      </td>
+                      <td style={{ padding: "3px 6px", fontSize: "7.5pt" }}>00</td>
+                    </tr>
+                    <tr style={{ borderTop: "1px solid #000" }}>
+                      <td style={{ padding: "3px 6px", fontSize: "7.5pt", fontWeight: "700", borderRight: "1px solid #000", whiteSpace: "nowrap" }}>
+                        Rev Date
+                      </td>
+                      <td style={{ padding: "3px 6px", fontSize: "7.5pt", borderRight: "1px solid #000" }}>
+                        {revDate}
+                      </td>
+                      <td style={{ padding: "3px 6px", fontSize: "7.5pt", fontWeight: "700", borderRight: "1px solid #000", whiteSpace: "nowrap" }}>
+                        Req No.
+                      </td>
+                      <td style={{ padding: "3px 6px", fontSize: "7.5pt", fontWeight: "700" }}>
+                        {reqNumber}
+                      </td>
+                    </tr>
+                    <tr style={{ borderTop: "1px solid #000" }}>
+                      <td style={{ padding: "3px 6px", fontSize: "7.5pt", fontWeight: "700", borderRight: "1px solid #000" }}>
+                        Date
+                      </td>
+                      <td colSpan={3} style={{ padding: "3px 6px", fontSize: "7.5pt" }}>
+                        {date}
+                      </td>
+                    </tr>
+                    <tr style={{ borderTop: "1px solid #000" }}>
+                      <td style={{ padding: "3px 6px", fontSize: "7.5pt", fontWeight: "700", borderRight: "1px solid #000" }}>
+                        Priority
+                      </td>
+                      <td colSpan={3} style={{ padding: "3px 6px", fontSize: "7.5pt", fontWeight: "700" }}>
+                        <select
+                          value={priority}
+                          onChange={(e) => setPriority(e.target.value as any)}
+                          style={{ fontSize: "7.5pt", fontWeight: "700", border: "none", background: "transparent", color: priority === "urgent" ? "#cc0000" : priority === "high" ? "#cc6600" : "#000", cursor: "pointer" }}
+                        >
+                          <option value="low">LOW</option>
+                          <option value="normal">NORMAL</option>
+                          <option value="high">HIGH</option>
+                          <option value="urgent">URGENT</option>
+                        </select>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        {/* Description / WO Row */}
+        <table style={{ width: "100%", borderCollapse: "collapse", borderTop: "1.5px solid #000", marginTop: "6px" }}>
+          <tbody>
+            <tr>
+              <td style={{ border: "1px solid #000", padding: "4px 8px", width: "15%", fontWeight: "700", fontSize: "8.5pt", background: "#f5f5f5" }}>
+                Description
+              </td>
+              <td style={{ border: "1px solid #000", padding: "4px 8px", width: "55%" }}>
+                <input
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Enter description / purpose of requisition"
+                  style={{ width: "100%", fontSize: "8.5pt", border: "none", background: "transparent", outline: "none" }}
+                />
+              </td>
+              <td style={{ border: "1px solid #000", padding: "4px 8px", width: "12%", fontWeight: "700", fontSize: "8.5pt", background: "#f5f5f5" }}>
+                WO No.
+              </td>
+              <td style={{ border: "1px solid #000", padding: "4px 8px", width: "18%" }}>
+                <input
+                  value={woNumber}
+                  onChange={(e) => setWoNumber(e.target.value)}
+                  placeholder="Optional"
+                  style={{ width: "100%", fontSize: "8.5pt", border: "none", background: "transparent", outline: "none" }}
+                />
+              </td>
+            </tr>
+            <tr>
+              <td style={{ border: "1px solid #000", padding: "4px 8px", fontWeight: "700", fontSize: "8.5pt", background: "#f5f5f5" }}>
+                Dept.
+              </td>
+              <td style={{ border: "1px solid #000", padding: "4px 8px" }}>
+                <input
+                  value={department}
+                  onChange={(e) => setDepartment(e.target.value)}
+                  placeholder="e.g. Production"
+                  style={{ width: "100%", fontSize: "8.5pt", border: "none", background: "transparent", outline: "none" }}
+                />
+              </td>
+              <td style={{ border: "1px solid #000", padding: "4px 8px", fontWeight: "700", fontSize: "8.5pt", background: "#f5f5f5" }}>
+                Req. By
+              </td>
+              <td style={{ border: "1px solid #000", padding: "4px 8px", fontSize: "8.5pt", color: "#444" }}>
+                {/* Auto-filled from auth on save */}
+                <input
+                  value={""}
+                  placeholder="Auto-filled from profile"
+                  readOnly
+                  style={{ width: "100%", fontSize: "8.5pt", border: "none", background: "transparent", outline: "none", color: "#888" }}
+                />
+              </td>
+            </tr>
+            <tr>
+              <td style={{ border: "1px solid #000", padding: "4px 8px", fontWeight: "700", fontSize: "8.5pt", background: "#f5f5f5" }}>
+                Required By
+              </td>
+              <td style={{ border: "1px solid #000", padding: "4px 8px" }}>
+                <input
+                  type="date"
+                  value={requiredBy}
+                  onChange={(e) => setRequiredBy(e.target.value)}
+                  style={{ width: "100%", fontSize: "8.5pt", border: "none", background: "transparent", outline: "none" }}
+                />
+              </td>
+              <td style={{ border: "1px solid #000", padding: "4px 8px", fontWeight: "700", fontSize: "8.5pt", background: "#f5f5f5" }}>
+                FY
+              </td>
+              <td style={{ border: "1px solid #000", padding: "4px 8px", fontSize: "8.5pt", color: "#444" }}>
+                {fy}
+              </td>
+            </tr>
+          </tbody>
+        </table>
 
         {/* Item Search */}
-        <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl p-6">
-          <h2 className="text-viton-navy dark:text-white font-semibold mb-4">Add Items</h2>
+        <div style={{ marginTop: "10px", marginBottom: "6px" }}>
           <div className="relative" ref={searchRef}>
-            <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8892a8] dark:text-gray-500" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8892a8]" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by serial ID or item name..."
-              className="w-full bg-[#f1f3f8] dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-xl pl-10 pr-4 py-3 text-sm text-viton-navy dark:text-white placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
+              placeholder="Search catalog by serial ID or name..."
+              style={{
+                width: "100%", padding: "6px 10px 6px 32px", fontSize: "9pt",
+                border: "1px solid #ccc", borderRadius: "4px", background: "#fafafa",
+              }}
             />
             {showSearch && searchResults.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-950 border border-[#dde1ea] dark:border-gray-800 rounded-2xl overflow-hidden shadow-2xl z-50">
+              <div className="absolute z-50 mt-1 bg-white border border-[#dde1ea] rounded-lg shadow-lg overflow-hidden w-full">
                 {searchResults.map((item) => (
                   <button
                     key={item.id}
                     onClick={() => addLine(item)}
-                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#f1f3f8] dark:hover:bg-gray-900 transition-colors text-left border-b border-[#dde1ea] dark:border-gray-800 last:border-0"
+                    className="w-full flex items-center justify-between px-3 py-2 hover:bg-[#f1f3f8] text-left border-b border-[#eef1f6] last:border-0"
                   >
                     <div>
-                      <p className="text-viton-red dark:text-orange-400 font-mono text-xs font-semibold">{item.serial_id}</p>
-                      <p className="text-viton-navy dark:text-white text-sm mt-0.5">{item.name}</p>
+                      <p className="text-viton-red font-mono text-[10px] font-semibold">{item.serial_id}</p>
+                      <p className="text-gray-800 text-[11px]">{item.name}</p>
                     </div>
-                    <span className="text-[#8892a8] dark:text-gray-500 text-xs bg-[#f1f3f8] dark:bg-gray-800 px-2 py-0.5 rounded-lg">{item.unit}</span>
+                    <span className="text-[10px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">{item.unit}</span>
                   </button>
                 ))}
               </div>
@@ -250,80 +405,125 @@ export default function NewRequisitionPage() {
           </div>
         </div>
 
-        {/* Lines */}
-        {lines.length > 0 && (
-          <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-[#dde1ea] dark:border-gray-800">
-              <h2 className="text-viton-navy dark:text-white font-semibold">Requested Items</h2>
-            </div>
-            <div className="p-6 space-y-4">
-              {lines.map((line) => (
-                <div key={line.tempId} className="bg-[#f7f8fb] dark:bg-gray-950 border border-[#dde1ea] dark:border-gray-800 rounded-2xl p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-viton-red dark:text-orange-400 font-mono text-xs font-semibold">{line.serial_id}</p>
-                      <p className="text-viton-navy dark:text-white font-medium text-sm">{line.name}</p>
-                    </div>
-                    <button onClick={() => removeLine(line.tempId)} className="text-gray-400 hover:text-red-500 transition-colors p-1">
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-3">
-                    <div>
-                      <label className="block text-[#8892a8] dark:text-gray-500 text-xs mb-1">Quantity</label>
-                      <input
-                        type="number"
-                        min={1}
-                        value={line.qty_requested}
-                        onChange={(e) => updateLine(line.tempId, { qty_requested: Number(e.target.value) })}
-                        className="w-full bg-white dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-xl px-3 py-2 text-sm text-viton-navy dark:text-white focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[#8892a8] dark:text-gray-500 text-xs mb-1">Unit</label>
-                      <div className="bg-[#eceef4] dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-xl px-3 py-2 text-sm text-[#4a5578] dark:text-gray-400">{line.unit}</div>
-                    </div>
-                    <div className="col-span-2 md:col-span-1">
-                      <label className="block text-[#8892a8] dark:text-gray-500 text-xs mb-1">Note</label>
+        {/* Items Table */}
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={{ background: "#1a1a6e", color: "#fff" }}>
+              {[
+                { label: "Sr No.", w: "5%", align: "center" as const },
+                { label: "Item / Description", w: "40%", align: "left" as const },
+                { label: "Serial ID", w: "18%", align: "center" as const },
+                { label: "Valve Size / Unit", w: "16%", align: "center" as const },
+                { label: "Quantity", w: "10%", align: "center" as const },
+                { label: "Remarks", w: "11%", align: "left" as const },
+              ].map((col) => (
+                <th
+                  key={col.label}
+                  style={{
+                    border: "1px solid #000",
+                    padding: "5px 6px",
+                    fontWeight: "700",
+                    fontSize: "8.5pt",
+                    textAlign: col.align,
+                    width: col.w,
+                    letterSpacing: "0.3px",
+                  }}
+                >
+                  {col.label}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {displayRows.map((line, i) => (
+              <tr key={i} style={{ background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
+                <td style={{ border: "1px solid #ccc", padding: "4px 6px", textAlign: "center", fontSize: "8.5pt", color: "#666" }}>
+                  {line ? i + 1 : ""}
+                </td>
+                <td style={{ border: "1px solid #ccc", padding: "4px 6px" }}>
+                  {line ? (
+                    <input
+                      value={line.name}
+                      onChange={(e) => updateLine(line.tempId, { name: e.target.value })}
+                      style={{ width: "100%", fontSize: "8.5pt", border: "none", background: "transparent", outline: "none" }}
+                    />
+                  ) : (
+                    <span style={{ color: "#ddd" }}>—</span>
+                  )}
+                </td>
+                <td style={{ border: "1px solid #ccc", padding: "4px 6px", textAlign: "center", fontSize: "8pt", fontFamily: "monospace", color: "#1a1a6e" }}>
+                  {line ? (
+                    <input
+                      value={line.serial_id}
+                      onChange={(e) => updateLine(line.tempId, { serial_id: e.target.value })}
+                      style={{ width: "100%", fontSize: "8pt", border: "none", background: "transparent", outline: "none", textAlign: "center", fontFamily: "monospace" }}
+                    />
+                  ) : (
+                    <span style={{ color: "#ddd" }}>—</span>
+                  )}
+                </td>
+                <td style={{ border: "1px solid #ccc", padding: "4px 6px", textAlign: "center", fontSize: "8.5pt" }}>
+                  {line ? (
+                    <input
+                      value={line.unit}
+                      onChange={(e) => updateLine(line.tempId, { unit: e.target.value })}
+                      style={{ width: "100%", fontSize: "8.5pt", border: "none", background: "transparent", outline: "none", textAlign: "center" }}
+                    />
+                  ) : (
+                    <span style={{ color: "#ddd" }}>—</span>
+                  )}
+                </td>
+                <td style={{ border: "1px solid #ccc", padding: "4px 6px", textAlign: "center", fontSize: "8.5pt" }}>
+                  {line ? (
+                    <input
+                      type="number"
+                      min={1}
+                      value={line.qty_requested}
+                      onChange={(e) => updateLine(line.tempId, { qty_requested: Number(e.target.value) })}
+                      style={{ width: "100%", fontSize: "8.5pt", border: "none", background: "transparent", outline: "none", textAlign: "center" }}
+                    />
+                  ) : (
+                    <span style={{ color: "#ddd" }}>—</span>
+                  )}
+                </td>
+                <td style={{ border: "1px solid #ccc", padding: "4px 6px", fontSize: "8pt" }}>
+                  {line ? (
+                    <div className="flex items-center gap-1">
                       <input
                         value={line.custom_note ?? ""}
                         onChange={(e) => updateLine(line.tempId, { custom_note: e.target.value })}
-                        placeholder="Specific requirement..."
-                        className="w-full bg-white dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-xl px-3 py-2 text-sm text-viton-navy dark:text-white placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
+                        style={{ width: "100%", fontSize: "8pt", border: "none", background: "transparent", outline: "none" }}
                       />
+                      <button onClick={() => removeLine(line.tempId)} className="text-gray-400 hover:text-red-500 flex-shrink-0">
+                        <Trash2 size={12} />
+                      </button>
                     </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                  ) : (
+                    <span style={{ color: "#ddd" }}>—</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {/* Footer / Actions */}
+        <div style={{ marginTop: "20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ fontSize: "8pt", color: "#888" }}>
+            This is a computer generated Requisition Slip.
           </div>
-        )}
-
-        {/* Notes */}
-        <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl p-6">
-          <label className="block text-viton-navy dark:text-white font-semibold mb-2">Notes</label>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Purpose of requisition, project reference, special instructions..."
-            rows={3}
-            className="w-full bg-[#f1f3f8] dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-viton-navy dark:text-white placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500 resize-none"
-          />
-        </div>
-
-        {/* Actions */}
-        <div className="flex items-center justify-end gap-3">
-          <a href="/dashboard/requisitions" className="bg-[#f1f3f8] dark:bg-gray-800 hover:bg-[#e8eaf2] dark:hover:bg-gray-700 text-[#4a5578] dark:text-gray-300 font-semibold px-5 py-3 rounded-xl text-sm">
-            Cancel
-          </a>
-          <button
-            onClick={handleSave}
-            disabled={saving || lines.length === 0}
-            className="bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 disabled:opacity-50 text-white font-semibold px-6 py-3 rounded-xl text-sm flex items-center gap-2 transition-all"
-          >
-            <Save size={15} />
-            {saving ? "Saving..." : "Submit Requisition"}
-          </button>
+          <div className="flex items-center gap-3">
+            <a href="/dashboard/requisitions" className="bg-[#f1f3f8] hover:bg-[#e8eaf2] text-[#4a5578] font-semibold px-4 py-2 rounded-lg text-sm">
+              Cancel
+            </a>
+            <button
+              onClick={handleSave}
+              disabled={saving || lines.length === 0}
+              className="bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 disabled:opacity-50 text-white font-semibold px-5 py-2 rounded-lg text-sm flex items-center gap-2"
+            >
+              <Save size={14} /> {saving ? "Saving..." : "Submit Requisition"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
