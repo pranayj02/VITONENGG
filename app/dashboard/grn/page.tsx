@@ -20,7 +20,10 @@ import {
   Trash2,
   Printer,
   Package,
+  Download,
 } from "lucide-react";
+import { PDFDownloadLink } from "@react-pdf/renderer";
+import { GRNPdfDocument } from "@/components/GRNPdf";
 
 interface POWithVendor extends PurchaseOrder {
   vendors: Vendor | null;
@@ -694,6 +697,14 @@ export default function GRNPage() {
                     {new Date(g.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
                   </div>
                   <div className="flex items-center justify-end gap-2">
+                    <PDFDownloadLink
+                      document={<GRNPdfDocument grn={g} po={pos.find(p => p.id === g.po_id) ? { po_number: (pos.find(p => p.id === g.po_id) as POWithVendor).po_number, created_at: (pos.find(p => p.id === g.po_id) as POWithVendor).created_at } : null} vendor={vendors.find(v => v.id === g.vendor_id) ?? null} />}
+                      fileName={`${g.grn_number.replace(/\//g, "-")}.pdf`}
+                      className="text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white"
+                      title="Download PDF"
+                    >
+                      <Download size={14} />
+                    </PDFDownloadLink>
                     <button onClick={() => openPrint(g.id)} className="text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white" title="Print">
                       <Printer size={14} />
                     </button>
@@ -745,6 +756,13 @@ export default function GRNPage() {
                           <button onClick={() => updateStatus(g.id, "rejected")} className="bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400 text-xs font-semibold px-3 py-1.5 rounded-md border border-red-100 dark:border-red-500/20">Reject</button>
                         </>
                       )}
+                      <PDFDownloadLink
+                        document={<GRNPdfDocument grn={g} po={pos.find(p => p.id === g.po_id) ? { po_number: (pos.find(p => p.id === g.po_id) as POWithVendor).po_number, created_at: (pos.find(p => p.id === g.po_id) as POWithVendor).created_at } : null} vendor={vendors.find(v => v.id === g.vendor_id) ?? null} />}
+                        fileName={`${g.grn_number.replace(/\//g, "-")}.pdf`}
+                        className="bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 text-white text-xs font-semibold px-3 py-1.5 rounded-md flex items-center gap-1.5"
+                      >
+                        <Download size={12} /> Download PDF
+                      </PDFDownloadLink>
                       <button onClick={() => openPrint(g.id)} className="bg-[#f1f3f8] text-[#4a5578] dark:bg-gray-800 dark:text-gray-300 text-xs font-semibold px-3 py-1.5 rounded-md border border-[#dde1ea] dark:border-gray-800 flex items-center gap-1.5">
                         <Printer size={12} /> Print
                       </button>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
 import type { GRN, GRNLineItem, Vendor } from "@/lib/types";
 
@@ -14,7 +14,6 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
   const [po, setPo] = useState<PORef | null>(null);
   const [vendor, setVendor] = useState<Vendor | null>(null);
   const [loading, setLoading] = useState(true);
-  const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     async function load() {
@@ -47,8 +46,6 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
     }
     load();
   }, [params.id]);
-
-  const handlePrint = () => window.print();
 
   if (loading) {
     return (
@@ -125,9 +122,8 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
     textAlign: "center",
   };
 
-  const SlipDocument = () => (
+  return (
     <div
-      ref={printRef}
       style={{
         width: "210mm",
         minHeight: "297mm",
@@ -137,12 +133,12 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
         color: "#000",
         padding: "5mm 8mm",
         boxSizing: "border-box",
+        margin: "0 auto",
       }}
     >
-      {/* ── FLAT HEADER TABLE (matches Excel grid) ────────────────── */}
+      {/* ── FLAT HEADER TABLE ───────────────────────────────────── */}
       <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "0" }}>
         <tbody>
-          {/* Row 1: Document No + Title + Company */}
           <tr>
             <td style={{ ...labelCell, width: "15%" }}>Document No.</td>
             <td style={{ ...valueCell, width: "15%" }}>VT-STR-R-02</td>
@@ -156,14 +152,12 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
             <td style={{ ...labelCell, width: "15%" }}>GRN No.</td>
             <td style={{ ...valueCell, width: "15%", fontWeight: "700" }}>{grn.grn_number}</td>
           </tr>
-          {/* Row 2: Revision No + GRN Date */}
           <tr>
             <td style={labelCell}>Revision No.</td>
             <td style={valueCell}>00</td>
             <td style={labelCell}>GRN Date</td>
             <td style={valueCell}>{grnDate}</td>
           </tr>
-          {/* Row 3: Revision Date + Status */}
           <tr>
             <td style={labelCell}>Revision Date</td>
             <td style={valueCell}>01/10/2025</td>
@@ -175,15 +169,13 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
         </tbody>
       </table>
 
-      {/* ── SUPPLIER + RECEIVED TABLE (flat 5-col) ────────────────── */}
+      {/* ── SUPPLIER + RECEIVED TABLE ───────────────────────────── */}
       <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "4px" }}>
         <tbody>
-          {/* Section headers */}
           <tr>
             <td colSpan={3} style={{ ...headerCell, width: "55%" }}>Supplier Details</td>
             <td colSpan={2} style={{ ...headerCell, width: "45%" }}>Received At</td>
           </tr>
-          {/* Supplier name | Company */}
           <tr>
             <td style={{ ...labelCell, width: "18%" }}>Supplier Name</td>
             <td colSpan={2} style={{ ...valueCell, fontWeight: "700", width: "37%" }}>
@@ -192,7 +184,6 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
             <td style={{ ...labelCell, width: "22%" }}>Company</td>
             <td style={{ ...valueCell, width: "23%" }}>M/s. VITON ENGINEERS PVT LTD</td>
           </tr>
-          {/* Supplier address | Address */}
           <tr>
             <td style={labelCell}>Supplier Address</td>
             <td colSpan={2} style={{ ...valueCell, fontSize: "7.5pt", lineHeight: 1.5 }}>
@@ -204,7 +195,6 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
               Anand Nagar, Ambernath E, Dist. Thane - 421506
             </td>
           </tr>
-          {/* Supplier GSTIN | Email */}
           <tr>
             <td style={labelCell}>Supplier GSTIN</td>
             <td colSpan={2} style={{ ...valueCell, fontWeight: "700" }}>
@@ -213,7 +203,6 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
             <td style={labelCell}>Email</td>
             <td style={valueCell}>viton.engg@gmail.com</td>
           </tr>
-          {/* Challan / Inv No. | GST No. */}
           <tr>
             <td style={labelCell}>Challan / Inv No.</td>
             <td colSpan={2} style={{ ...valueCell, fontWeight: "700" }}>
@@ -222,7 +211,6 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
             <td style={labelCell}>GST No.</td>
             <td style={{ ...valueCell, fontWeight: "700" }}>27AACCV7755N1ZK</td>
           </tr>
-          {/* Challan / Inv Date | Received By */}
           <tr>
             <td style={labelCell}>Challan / Inv Date</td>
             <td colSpan={2} style={valueCell}>
@@ -231,7 +219,6 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
             <td style={labelCell}>Received By</td>
             <td style={valueCell}>{grn.received_by_name ?? "—"}</td>
           </tr>
-          {/* PO No. | (empty) */}
           <tr>
             <td style={labelCell}>PO No.</td>
             <td colSpan={2} style={{ ...valueCell, fontFamily: "monospace", color: "#1a1a6e", fontWeight: "700" }}>
@@ -240,14 +227,12 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
             <td style={labelCell} />
             <td style={valueCell} />
           </tr>
-          {/* PO Date | (empty) */}
           <tr>
             <td style={labelCell}>PO Date</td>
             <td colSpan={2} style={valueCell}>{poDate}</td>
             <td style={labelCell} />
             <td style={valueCell} />
           </tr>
-          {/* Inspected By | (empty) */}
           <tr>
             <td style={labelCell}>Inspected By</td>
             <td colSpan={2} style={valueCell}>{grn.inspected_by_name ?? "—"}</td>
@@ -257,7 +242,7 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
         </tbody>
       </table>
 
-      {/* ── ITEMS TABLE ───────────────────────────────────────────── */}
+      {/* ── ITEMS TABLE ─────────────────────────────────────────── */}
       <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "6px" }}>
         <thead>
           <tr style={{ background: "#1a1a6e", color: "#fff" }}>
@@ -329,7 +314,7 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
         </tbody>
       </table>
 
-      {/* ── REMARK ROW ────────────────────────────────────────────── */}
+      {/* ── REMARK ROW ──────────────────────────────────────────── */}
       <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "0" }}>
         <tbody>
           <tr>
@@ -343,7 +328,7 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
         </tbody>
       </table>
 
-      {/* ── SIGNATURES ────────────────────────────────────────────── */}
+      {/* ── SIGNATURES ──────────────────────────────────────────── */}
       <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "32px" }}>
         <tbody>
           <tr>
@@ -375,84 +360,10 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
         </tbody>
       </table>
 
-      {/* ── FOOTER ────────────────────────────────────────────────── */}
+      {/* ── FOOTER ──────────────────────────────────────────────── */}
       <div style={{ marginTop: "18px", textAlign: "center", fontSize: "7pt", color: "#888", borderTop: "1px solid #ddd", paddingTop: "5px" }}>
         This is a computer generated Goods Receipt Note and does not require a signature if digitally verified.
       </div>
     </div>
-  );
-
-  return (
-    <>
-      <style>{`
-        @media print {
-          html, body { margin: 0; padding: 0; background: white; }
-          .no-print { display: none !important; }
-          .print-wrapper { display: block !important; box-shadow: none !important; margin: 0 !important; padding: 0 !important; }
-          @page { size: A4 portrait; margin: 0; }
-        }
-      `}</style>
-
-      <div
-        className="no-print"
-        style={{
-          position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)",
-          display: "flex", flexDirection: "column",
-          alignItems: "center", justifyContent: "flex-start",
-          overflowY: "auto", zIndex: 50, padding: "24px 16px 40px",
-        }}
-      >
-        <div
-          style={{
-            width: "210mm", maxWidth: "100%",
-            display: "flex", justifyContent: "space-between", alignItems: "center",
-            marginBottom: "12px", color: "#fff",
-          }}
-        >
-          <div>
-            <span style={{ fontSize: "13px", fontWeight: "700" }}>Print Preview — GRN</span>
-            <span style={{ fontSize: "12px", marginLeft: "10px", opacity: 0.7 }}>{grn.grn_number}</span>
-          </div>
-          <div style={{ display: "flex", gap: "10px" }}>
-            <button
-              onClick={() => window.close()}
-              style={{
-                background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)",
-                color: "#fff", padding: "7px 18px", borderRadius: "6px",
-                fontSize: "12px", cursor: "pointer",
-              }}
-            >
-              ✕ Close
-            </button>
-            <button
-              onClick={handlePrint}
-              style={{
-                background: "#1a1a6e", border: "none",
-                color: "#fff", padding: "7px 22px", borderRadius: "6px",
-                fontSize: "12px", fontWeight: "700", cursor: "pointer",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
-              }}
-            >
-              🖨 Print / Save PDF
-            </button>
-          </div>
-        </div>
-
-        <div
-          className="print-wrapper"
-          style={{
-            width: "210mm", maxWidth: "100%",
-            boxShadow: "0 8px 40px rgba(0,0,0,0.4)",
-            borderRadius: "4px", overflow: "hidden",
-          }}
-        >
-          <SlipDocument />
-        </div>
-      </div>
-
-      <div className="print-wrapper" style={{ display: "none" }}>
-        <SlipDocument />
-      </div>
-    </>
   );
 }
