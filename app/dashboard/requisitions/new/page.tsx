@@ -51,7 +51,7 @@ export default function NewRequisitionPage() {
         .order("fy_serial", { ascending: false })
         .limit(1);
 
-      const nextSerial = (rows?.[0]?.fy_serial ?? 0) + 1;
+      const nextSerial = (Number((rows as any)?.[0]?.fy_serial) || 0) + 1;
       setReqNumber(`MR/${String(nextSerial).padStart(3, "0")}/${fy}`);
     }
     init();

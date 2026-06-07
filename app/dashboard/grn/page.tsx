@@ -119,7 +119,7 @@ export default function GRNPage() {
       .eq("fy_label", fy)
       .order("fy_serial", { ascending: false })
       .limit(1);
-    const nextSerial = (last?.[0]?.fy_serial ?? 0) + 1;
+    const nextSerial = (Number((last as any)?.[0]?.fy_serial) || 0) + 1;
     const finalGrnNumber = `GRN/${String(nextSerial).padStart(3, "0")}/${fy}`;
 
     const payload = {
