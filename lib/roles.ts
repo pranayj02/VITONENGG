@@ -45,6 +45,8 @@ export const PERMISSIONS = {
   // GRN / Stock
   create_grn: ["admin", "store_keeper", "purchase_manager"],
   edit_grn: ["admin", "store_keeper"],
+  inspect_grn: ["admin", "store_keeper", "purchase_manager"],
+  approve_grn: ["admin", "purchase_manager"],
   adjust_stock: ["admin", "store_keeper"],
 
   // Master data

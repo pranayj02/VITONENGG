@@ -33,7 +33,7 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
           .select("po_number, created_at")
           .eq("id", grnData.po_id)
           .single();
-        setPo(poData ?? null);
+        setPo((poData as PORef | null) ?? null);
       }
       if (grnData?.vendor_id) {
         const { data: vendorData } = await supabase
@@ -41,7 +41,7 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
           .select("*")
           .eq("id", grnData.vendor_id)
           .single();
-        setVendor(vendorData ?? null);
+        setVendor((vendorData as Vendor | null) ?? null);
       }
       setLoading(false);
     }

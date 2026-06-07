@@ -229,7 +229,7 @@ export default function GRNPage() {
       fy_serial: nextSerial,
       po_id: selectedPO?.id ?? null,
       vendor_id: selectedPO?.vendor_id ?? selectedVendor?.id ?? null,
-      vendor_name: selectedPO?.vendors?.name ?? selectedVendor?.name ?? manualVendorName.trim() || null,
+      vendor_name: selectedPO?.vendors?.name ?? selectedVendor?.name ?? (manualVendorName.trim() || null),
       received_by: user?.id ?? null,
       received_by_name: name,
       inspected_by: null,
