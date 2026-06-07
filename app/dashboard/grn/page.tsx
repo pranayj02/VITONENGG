@@ -7,7 +7,6 @@ import { can, useRole } from "@/lib/roles";
 import { getCurrentFY } from "@/lib/fy";
 import type { PurchaseOrder, Vendor, GRN, GRNLineItem, LineItem, Item } from "@/lib/types";
 import {
-  Package,
   Search,
   X,
   CheckCircle,
@@ -20,8 +19,7 @@ import {
   FileText,
   Trash2,
   Printer,
-  Eye,
-  Pencil,
+  Package,
 } from "lucide-react";
 
 interface POWithVendor extends PurchaseOrder {
@@ -38,7 +36,7 @@ const statusColors: Record<string, string> = {
 
 export default function GRNPage() {
   const router = useRouter();
-  const { role, loading: roleLoading } = useRole();
+  const { role } = useRole();
   const [pos, setPos] = useState<POWithVendor[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [grns, setGrns] = useState<GRN[]>([]);
@@ -47,19 +45,19 @@ export default function GRNPage() {
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  // Create GRN modal state
   const [createOpen, setCreateOpen] = useState(false);
   const [createMode, setCreateMode] = useState<"against_po" | "without_po" | null>(null);
   const [selectedPO, setSelectedPO] = useState<POWithVendor | null>(null);
   const [manualVendorId, setManualVendorId] = useState("");
   const [manualVendorName, setManualVendorName] = useState("");
-  const [grnNumber, setGrnNumber] = useState("");
   const [grnLines, setGrnLines] = useState<GRNLineItem[]>([]);
   const [inspectionNotes, setInspectionNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [inspectedBy, setInspectedBy] = useState("");
+  const [challanNo, setChallanNo] = useState("");
+  const [challanDate, setChallanDate] = useState("");
 
-  // Manual item search state
   const [itemSearch, setItemSearch] = useState("");
   const [itemResults, setItemResults] = useState<Item[]>([]);
   const [showItemSearch, setShowItemSearch] = useState(false);
@@ -68,13 +66,11 @@ export default function GRNPage() {
   async function load() {
     setLoading(true);
     const supabase = createClient();
-
     const [poRes, grnRes, vendorRes] = await Promise.all([
       supabase.from("purchase_orders").select("*, vendors(*)").eq("status", "confirmed").order("created_at", { ascending: false }),
       supabase.from("grn").select("*").order("created_at", { ascending: false }).limit(500),
       supabase.from("vendors").select("*").order("name"),
     ]);
-
     setPos((poRes.data ?? []) as unknown as POWithVendor[]);
     setVendors((vendorRes.data ?? []) as unknown as Vendor[]);
     const gRows = (grnRes.data ?? []) as unknown as GRN[];
@@ -89,22 +85,19 @@ export default function GRNPage() {
     let out = grns;
     if (search.trim()) {
       const q = search.toLowerCase();
-      out = out.filter(
-        (g) =>
-          g.grn_number.toLowerCase().includes(q) ||
-          (g.received_by_name ?? "").toLowerCase().includes(q) ||
-          (g.vendor_name ?? "").toLowerCase().includes(q)
+      out = out.filter((g) =>
+        g.grn_number.toLowerCase().includes(q) ||
+        (g.received_by_name ?? "").toLowerCase().includes(q) ||
+        (g.vendor_name ?? "").toLowerCase().includes(q)
       );
     }
     setFilteredGRN(out);
   }, [search, grns]);
 
-  // Item search for manual mode
   useEffect(() => {
     if (!itemSearch.trim()) { setItemResults([]); setShowItemSearch(false); return; }
-    const q = itemSearch.toLowerCase();
     const supabase = createClient();
-    supabase.from("items").select("*").or(`serial_id.ilike.%${q}%,name.ilike.%${q}%`).limit(8).then(({ data }) => {
+    supabase.from("items").select("*").or(`serial_id.ilike.%${itemSearch}%,name.ilike.%${itemSearch}%`).limit(8).then(({ data }) => {
       const rows = (data ?? []) as unknown as Item[];
       setItemResults(rows);
       setShowItemSearch(rows.length > 0);
@@ -128,14 +121,13 @@ export default function GRNPage() {
     setManualVendorName("");
     setGrnLines([]);
     setInspectionNotes("");
+    setInspectedBy("");
+    setChallanNo("");
+    setChallanDate("");
     setError("");
     setItemSearch("");
     setItemResults([]);
     setShowItemSearch(false);
-
-    const fy = getCurrentFY();
-    const nextSerial = 1;
-    setGrnNumber(`GRN/${nextSerial}/${fy}`);
     setCreateOpen(true);
   }
 
@@ -151,8 +143,14 @@ export default function GRNPage() {
       rejected_qty: 0,
       rejection_reason: "",
       unit: l.unit,
+      challan_weight: 0,
+      challan_nos: l.quantity,
+      counted_nos: l.quantity,
     }));
     setGrnLines(lines);
+    setManualVendorName(po.vendors?.name ?? "");
+    setInspectionNotes("");
+    setError("");
     setCreateMode("against_po");
   }
 
@@ -169,6 +167,9 @@ export default function GRNPage() {
         rejected_qty: 0,
         rejection_reason: "",
         unit: item.unit,
+        challan_weight: 0,
+        challan_nos: 1,
+        counted_nos: 1,
       },
     ]);
     setItemSearch("");
@@ -189,6 +190,9 @@ export default function GRNPage() {
         rejected_qty: 0,
         rejection_reason: "",
         unit: "NOS",
+        challan_weight: 0,
+        challan_nos: 1,
+        counted_nos: 1,
       },
     ]);
   }
@@ -203,9 +207,10 @@ export default function GRNPage() {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     const { data: profile } = user
-      ? await supabase.from("profiles").select("full_name").eq("id", user.id).single()
+      ? await supabase.from("profiles").select("full_name, department").eq("id", user.id).single()
       : { data: null };
-    const name = (profile as any)?.full_name ?? user?.email ?? "Unknown";
+    const profileData = profile as any;
+    const name = profileData?.full_name ?? user?.email ?? "Unknown";
 
     const fy = getCurrentFY();
     const { data: last } = await supabase
@@ -216,7 +221,6 @@ export default function GRNPage() {
       .limit(1);
     const nextSerial = (Number((last as any)?.[0]?.fy_serial) || 0) + 1;
     const finalGrnNumber = `GRN/${String(nextSerial).padStart(3, "0")}/${fy}`;
-
     const selectedVendor = vendors.find((v) => v.id === manualVendorId);
 
     const payload = {
@@ -225,9 +229,11 @@ export default function GRNPage() {
       fy_serial: nextSerial,
       po_id: selectedPO?.id ?? null,
       vendor_id: selectedPO?.vendor_id ?? selectedVendor?.id ?? null,
-      vendor_name: selectedPO?.vendors?.name ?? selectedVendor?.name ?? (manualVendorName.trim() || null),
+      vendor_name: selectedPO?.vendors?.name ?? selectedVendor?.name ?? manualVendorName.trim() || null,
       received_by: user?.id ?? null,
-      received_by_name: (profile as any)?.full_name ?? user?.email ?? "Unknown",
+      received_by_name: name,
+      inspected_by: null,
+      inspected_by_name: inspectedBy.trim() || null,
       line_items: grnLines,
       status: "pending" as const,
       inspection_notes: inspectionNotes.trim() || null,
@@ -236,7 +242,6 @@ export default function GRNPage() {
     const { error: saveErr, data } = await supabase.from("grn").insert(payload).select("id").single();
     if (saveErr) { setError(saveErr.message); setSaving(false); return; }
 
-    // Update stock ledger for accepted quantities
     for (const line of grnLines) {
       if (line.accepted_qty > 0) {
         await supabase.from("stock_ledger").insert({
@@ -251,7 +256,7 @@ export default function GRNPage() {
           unit: line.unit,
           notes: selectedPO ? `Received against PO ${selectedPO.po_number}` : `Direct receipt - ${payload.vendor_name}`,
           created_by: user?.id ?? null,
-          created_by_name: (profile as any)?.full_name ?? user?.email ?? "Unknown",
+          created_by_name: name,
         });
       }
     }
@@ -266,12 +271,12 @@ export default function GRNPage() {
       prev.map((l, i) => {
         if (i !== index) return l;
         const next = { ...l, ...patch };
-        if (next.received_qty !== undefined) {
-          next.accepted_qty = Math.min(next.accepted_qty ?? l.accepted_qty, next.received_qty);
-          next.rejected_qty = next.received_qty - next.accepted_qty;
+        if (next.counted_nos !== undefined) {
+          next.accepted_qty = Math.min(next.accepted_qty ?? l.accepted_qty, next.counted_nos);
+          next.rejected_qty = next.counted_nos - next.accepted_qty;
         }
         if (next.accepted_qty !== undefined) {
-          next.rejected_qty = (next.received_qty ?? l.received_qty) - next.accepted_qty;
+          next.rejected_qty = (next.counted_nos ?? l.counted_nos ?? l.received_qty) - next.accepted_qty;
         }
         return next;
       })
@@ -289,6 +294,15 @@ export default function GRNPage() {
   }
 
   const canCreate = role && can(role, "create_grn");
+  const canInspect = role && can(role, "inspect_grn");
+  const canApprove = role && can(role, "approve_grn");
+
+  const MIN_ROWS = 10;
+  const displayLines = [...grnLines, ...Array(Math.max(0, MIN_ROWS - grnLines.length)).fill(null)];
+
+  const revDate = "01/10/2025";
+  const grnDate = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "2-digit" });
+  const fy = getCurrentFY();
 
   return (
     <div className="p-6 lg:p-8 max-w-6xl mx-auto">
@@ -313,7 +327,6 @@ export default function GRNPage() {
       {createOpen && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-start justify-center p-4 overflow-y-auto">
           <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl w-full max-w-4xl my-8 shadow-2xl overflow-hidden">
-            {/* Header */}
             <div className="px-6 py-4 border-b border-[#dde1ea] dark:border-gray-800 flex items-center justify-between sticky top-0 bg-white dark:bg-gray-900">
               <div>
                 <h2 className="text-viton-navy dark:text-white font-bold">
@@ -321,16 +334,13 @@ export default function GRNPage() {
                 </h2>
                 {createMode && (
                   <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-0.5">
-                    {createMode === "against_po" && selectedPO ? `PO: ${selectedPO.po_number}` : "Manual entry — material received without purchase order"}
+                    {createMode === "against_po" && selectedPO ? `PO: ${selectedPO.po_number}` : "Manual entry — no purchase order"}
                   </p>
                 )}
               </div>
               <div className="flex items-center gap-2">
                 {createMode && (
-                  <button
-                    onClick={() => setCreateMode(null)}
-                    className="text-sm text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white flex items-center gap-1"
-                  >
+                  <button onClick={() => setCreateMode(null)} className="text-sm text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white flex items-center gap-1">
                     <ArrowLeft size={14} /> Back
                   </button>
                 )}
@@ -340,265 +350,275 @@ export default function GRNPage() {
               </div>
             </div>
 
-            {/* Mode Selection */}
             {!createMode && (
               <div className="p-6 grid sm:grid-cols-2 gap-4">
-                <button
-                  onClick={() => setCreateMode("against_po")}
-                  className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl p-6 hover:border-viton-red dark:hover:border-orange-500 hover:shadow-md transition-all text-left"
-                >
+                <button onClick={() => setCreateMode("against_po")} className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl p-6 hover:border-viton-red dark:hover:border-orange-500 hover:shadow-md transition-all text-left">
                   <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400 flex items-center justify-center mb-4">
                     <FileText size={22} />
                   </div>
                   <p className="text-viton-navy dark:text-white font-semibold text-sm">Receive Against PO</p>
-                  <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-1">
-                    Select a pending purchase order and record what actually arrived.
-                  </p>
+                  <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-1">Select a pending PO and record what arrived.</p>
                 </button>
-
-                <button
-                  onClick={() => setCreateMode("without_po")}
-                  className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl p-6 hover:border-viton-red dark:hover:border-orange-500 hover:shadow-md transition-all text-left"
-                >
+                <button onClick={() => setCreateMode("without_po")} className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl p-6 hover:border-viton-red dark:hover:border-orange-500 hover:shadow-md transition-all text-left">
                   <div className="w-11 h-11 rounded-xl bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400 flex items-center justify-center mb-4">
                     <Truck size={22} />
                   </div>
                   <p className="text-viton-navy dark:text-white font-semibold text-sm">Direct Receipt (No PO)</p>
-                  <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-1">
-                    Emergency buy, local market, replacement, or return — no PO needed.
-                  </p>
+                  <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-1">Emergency, local market, or return without PO.</p>
                 </button>
               </div>
             )}
 
-            {/* Against PO: Select PO */}
             {createMode === "against_po" && !selectedPO && (
               <div className="p-6">
-                <h3 className="text-[#8892a8] dark:text-gray-400 text-xs font-semibold uppercase tracking-widest mb-4">
-                  Select Pending PO
-                </h3>
+                <h3 className="text-[#8892a8] dark:text-gray-400 text-xs font-semibold uppercase tracking-widest mb-4">Select Pending PO</h3>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {pos
-                    .filter((po) => !grns.some((g) => g.po_id === po.id))
-                    .map((po) => (
-                      <div
-                        key={po.id}
-                        className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl p-5 hover:border-viton-red dark:hover:border-orange-500 hover:shadow-md transition-all cursor-pointer"
-                        onClick={() => selectPO(po)}
-                      >
-                        <div className="flex items-center justify-between gap-2 mb-2">
-                          <p className="text-viton-navy dark:text-white font-semibold font-mono text-sm">{po.po_number}</p>
-                          <Plus size={14} className="text-viton-red dark:text-orange-400" />
-                        </div>
-                        <p className="text-[#8892a8] dark:text-gray-500 text-xs">{po.vendors?.name ?? "Unknown Vendor"}</p>
-                        <p className="text-[#4a5578] dark:text-gray-400 text-xs mt-1">
-                          {po.line_items?.length ?? 0} items · Rs. {po.total?.toLocaleString("en-IN") ?? 0}
-                        </p>
+                  {pos.filter((po) => !grns.some((g) => g.po_id === po.id)).map((po) => (
+                    <div key={po.id} className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl p-5 hover:border-viton-red dark:hover:border-orange-500 hover:shadow-md transition-all cursor-pointer" onClick={() => selectPO(po)}>
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <p className="text-viton-navy dark:text-white font-semibold font-mono text-sm">{po.po_number}</p>
+                        <Plus size={14} className="text-viton-red dark:text-orange-500" />
                       </div>
-                    ))}
+                      <p className="text-[#8892a8] dark:text-gray-500 text-xs">{po.vendors?.name ?? "—"}</p>
+                      <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-1">{po.line_items?.length ?? 0} items</p>
+                    </div>
+                  ))}
                   {pos.filter((po) => !grns.some((g) => g.po_id === po.id)).length === 0 && (
-                    <p className="text-[#8892a8] dark:text-gray-600 text-sm col-span-full">No pending POs to receive. You can still use "Direct Receipt" mode.</p>
+                    <div className="text-sm text-[#8892a8] dark:text-gray-500 p-4">No pending POs available.</div>
                   )}
                 </div>
               </div>
             )}
 
-            {/* GRN Form */}
             {(createMode === "against_po" && selectedPO) || createMode === "without_po" ? (
-              <div className="p-6 space-y-6">
-                {error && (
-                  <div className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-xl p-3 text-red-600 dark:text-red-300 text-sm">{error}</div>
-                )}
+              <div className="p-0 overflow-x-auto">
+                {/* ── GRN FORM ── */}
+                <div style={{ background:"#fff", fontFamily:"Arial, Helvetica, sans-serif", fontSize:"10pt", color:"#000", padding:"8mm 10mm", boxSizing:"border-box", borderRadius:"4px", border:"1px solid #ddd", minWidth:"800px" }}>
+                  {/* Top Header Row */}
+                  <table style={{ width:"100%", borderCollapse:"collapse", marginBottom:"0" }}>
+                    <tbody>
+                      <tr>
+                        <td style={{ verticalAlign:"top", width:"30%", paddingRight:"6px" }}>
+                          <table style={{ width:"100%", borderCollapse:"collapse", border:"1px solid #000", fontSize:"7.5pt" }}>
+                            <tbody>
+                              <tr><td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb", whiteSpace:"nowrap" }}>Document No.</td><td style={{ border:"1px solid #000", padding:"4px 7px", fontSize:"8pt" }}>VT-STR-R-02</td></tr>
+                              <tr><td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Revision No.</td><td style={{ border:"1px solid #000", padding:"4px 7px", fontSize:"8pt" }}>00</td></tr>
+                              <tr><td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Revision Date</td><td style={{ border:"1px solid #000", padding:"4px 7px", fontSize:"8pt" }}>{revDate}</td></tr>
+                            </tbody>
+                          </table>
+                        </td>
+                        <td style={{ verticalAlign:"middle", textAlign:"center", width:"40%", padding:"0 6px" }}>
+                          <div style={{ border:"2px solid #000", padding:"6px 10px", background:"#1a1a6e", color:"#fff" }}>
+                            <div style={{ fontSize:"12pt", fontWeight:"900", letterSpacing:"1.5px", textTransform:"uppercase" }}>Goods Receipt Note</div>
+                            <div style={{ fontSize:"8pt", letterSpacing:"0.8px", marginTop:"2px", opacity:0.85 }}>GRN</div>
+                          </div>
+                          <div style={{ fontSize:"10pt", fontWeight:"900", marginTop:"6px", letterSpacing:"0.3px" }}>VITON ENGINEERS PVT LTD</div>
+                        </td>
+                        <td style={{ verticalAlign:"top", width:"30%", paddingLeft:"6px" }}>
+                          <table style={{ width:"100%", borderCollapse:"collapse", border:"1px solid #000", fontSize:"7.5pt" }}>
+                            <tbody>
+                              <tr><td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb", whiteSpace:"nowrap" }}>GRN No.</td><td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt" }}>Auto</td></tr>
+                              <tr><td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>GRN Date</td><td style={{ border:"1px solid #000", padding:"4px 7px", fontSize:"8pt" }}>{grnDate}</td></tr>
+                              <tr><td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Status</td><td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt" }}>PENDING</td></tr>
+                            </tbody>
+                          </table>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
 
-                {/* Meta */}
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[#8892a8] dark:text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2">GRN Number (Auto)</label>
-                    <div className="bg-[#eceef4] dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-[#4a5578] dark:text-gray-400 font-mono">{grnNumber}</div>
-                  </div>
-                  {createMode === "against_po" && selectedPO ? (
-                    <div>
-                      <label className="block text-[#8892a8] dark:text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2">Vendor</label>
-                      <div className="bg-[#eceef4] dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-[#4a5578] dark:text-gray-400">{selectedPO.vendors?.name ?? "—"}</div>
-                    </div>
-                  ) : (
-                    <div>
-                      <label className="block text-[#8892a8] dark:text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2">Vendor</label>
-                      <div className="space-y-2">
-                        <div className="relative">
-                          <select
-                            value={manualVendorId}
-                            onChange={(e) => {
-                              setManualVendorId(e.target.value);
-                              const v = vendors.find((v) => v.id === e.target.value);
-                              setManualVendorName(v?.name ?? "");
-                            }}
-                            className="w-full appearance-none bg-white dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-xl px-4 py-3 pr-10 text-sm text-viton-navy dark:text-white focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500 cursor-pointer"
-                          >
-                            <option value="">— select vendor (optional) —</option>
-                            {vendors.map((v) => (
-                              <option key={v.id} value={v.id}>{v.name}</option>
-                            ))}
-                          </select>
-                          <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8892a8] dark:text-gray-500 pointer-events-none" />
-                        </div>
-                        <input
-                          value={manualVendorName}
-                          onChange={(e) => setManualVendorName(e.target.value)}
-                          placeholder="Or type vendor name if not in list"
-                          className="w-full bg-white dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-viton-navy dark:text-white placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
+                  {/* Supplier Details + Received At */}
+                  <table style={{ width:"100%", borderCollapse:"collapse", marginTop:"6px" }}>
+                    <tbody>
+                      <tr>
+                        <td colSpan={2} style={{ border:"1px solid #000", background:"#1a1a6e", color:"#fff", fontWeight:"700", fontSize:"8pt", padding:"3px 7px", width:"48%", textTransform:"uppercase", letterSpacing:"0.8px" }}>Supplier Details</td>
+                        <td style={{ width:"4%" }} />
+                        <td colSpan={2} style={{ border:"1px solid #000", background:"#1a1a6e", color:"#fff", fontWeight:"700", fontSize:"8pt", padding:"3px 7px", width:"48%", textTransform:"uppercase", letterSpacing:"0.8px" }}>Received At</td>
+                      </tr>
+                      <tr>
+                        <td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb", width:"18%" }}>Supplier Name</td>
+                        <td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", width:"30%" }}>
+                          {createMode === "without_po" ? (
+                            <div className="flex gap-2">
+                              <select value={manualVendorId} onChange={(e) => { setManualVendorId(e.target.value); const v = vendors.find(v => v.id === e.target.value); setManualVendorName(v?.name ?? ""); }} className="text-[10pt] font-normal border rounded px-1 w-full" style={{ fontSize:"10pt" }}>
+                                <option value="">Select vendor...</option>
+                                {vendors.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
+                              </select>
+                            </div>
+                          ) : (
+                            <input value={selectedPO?.vendors?.name ?? ""} readOnly style={{ width:"100%", fontSize:"8pt", border:"none", background:"transparent", outline:"none" }} />
+                          )}
+                        </td>
+                        <td style={{ width:"4%" }} />
+                        <td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb", width:"18%" }}>Company</td>
+                        <td style={{ border:"1px solid #000", padding:"4px 7px", fontSize:"8pt", width:"30%" }}>M/s. VITON ENGINEERS PVT LTD</td>
+                      </tr>
+                      <tr>
+                        <td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Challan / Inv No.</td>
+                        <td style={{ border:"1px solid #000", padding:"4px 7px" }}>
+                          <input value={challanNo} onChange={(e) => setChallanNo(e.target.value)} style={{ width:"100%", fontSize:"8pt", border:"none", background:"transparent", outline:"none" }} placeholder="Optional" />
+                        </td>
+                        <td style={{ width:"4%" }} />
+                        <td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Address</td>
+                        <td style={{ border:"1px solid #000", padding:"4px 7px", fontSize:"7.5pt", lineHeight:1.5 }}>Plot No. B-40/1, Addl. Ambernath MIDC,<br />Anand Nagar, Ambernath E, Dist. Thane - 421506</td>
+                      </tr>
+                      <tr>
+                        <td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Challan / Inv Date</td>
+                        <td style={{ border:"1px solid #000", padding:"4px 7px" }}>
+                          <input value={challanDate} onChange={(e) => setChallanDate(e.target.value)} style={{ width:"100%", fontSize:"8pt", border:"none", background:"transparent", outline:"none" }} placeholder="DD/MM/YYYY" />
+                        </td>
+                        <td style={{ width:"4%" }} />
+                        <td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Email</td>
+                        <td style={{ border:"1px solid #000", padding:"4px 7px", fontSize:"8pt" }}>viton.engg@gmail.com</td>
+                      </tr>
+                      <tr>
+                        <td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>PO No.</td>
+                        <td style={{ border:"1px solid #000", padding:"4px 7px", fontFamily:"monospace", color:"#1a1a6e", fontWeight:"700" }}>{selectedPO?.po_number ?? "Direct Receipt"}</td>
+                        <td style={{ width:"4%" }} />
+                        <td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>GST No.</td>
+                        <td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt" }}>27AACCV7755N1ZK</td>
+                      </tr>
+                      <tr>
+                        <td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>PO Date</td>
+                        <td style={{ border:"1px solid #000", padding:"4px 7px", fontSize:"8pt" }}>
+                          {selectedPO ? new Date(selectedPO.created_at).toLocaleDateString("en-IN", { day:"2-digit", month:"2-digit", year:"numeric" }) : "—"}
+                        </td>
+                        <td style={{ width:"4%" }} />
+                        <td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Received By</td>
+                        <td style={{ border:"1px solid #000", padding:"4px 7px", fontSize:"8pt" }}>
+                          <input value={""} readOnly placeholder="Auto-filled from profile" style={{ width:"100%", fontSize:"8pt", border:"none", background:"transparent", outline:"none", color:"#888" }} />
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Inspected By</td>
+                        <td style={{ border:"1px solid #000", padding:"4px 7px" }}>
+                          <input value={inspectedBy} onChange={(e) => setInspectedBy(e.target.value)} style={{ width:"100%", fontSize:"8pt", border:"none", background:"transparent", outline:"none" }} placeholder="Name" />
+                        </td>
+                        <td style={{ width:"4%" }} />
+                        <td colSpan={2} style={{ border:"none" }} />
+                      </tr>
+                    </tbody>
+                  </table>
 
-                {/* Item Search for Manual Mode */}
-                {createMode === "without_po" && (
-                  <div className="bg-[#f7f8fb] dark:bg-gray-950 border border-[#dde1ea] dark:border-gray-800 rounded-2xl p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="text-viton-navy dark:text-white font-semibold text-sm">Add Items</h3>
-                      <button
-                        onClick={addFreeformItem}
-                        className="text-xs text-viton-red dark:text-orange-400 font-semibold hover:underline"
-                      >
-                        + Add freeform item
-                      </button>
-                    </div>
+                  {/* Item Search & Add */}
+                  <div style={{ marginTop:"10px", marginBottom:"6px" }}>
                     <div className="relative" ref={itemSearchRef}>
-                      <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8892a8] dark:text-gray-500" />
-                      <input
-                        value={itemSearch}
-                        onChange={(e) => setItemSearch(e.target.value)}
-                        placeholder="Search catalog by serial ID or name..."
-                        className="w-full bg-white dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-xl pl-10 pr-4 py-3 text-sm text-viton-navy dark:text-white placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
-                      />
+                      <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8892a8]" />
+                      <input value={itemSearch} onChange={(e) => setItemSearch(e.target.value)} placeholder="Search catalog by serial ID or name..." style={{ width:"100%", padding:"6px 10px 6px 32px", fontSize:"9pt", border:"1px solid #ccc", borderRadius:"4px", background:"#fafafa" }} />
                       {showItemSearch && itemResults.length > 0 && (
-                        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-950 border border-[#dde1ea] dark:border-gray-800 rounded-2xl overflow-hidden shadow-2xl z-50">
+                        <div className="absolute z-50 mt-1 bg-white border border-[#dde1ea] rounded-lg shadow-lg overflow-hidden w-full">
                           {itemResults.map((item) => (
-                            <button
-                              key={item.id}
-                              onClick={() => addManualItem(item)}
-                              className="w-full flex items-center justify-between px-4 py-3 hover:bg-[#f1f3f8] dark:hover:bg-gray-900 transition-colors text-left border-b border-[#dde1ea] dark:border-gray-800 last:border-0"
-                            >
-                              <div>
-                                <p className="text-viton-red dark:text-orange-400 font-mono text-xs font-semibold">{item.serial_id}</p>
-                                <p className="text-viton-navy dark:text-white text-sm mt-0.5">{item.name}</p>
-                              </div>
-                              <span className="text-[#8892a8] dark:text-gray-500 text-xs bg-[#f1f3f8] dark:bg-gray-800 px-2 py-0.5 rounded-lg">{item.unit}</span>
+                            <button key={item.id} onClick={() => addManualItem(item)} className="w-full flex items-center justify-between px-3 py-2 hover:bg-[#f1f3f8] text-left border-b border-[#eef1f6] last:border-0">
+                              <div><p className="text-viton-red font-mono text-[10px] font-semibold">{item.serial_id}</p><p className="text-gray-800 text-[11px]">{item.name}</p></div>
+                              <span className="text-[10px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">{item.unit}</span>
                             </button>
                           ))}
                         </div>
                       )}
                     </div>
+                    <div className="mt-2 flex gap-2">
+                      <button onClick={addFreeformItem} className="text-[10px] text-blue-600 hover:text-blue-800 font-medium">+ Add Freeform Item</button>
+                      <button onClick={() => { setItemSearch(""); setItemResults([]); setShowItemSearch(false); }} className="text-[10px] text-gray-400 hover:text-gray-600">Clear</button>
+                    </div>
                   </div>
-                )}
 
-                {/* Lines Table */}
-                {grnLines.length > 0 && (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-[#dde1ea] dark:border-gray-800">
-                          <th className="text-left text-[#8892a8] dark:text-gray-500 text-xs uppercase tracking-wider px-3 py-2">Item</th>
-                          <th className="text-right text-[#8892a8] dark:text-gray-500 text-xs uppercase tracking-wider px-3 py-2">{createMode === "against_po" ? "PO Qty" : "Unit"}</th>
-                          <th className="text-right text-[#8892a8] dark:text-gray-500 text-xs uppercase tracking-wider px-3 py-2">Received</th>
-                          <th className="text-right text-[#8892a8] dark:text-gray-500 text-xs uppercase tracking-wider px-3 py-2">Accepted</th>
-                          <th className="text-right text-[#8892a8] dark:text-gray-500 text-xs uppercase tracking-wider px-3 py-2">Rejected</th>
-                          <th className="text-left text-[#8892a8] dark:text-gray-500 text-xs uppercase tracking-wider px-3 py-2">Reason</th>
-                          <th className="px-3 py-2"></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {grnLines.map((line, i) => (
-                          <tr key={i} className="border-b border-[#eef1f6] dark:border-gray-800/40">
-                            <td className="px-3 py-2 min-w-[180px]">
-                              {createMode === "without_po" && !line.serial_id ? (
-                                <input
-                                  value={line.name}
-                                  onChange={(e) => updateGRNLine(i, { name: e.target.value })}
-                                  placeholder="Item name"
-                                  className="w-full bg-white dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-lg px-2 py-1 text-sm text-viton-navy dark:text-white focus:outline-none focus:ring-1 focus:ring-viton-red dark:focus:ring-orange-500"
-                                />
-                              ) : (
-                                <>
-                                  <p className="text-viton-navy dark:text-white font-medium">{line.name}</p>
-                                  <p className="text-viton-red dark:text-orange-400 font-mono text-xs">{line.serial_id}</p>
-                                </>
-                              )}
-                            </td>
-                            <td className="px-3 py-2 text-right text-[#4a5578] dark:text-gray-400">
-                              {createMode === "against_po" ? line.po_qty : (
-                                <input
-                                  value={line.unit}
-                                  onChange={(e) => updateGRNLine(i, { unit: e.target.value })}
-                                  className="w-16 bg-white dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-lg px-2 py-1 text-sm text-right text-viton-navy dark:text-white focus:outline-none focus:ring-1 focus:ring-viton-red dark:focus:ring-orange-500"
-                                />
-                              )}
-                            </td>
-                            <td className="px-3 py-2">
-                              <input
-                                type="number"
-                                min={0}
-                                max={createMode === "against_po" ? line.po_qty : undefined}
-                                value={line.received_qty}
-                                onChange={(e) => updateGRNLine(i, { received_qty: Number(e.target.value) })}
-                                className="w-20 bg-white dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-lg px-2 py-1 text-sm text-right text-viton-navy dark:text-white focus:outline-none focus:ring-1 focus:ring-viton-red dark:focus:ring-orange-500"
-                              />
-                            </td>
-                            <td className="px-3 py-2">
-                              <input
-                                type="number"
-                                min={0}
-                                max={line.received_qty}
-                                value={line.accepted_qty}
-                                onChange={(e) => updateGRNLine(i, { accepted_qty: Number(e.target.value) })}
-                                className="w-20 bg-white dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-lg px-2 py-1 text-sm text-right text-viton-navy dark:text-white focus:outline-none focus:ring-1 focus:ring-viton-red dark:focus:ring-orange-500"
-                              />
-                            </td>
-                            <td className="px-3 py-2 text-right text-red-500 font-medium">{line.rejected_qty}</td>
-                            <td className="px-3 py-2">
-                              <input
-                                value={line.rejection_reason ?? ""}
-                                onChange={(e) => updateGRNLine(i, { rejection_reason: e.target.value })}
-                                placeholder="If rejected..."
-                                className="w-full bg-white dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-lg px-2 py-1 text-sm text-viton-navy dark:text-white placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-viton-red dark:focus:ring-orange-500"
-                              />
-                            </td>
-                            <td className="px-3 py-2">
-                              <button onClick={() => removeLine(i)} className="text-gray-400 hover:text-red-500 transition-colors p-1">
-                                <Trash2 size={14} />
-                              </button>
-                            </td>
-                          </tr>
+                  {/* Items Table */}
+                  <table style={{ width:"100%", borderCollapse:"collapse" }}>
+                    <thead>
+                      <tr style={{ background:"#1a1a6e", color:"#fff" }}>
+                        {[
+                          { label:"Sr No.", w:"5%", align:"center" as const },
+                          { label:"Description of Material", w:"32%", align:"left" as const },
+                          { label:"PO No.", w:"14%", align:"center" as const },
+                          { label:"PO Date", w:"10%", align:"center" as const },
+                          { label:"Challan Qty\n(Kgs/Mtr)", w:"9%", align:"center" as const },
+                          { label:"Challan Qty\n(Nos)", w:"8%", align:"center" as const },
+                          { label:"Counted Qty\n(Nos)", w:"8%", align:"center" as const },
+                          { label:"Accepted Qty\n(Nos)", w:"8%", align:"center" as const },
+                          { label:"Rejection Qty\n(Nos)", w:"8%", align:"center" as const },
+                          { label:"Remark", w:"10%", align:"left" as const },
+                        ].map((col) => (
+                          <th key={col.label} style={{ border:"1px solid #000", padding:"4px 4px", fontWeight:"700", fontSize:"7.5pt", textAlign:col.align, width:col.w, lineHeight:1.3, whiteSpace:"pre-line" }}>
+                            {col.label}
+                          </th>
                         ))}
-                      </tbody>
-                    </table>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {displayLines.map((line, i) => (
+                        <tr key={i} style={{ background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
+                          <td style={{ border:"1px solid #ccc", padding:"4px 5px", textAlign:"center", fontSize:"8pt", color:"#666" }}>{line ? i + 1 : ""}</td>
+                          <td style={{ border:"1px solid #ccc", padding:"4px 5px" }}>
+                            {line ? (
+                              <input value={line.name} onChange={(e) => updateGRNLine(i, { name: e.target.value })} style={{ width:"100%", fontSize:"8pt", border:"none", background:"transparent", outline:"none" }} />
+                            ) : ""}
+                          </td>
+                          <td style={{ border:"1px solid #ccc", padding:"4px 5px", textAlign:"center", fontSize:"7.5pt", fontFamily:"monospace", color:"#1a1a6e" }}>
+                            {line ? (selectedPO?.po_number ?? "—") : ""}
+                          </td>
+                          <td style={{ border:"1px solid #ccc", padding:"4px 5px", textAlign:"center", fontSize:"7.5pt" }}>
+                            {line ? (selectedPO ? new Date(selectedPO.created_at).toLocaleDateString("en-IN", { day:"2-digit", month:"2-digit", year:"numeric" }) : "—") : ""}
+                          </td>
+                          <td style={{ border:"1px solid #ccc", padding:"4px 5px", textAlign:"center", fontSize:"8pt" }}>
+                            {line ? (
+                              <input type="number" value={line.challan_weight ?? 0} onChange={(e) => updateGRNLine(i, { challan_weight: Number(e.target.value) })} style={{ width:"100%", fontSize:"8pt", border:"none", background:"transparent", outline:"none", textAlign:"center" }} />
+                            ) : ""}
+                          </td>
+                          <td style={{ border:"1px solid #ccc", padding:"4px 5px", textAlign:"center", fontSize:"8pt" }}>
+                            {line ? (
+                              <input type="number" value={line.challan_nos ?? line.received_qty ?? 1} onChange={(e) => updateGRNLine(i, { challan_nos: Number(e.target.value) })} style={{ width:"100%", fontSize:"8pt", border:"none", background:"transparent", outline:"none", textAlign:"center" }} />
+                            ) : ""}
+                          </td>
+                          <td style={{ border:"1px solid #ccc", padding:"4px 5px", textAlign:"center", fontSize:"8pt" }}>
+                            {line ? (
+                              <input type="number" value={line.counted_nos ?? line.received_qty ?? 1} onChange={(e) => updateGRNLine(i, { counted_nos: Number(e.target.value) })} style={{ width:"100%", fontSize:"8pt", border:"none", background:"transparent", outline:"none", textAlign:"center" }} />
+                            ) : ""}
+                          </td>
+                          <td style={{ border:"1px solid #ccc", padding:"4px 5px", textAlign:"center", fontSize:"8pt" }}>
+                            {line ? (
+                              <input type="number" value={line.accepted_qty ?? 0} onChange={(e) => updateGRNLine(i, { accepted_qty: Number(e.target.value) })} style={{ width:"100%", fontSize:"8pt", border:"none", background:"transparent", outline:"none", textAlign:"center" }} />
+                            ) : ""}
+                          </td>
+                          <td style={{ border:"1px solid #ccc", padding:"4px 5px", textAlign:"center", fontSize:"8pt", color: line && (line.rejected_qty ?? 0) > 0 ? "#cc0000" : "#000" }}>
+                            {line ? (line.rejected_qty ?? 0) : ""}
+                          </td>
+                          <td style={{ border:"1px solid #ccc", padding:"4px 5px", fontSize:"7.5pt" }}>
+                            {line ? (
+                              <div className="flex items-center gap-1">
+                                <input value={line.rejection_reason ?? ""} onChange={(e) => updateGRNLine(i, { rejection_reason: e.target.value })} style={{ width:"100%", fontSize:"7.5pt", border:"none", background:"transparent", outline:"none" }} />
+                                <button onClick={() => removeLine(i)} className="text-gray-400 hover:text-red-500 flex-shrink-0"><Trash2 size={10} /></button>
+                              </div>
+                            ) : ""}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+
+                  {/* Remark */}
+                  <table style={{ width:"100%", borderCollapse:"collapse", marginTop:"0" }}>
+                    <tbody>
+                      <tr>
+                        <td style={{ border:"1px solid #ccc", padding:"5px 7px", fontSize:"8pt", fontWeight:"700", width:"12%" }}>Remark :</td>
+                        <td style={{ border:"1px solid #ccc", padding:"5px 7px", fontSize:"8pt" }}>
+                          <input value={inspectionNotes} onChange={(e) => setInspectionNotes(e.target.value)} style={{ width:"100%", fontSize:"8pt", border:"none", background:"transparent", outline:"none" }} placeholder="Inspection notes or overall remarks" />
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  {/* Footer Actions */}
+                  <div style={{ marginTop:"20px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                    <div style={{ fontSize:"8pt", color:"#888" }}>
+                      This is a computer generated Goods Receipt Note.
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <button onClick={() => setCreateOpen(false)} className="bg-[#f1f3f8] hover:bg-[#e8eaf2] text-[#4a5578] font-semibold px-4 py-2 rounded-lg text-sm">Cancel</button>
+                      <button onClick={handleSaveGRN} disabled={saving || grnLines.length === 0} className="bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 disabled:opacity-50 text-white font-semibold px-5 py-2 rounded-lg text-sm flex items-center gap-2">
+                        <SaveIcon /> {saving ? "Saving..." : "Submit GRN"}
+                      </button>
+                    </div>
                   </div>
-                )}
-
-                <div>
-                  <label className="block text-[#8892a8] dark:text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2">Inspection Notes</label>
-                  <textarea
-                    value={inspectionNotes}
-                    onChange={(e) => setInspectionNotes(e.target.value)}
-                    placeholder="General inspection remarks..."
-                    rows={3}
-                    className="w-full bg-[#f1f3f8] dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-viton-navy dark:text-white placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500 resize-none"
-                  />
-                </div>
-
-                <div className="flex items-center justify-end gap-3">
-                  <button onClick={() => setCreateOpen(false)} className="bg-[#f1f3f8] dark:bg-gray-800 hover:bg-[#e8eaf2] dark:hover:bg-gray-700 text-[#4a5578] dark:text-gray-300 font-semibold px-5 py-2.5 rounded-xl text-sm">
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSaveGRN}
-                    disabled={saving || grnLines.length === 0}
-                    className="bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 disabled:opacity-50 text-white font-semibold px-6 py-2.5 rounded-xl text-sm flex items-center gap-2"
-                  >
-                    <CheckCircle size={15} /> {saving ? "Saving..." : "Create GRN"}
-                  </button>
                 </div>
               </div>
             ) : null}
@@ -606,159 +626,132 @@ export default function GRNPage() {
         </div>
       )}
 
-      {/* GRN History */}
-      <h2 className="text-[#8892a8] dark:text-gray-400 text-xs font-semibold uppercase tracking-widest mb-4">
-        GRN History
-      </h2>
-
-      <div className="relative mb-6">
-        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8892a8] dark:text-gray-500" />
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search GRN number, receiver, or vendor..."
-          className="w-full bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-xl pl-10 pr-10 py-3 text-sm text-viton-navy dark:text-white placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
-        />
-        {search && (
-          <button onClick={() => setSearch("")} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white">
-            <X size={14} />
-          </button>
-        )}
+      {/* Filter bar */}
+      <div className="mb-4 flex items-center gap-3">
+        <div className="relative flex-1">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8892a8]" />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search GRN, vendor, receiver..." className="bg-[#f1f3f8] dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-xl text-sm px-9 py-2 w-full focus:outline-none focus:border-viton-red dark:focus:border-orange-500" />
+        </div>
       </div>
 
-      {loading || roleLoading ? (
-        <div className="flex justify-center py-16">
-          <div className="w-6 h-6 border-2 border-viton-red dark:border-orange-500 border-t-transparent rounded-full animate-spin" />
+      {/* GRN list */}
+      <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl overflow-hidden">
+        <div className="grid grid-cols-[1fr,140px,140px,120px,44px] px-5 py-3 border-b border-[#dde1ea] dark:border-gray-800 text-[#8892a8] dark:text-gray-500 text-xs font-semibold uppercase tracking-widest">
+          <div>GRN / Vendor</div>
+          <div>Items</div>
+          <div>Status</div>
+          <div className="text-right">Date</div>
+          <div />
         </div>
-      ) : filteredGRN.length === 0 ? (
-        <div className="text-center py-16 text-[#8892a8] dark:text-gray-600">
-          {search ? "No GRNs match your search." : "No GRNs yet."}
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {filteredGRN.map((g) => {
-            const isOpen = expanded === g.id;
-            const lines = (g.line_items ?? []) as GRNLineItem[];
-            const date = new Date(g.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
-            const hasRejections = lines.some((l) => l.rejected_qty > 0);
 
+        {loading ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="px-5 py-4 border-b border-[#dde1ea] dark:border-gray-800 animate-pulse">
+              <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded w-3/4 mb-2" />
+              <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded w-1/2" />
+            </div>
+          ))
+        ) : filteredGRN.length === 0 ? (
+          <div className="px-5 py-12 text-center text-[#8892a8] dark:text-gray-500 text-sm">
+            <div className="w-12 h-12 rounded-xl bg-[#f1f3f8] dark:bg-gray-800 flex items-center justify-center mx-auto mb-3">
+              <Package size={20} className="text-[#8892a8] dark:text-gray-500" />
+            </div>
+            <p className="font-semibold mb-1">No GRN records found</p>
+            <p className="text-xs">Create a new receipt to start recording.</p>
+          </div>
+        ) : (
+          filteredGRN.map((g) => {
+            const lines = (g.line_items ?? []) as GRNLineItem[];
+            const isOpen = expanded === g.id;
             return (
-              <div
-                key={g.id}
-                className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl overflow-hidden hover:border-[#cfd5e2] dark:hover:border-gray-700 transition-all"
-              >
-                <div
-                  className="px-5 py-4 flex items-center justify-between cursor-pointer"
-                  onClick={() => setExpanded(isOpen ? null : g.id)}
-                >
-                  <div className="flex items-center gap-4 flex-1 min-w-0">
-                    <div className="w-9 h-9 bg-viton-red/10 dark:bg-orange-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <Package size={16} className="text-viton-red dark:text-orange-400" />
+              <div key={g.id} className="border-b border-[#dde1ea] dark:border-gray-800 last:border-0">
+                <div className="grid grid-cols-[1fr,140px,140px,120px,44px] px-5 py-4 items-center gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-viton-navy dark:text-white font-mono text-sm">{g.grn_number}</p>
+                      {g.po_id && (
+                        <span className="text-[9px] bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 px-1.5 py-0.5 rounded border border-blue-100 dark:border-blue-500/20">Linked PO</span>
+                      )}
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-viton-navy dark:text-white font-semibold font-mono text-sm">{g.grn_number}</p>
-                      <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-0.5">
-                        {g.po_id ? "Linked to PO" : "Direct receipt"} · {g.vendor_name ?? "—"} · {g.received_by_name ?? "—"} · {date}
-                      </p>
-                    </div>
+                    <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-0.5">{g.vendor_name ?? "—"}</p>
+                    <p className="text-[#8892a8] dark:text-gray-500 text-[10px] mt-0.5">Received by {g.received_by_name ?? "—"}</p>
                   </div>
-                  <div className="flex items-center gap-3 ml-4 flex-shrink-0">
-                    {hasRejections && (
-                      <AlertCircle size={16} className="text-red-500" />
-                    )}
-                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-lg capitalize ${statusColors[g.status] ?? "bg-gray-100 text-gray-600"}`}>
-                      {g.status}
+                  <div className="text-sm text-[#4a5578] dark:text-gray-400">{lines.length} items</div>
+                  <div>
+                    <span className={`text-[10px] font-semibold px-2 py-1 rounded-md border ${statusColors[g.status] ?? "bg-gray-50 text-gray-700 dark:bg-gray-500/10 dark:text-gray-400"}`}>
+                      {g.status.toUpperCase()}
                     </span>
-                    {isOpen ? <ChevronUp size={16} className="text-[#8892a8] dark:text-gray-500" /> : <ChevronDown size={16} className="text-[#8892a8] dark:text-gray-500" />}
+                  </div>
+                  <div className="text-right text-[#8892a8] dark:text-gray-500 text-xs">
+                    {new Date(g.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                  </div>
+                  <div className="flex items-center justify-end gap-2">
+                    <button onClick={() => openPrint(g.id)} className="text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white" title="Print">
+                      <Printer size={14} />
+                    </button>
+                    <button onClick={() => setExpanded(isOpen ? null : g.id)} className="text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white">
+                      {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </button>
                   </div>
                 </div>
 
                 {isOpen && (
-                  <div className="border-t border-[#dde1ea] dark:border-gray-800">
-                    <div className="overflow-x-auto">
+                  <div className="px-5 pb-4">
+                    <div className="bg-[#f1f3f8] dark:bg-gray-800 rounded-xl border border-[#dde1ea] dark:border-gray-800 overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead>
-                          <tr className="border-b border-[#dde1ea] dark:border-gray-800 bg-[#f7f8fb] dark:bg-gray-800/40">
-                            <th className="text-left text-[#8892a8] dark:text-gray-500 text-xs uppercase tracking-wider px-5 py-2.5">#</th>
-                            <th className="text-left text-[#8892a8] dark:text-gray-500 text-xs uppercase tracking-wider px-5 py-2.5">Serial ID</th>
-                            <th className="text-left text-[#8892a8] dark:text-gray-500 text-xs uppercase tracking-wider px-5 py-2.5">Item</th>
-                            <th className="text-right text-[#8892a8] dark:text-gray-500 text-xs uppercase tracking-wider px-5 py-2.5">{g.po_id ? "PO Qty" : "Unit"}</th>
-                            <th className="text-right text-[#8892a8] dark:text-gray-500 text-xs uppercase tracking-wider px-5 py-2.5">Accepted</th>
-                            <th className="text-right text-[#8892a8] dark:text-gray-500 text-xs uppercase tracking-wider px-5 py-2.5">Rejected</th>
+                          <tr className="text-[#8892a8] dark:text-gray-500 text-xs border-b border-[#dde1ea] dark:border-gray-800">
+                            <th className="text-left px-4 py-3 font-semibold">Item</th>
+                            <th className="text-center px-3 py-3 font-semibold">PO Qty</th>
+                            <th className="text-center px-3 py-3 font-semibold">Received</th>
+                            <th className="text-center px-3 py-3 font-semibold">Accepted</th>
+                            <th className="text-center px-3 py-3 font-semibold">Rejected</th>
+                            <th className="text-left px-3 py-3 font-semibold">Reason</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {lines.map((line, i) => (
-                            <tr key={i} className="border-b border-[#eef1f6] dark:border-gray-800/40 last:border-0">
-                              <td className="px-5 py-2.5 text-[#8892a8] dark:text-gray-500 text-xs">{i + 1}</td>
-                              <td className="px-5 py-2.5 text-viton-red dark:text-orange-400 font-mono text-xs font-semibold">{line.serial_id || "—"}</td>
-                              <td className="px-5 py-2.5 text-viton-navy dark:text-white">{line.name}</td>
-                              <td className="px-5 py-2.5 text-right text-[#4a5578] dark:text-gray-400">{g.po_id ? line.po_qty : line.unit}</td>
-                              <td className="px-5 py-2.5 text-right text-green-600 dark:text-green-400 font-medium">{line.accepted_qty}</td>
-                              <td className="px-5 py-2.5 text-right text-red-500 font-medium">{line.rejected_qty}</td>
+                          {lines.map((l, i) => (
+                            <tr key={i} className="border-b border-[#dde1ea] dark:border-gray-800 last:border-0">
+                              <td className="px-4 py-2 text-viton-navy dark:text-white font-medium">{l.name}</td>
+                              <td className="px-3 py-2 text-center text-[#8892a8] dark:text-gray-500">{l.po_qty ?? 0}</td>
+                              <td className="px-3 py-2 text-center font-semibold">{l.received_qty}</td>
+                              <td className="px-3 py-2 text-center text-green-700 dark:text-green-400 font-semibold">{l.accepted_qty}</td>
+                              <td className="px-3 py-2 text-center text-viton-red font-semibold">{l.rejected_qty}</td>
+                              <td className="px-3 py-2 text-[#8892a8] dark:text-gray-500 text-xs">{l.rejection_reason || "—"}</td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     </div>
-                    {g.inspection_notes && (
-                      <div className="px-5 py-3 border-t border-[#dde1ea] dark:border-gray-800 text-sm text-[#4a5578] dark:text-gray-400">
-                        <span className="font-semibold text-[#8892a8] dark:text-gray-500">Inspection Notes:</span> {g.inspection_notes}
-                      </div>
-                    )}
 
-                    {/* Status Actions */}
-                    <div className="px-5 py-4 border-t border-[#dde1ea] dark:border-gray-800 flex items-center justify-between flex-wrap gap-3">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[#8892a8] dark:text-gray-500 text-xs font-semibold uppercase tracking-wider">Change Status:</span>
-                        {g.status !== "pending" && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); updateStatus(g.id, "pending"); }}
-                            className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-yellow-50 text-yellow-700 dark:bg-yellow-500/10 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-500/30 hover:bg-yellow-500 hover:text-white transition-all"
-                          >
-                            Pending
-                          </button>
-                        )}
-                        {g.status !== "inspected" && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); updateStatus(g.id, "inspected"); }}
-                            className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30 hover:bg-blue-500 hover:text-white transition-all"
-                          >
-                            Inspected
-                          </button>
-                        )}
-                        {g.status !== "approved" && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); updateStatus(g.id, "approved"); }}
-                            className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400 border border-green-200 dark:border-green-500/30 hover:bg-green-500 hover:text-white transition-all"
-                          >
-                            Approved
-                          </button>
-                        )}
-                        {g.status !== "rejected" && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); updateStatus(g.id, "rejected"); }}
-                            className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400 border border-red-200 dark:border-red-500/30 hover:bg-red-500 hover:text-white transition-all"
-                          >
-                            Rejected
-                          </button>
-                        )}
-                      </div>
-
-                      <button
-                        onClick={(e) => { e.stopPropagation(); openPrint(g.id); }}
-                        className="flex items-center gap-2 bg-[#f1f3f8] hover:bg-viton-red dark:bg-gray-800 dark:hover:bg-orange-500 text-[#4a5578] dark:text-gray-300 hover:text-white font-semibold px-4 py-2 rounded-xl text-sm transition-all"
-                      >
-                        <Printer size={14} /> Print GRN
+                    <div className="mt-3 flex items-center gap-3 flex-wrap">
+                      {g.status === "pending" && canInspect && (
+                        <>
+                          <button onClick={() => updateStatus(g.id, "inspected")} className="bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 text-xs font-semibold px-3 py-1.5 rounded-md border border-blue-100 dark:border-blue-500/20">Mark Inspected</button>
+                          <button onClick={() => updateStatus(g.id, "rejected")} className="bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400 text-xs font-semibold px-3 py-1.5 rounded-md border border-red-100 dark:border-red-500/20">Reject</button>
+                        </>
+                      )}
+                      {g.status === "inspected" && canApprove && (
+                        <>
+                          <button onClick={() => updateStatus(g.id, "approved")} className="bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400 text-xs font-semibold px-3 py-1.5 rounded-md border border-green-100 dark:border-green-500/20">Approve</button>
+                          <button onClick={() => updateStatus(g.id, "rejected")} className="bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400 text-xs font-semibold px-3 py-1.5 rounded-md border border-red-100 dark:border-red-500/20">Reject</button>
+                        </>
+                      )}
+                      <button onClick={() => openPrint(g.id)} className="bg-[#f1f3f8] text-[#4a5578] dark:bg-gray-800 dark:text-gray-300 text-xs font-semibold px-3 py-1.5 rounded-md border border-[#dde1ea] dark:border-gray-800 flex items-center gap-1.5">
+                        <Printer size={12} /> Print
                       </button>
                     </div>
                   </div>
                 )}
               </div>
             );
-          })}
-        </div>
-      )}
+          })
+        )}
+      </div>
     </div>
   );
+}
+
+function SaveIcon() {
+  return <Package size={14} />;
 }

@@ -4,8 +4,14 @@ import { useEffect, useState, useRef } from "react";
 import { createClient } from "@/lib/supabase";
 import type { GRN, GRNLineItem } from "@/lib/types";
 
+interface PORef {
+  po_number: string;
+  created_at: string;
+}
+
 export default function GRNPrintPage({ params }: { params: { id: string } }) {
   const [grn, setGrn] = useState<GRN | null>(null);
+  const [po, setPo] = useState<PORef | null>(null);
   const [loading, setLoading] = useState(true);
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -17,7 +23,17 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
         .select("*")
         .eq("id", decodeURIComponent(params.id))
         .single();
-      setGrn((data ?? null) as unknown as GRN | null);
+      const grnData = (data ?? null) as unknown as GRN | null;
+      setGrn(grnData);
+
+      if (grnData?.po_id) {
+        const { data: poData } = await supabase
+          .from("purchase_orders")
+          .select("po_number, created_at")
+          .eq("id", grnData.po_id)
+          .single();
+        setPo(poData ?? null);
+      }
       setLoading(false);
     }
     load();
@@ -42,18 +58,36 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
   }
 
   const lines = (grn.line_items ?? []) as GRNLineItem[];
-  const date = new Date(grn.created_at).toLocaleDateString("en-IN", {
-    day: "2-digit", month: "2-digit", year: "numeric",
-  });
-  const revDate = new Date(grn.created_at).toLocaleDateString("en-IN", {
+  const grnDate = new Date(grn.created_at).toLocaleDateString("en-IN", {
     day: "2-digit", month: "2-digit", year: "2-digit",
   });
+  const poDate = po
+    ? new Date(po.created_at).toLocaleDateString("en-IN", {
+        day: "2-digit", month: "2-digit", year: "numeric",
+      })
+    : "—";
 
-  const MIN_ROWS = 8;
+  const MIN_ROWS = 10;
   const paddedLines: (GRNLineItem | null)[] = [
     ...lines,
     ...Array(Math.max(0, MIN_ROWS - lines.length)).fill(null),
   ];
+
+  const labelCell = (w?: string): React.CSSProperties => ({
+    border: "1px solid #000",
+    padding: "4px 7px",
+    fontWeight: "700",
+    fontSize: "8pt",
+    background: "#ebebeb",
+    whiteSpace: "nowrap",
+    width: w,
+  });
+  const valueCell = (w?: string): React.CSSProperties => ({
+    border: "1px solid #000",
+    padding: "4px 7px",
+    fontSize: "8pt",
+    width: w,
+  });
 
   const SlipDocument = () => (
     <div
@@ -63,102 +97,77 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
         minHeight: "297mm",
         background: "#fff",
         fontFamily: "Arial, Helvetica, sans-serif",
-        fontSize: "10pt",
+        fontSize: "9pt",
         color: "#000",
-        padding: "10mm 12mm",
+        padding: "8mm 10mm",
         boxSizing: "border-box",
       }}
     >
-      {/* HEADER */}
+      {/* ── TOP HEADER ROW ─────────────────────────────────── */}
       <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "0" }}>
         <tbody>
           <tr>
-            <td style={{ verticalAlign: "top", width: "55%", paddingRight: "8px" }}>
-              <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
-                <img
-                  src="/Logo.JPG"
-                  alt="Viton Engineers"
-                  style={{ width: "54px", height: "54px", objectFit: "contain", flexShrink: 0 }}
-                  crossOrigin="anonymous"
-                />
-                <div>
-                  <div style={{ fontSize: "13pt", fontWeight: "900", letterSpacing: "0.3px", lineHeight: 1.2 }}>
-                    VITON ENGINEERS PVT. LTD.
-                  </div>
-                  <div style={{ fontSize: "7.5pt", color: "#333", marginTop: "3px", lineHeight: 1.5 }}>
-                    WORKS: B40/1, ADDL. Ambernath MIDC, Anand Nagar,<br />
-                    Opp. Hali Pad, Ambernath East, Dist. Thane - 421506
-                  </div>
-                  <div style={{ fontSize: "7.5pt", color: "#333", marginTop: "2px" }}>
-                    Tel: 08779301215 / 9769639388 | Email: info@vitonvalves.com
-                  </div>
-                  <div style={{ fontSize: "7.5pt", color: "#333" }}>
-                    GSTIN: <strong>27AACCV7755N1ZK</strong>
-                  </div>
+            {/* Left meta: Doc No / Rev / Title */}
+            <td style={{ verticalAlign: "top", width: "30%", paddingRight: "6px" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #000", fontSize: "7.5pt" }}>
+                <tbody>
+                  <tr>
+                    <td style={labelCell()}>Document No.</td>
+                    <td style={valueCell()}>VT-STR-R-02</td>
+                  </tr>
+                  <tr>
+                    <td style={labelCell()}>Revision No.</td>
+                    <td style={valueCell()}>00</td>
+                  </tr>
+                  <tr>
+                    <td style={labelCell()}>Revision Date</td>
+                    <td style={valueCell()}>01/10/2025</td>
+                  </tr>
+                </tbody>
+              </table>
+            </td>
+
+            {/* Centre: Document title + company name */}
+            <td style={{ verticalAlign: "middle", textAlign: "center", width: "40%", padding: "0 6px" }}>
+              <div style={{
+                border: "2px solid #000",
+                padding: "6px 10px",
+                background: "#1a1a6e",
+                color: "#fff",
+              }}>
+                <div style={{ fontSize: "12pt", fontWeight: "900", letterSpacing: "1.5px", textTransform: "uppercase" }}>
+                  Goods Receipt Note
                 </div>
+                <div style={{ fontSize: "8pt", letterSpacing: "0.8px", marginTop: "2px", opacity: 0.85 }}>
+                  GRN
+                </div>
+              </div>
+              <div style={{ fontSize: "10pt", fontWeight: "900", marginTop: "6px", letterSpacing: "0.3px" }}>
+                VITON ENGINEERS PVT LTD
               </div>
             </td>
 
-            <td style={{ verticalAlign: "top", width: "45%" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", border: "1.5px solid #000" }}>
+            {/* Right: Logo + GRN meta */}
+            <td style={{ verticalAlign: "top", width: "30%", paddingLeft: "6px" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #000", fontSize: "7.5pt" }}>
                 <tbody>
                   <tr>
-                    <td
-                      colSpan={4}
-                      style={{
-                        background: "#1a1a6e",
-                        color: "#fff",
-                        textAlign: "center",
-                        fontWeight: "900",
-                        fontSize: "11pt",
-                        letterSpacing: "1.5px",
-                        padding: "5px 8px",
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      Goods Receipt Note
-                    </td>
-                  </tr>
-                  <tr style={{ borderTop: "1px solid #000" }}>
-                    <td style={{ padding: "3px 6px", fontSize: "7.5pt", fontWeight: "700", borderRight: "1px solid #000", whiteSpace: "nowrap" }}>
-                      Doc No.
-                    </td>
-                    <td style={{ padding: "3px 6px", fontSize: "7.5pt", borderRight: "1px solid #000" }}>
-                      VT-PPC-G-05
-                    </td>
-                    <td style={{ padding: "3px 6px", fontSize: "7.5pt", fontWeight: "700", borderRight: "1px solid #000", whiteSpace: "nowrap" }}>
-                      Rev No.
-                    </td>
-                    <td style={{ padding: "3px 6px", fontSize: "7.5pt" }}>00</td>
-                  </tr>
-                  <tr style={{ borderTop: "1px solid #000" }}>
-                    <td style={{ padding: "3px 6px", fontSize: "7.5pt", fontWeight: "700", borderRight: "1px solid #000", whiteSpace: "nowrap" }}>
-                      Rev Date
-                    </td>
-                    <td style={{ padding: "3px 6px", fontSize: "7.5pt", borderRight: "1px solid #000" }}>
-                      {revDate}
-                    </td>
-                    <td style={{ padding: "3px 6px", fontSize: "7.5pt", fontWeight: "700", borderRight: "1px solid #000", whiteSpace: "nowrap" }}>
-                      GRN No.
-                    </td>
-                    <td style={{ padding: "3px 6px", fontSize: "7.5pt", fontWeight: "700" }}>
+                    <td style={labelCell("45%")}>GRN No.</td>
+                    <td style={{ ...valueCell(), fontWeight: "700", fontSize: "8pt" }}>
                       {grn.grn_number}
                     </td>
                   </tr>
-                  <tr style={{ borderTop: "1px solid #000" }}>
-                    <td style={{ padding: "3px 6px", fontSize: "7.5pt", fontWeight: "700", borderRight: "1px solid #000" }}>
-                      Date
-                    </td>
-                    <td colSpan={3} style={{ padding: "3px 6px", fontSize: "7.5pt" }}>
-                      {date}
-                    </td>
+                  <tr>
+                    <td style={labelCell()}>GRN Date</td>
+                    <td style={valueCell()}>{grnDate}</td>
                   </tr>
-                  <tr style={{ borderTop: "1px solid #000" }}>
-                    <td style={{ padding: "3px 6px", fontSize: "7.5pt", fontWeight: "700", borderRight: "1px solid #000" }}>
-                      Status
-                    </td>
-                    <td colSpan={3} style={{ padding: "3px 6px", fontSize: "7.5pt", fontWeight: "700",
-                      color: grn.status === "approved" ? "green" : grn.status === "rejected" ? "red" : "#000" }}>
+                  <tr>
+                    <td style={labelCell()}>Status</td>
+                    <td style={{
+                      ...valueCell(),
+                      fontWeight: "700",
+                      color: grn.status === "approved" ? "#006400" : grn.status === "rejected" ? "#cc0000" : "#000",
+                    }}>
                       {grn.status.toUpperCase()}
                     </td>
                   </tr>
@@ -169,64 +178,124 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
         </tbody>
       </table>
 
-      {/* VENDOR + RECEIPT ROWS */}
-      <table style={{ width: "100%", borderCollapse: "collapse", borderTop: "1.5px solid #000", marginTop: "6px" }}>
+      {/* ── SUPPLIER DETAILS + RECEIVED AT ──────────────────── */}
+      <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "6px" }}>
         <tbody>
           <tr>
-            <td style={{ border: "1px solid #000", padding: "4px 8px", width: "15%", fontWeight: "700", fontSize: "8.5pt", background: "#f5f5f5" }}>
-              Vendor
+            <td
+              colSpan={2}
+              style={{
+                border: "1px solid #000",
+                background: "#1a1a6e",
+                color: "#fff",
+                fontWeight: "700",
+                fontSize: "8pt",
+                padding: "3px 7px",
+                width: "48%",
+                textTransform: "uppercase",
+                letterSpacing: "0.8px",
+              }}
+            >
+              Supplier Details
             </td>
-            <td style={{ border: "1px solid #000", padding: "4px 8px", width: "40%", fontSize: "8.5pt" }}>
-              {grn.vendor_name ?? "—"}
-            </td>
-            <td style={{ border: "1px solid #000", padding: "4px 8px", width: "15%", fontWeight: "700", fontSize: "8.5pt", background: "#f5f5f5" }}>
-              PO Ref
-            </td>
-            <td style={{ border: "1px solid #000", padding: "4px 8px", width: "30%", fontSize: "8.5pt" }}>
-              {grn.po_id ? "Linked" : "Direct Receipt"}
+            <td style={{ width: "4%" }} />
+            <td
+              colSpan={2}
+              style={{
+                border: "1px solid #000",
+                background: "#1a1a6e",
+                color: "#fff",
+                fontWeight: "700",
+                fontSize: "8pt",
+                padding: "3px 7px",
+                width: "48%",
+                textTransform: "uppercase",
+                letterSpacing: "0.8px",
+              }}
+            >
+              Received At
             </td>
           </tr>
           <tr>
-            <td style={{ border: "1px solid #000", padding: "4px 8px", fontWeight: "700", fontSize: "8.5pt", background: "#f5f5f5" }}>
-              Received By
+            <td style={{ ...labelCell("18%"), border: "1px solid #000" }}>Supplier Name</td>
+            <td style={{ ...valueCell(), border: "1px solid #000", fontWeight: "700", width: "30%" }}>
+              {grn.vendor_name ?? "—"}
             </td>
-            <td style={{ border: "1px solid #000", padding: "4px 8px", fontSize: "8.5pt" }}>
-              {grn.received_by_name ?? "—"}
+            <td style={{ width: "4%" }} />
+            <td style={{ ...labelCell("18%"), border: "1px solid #000" }}>Company</td>
+            <td style={{ ...valueCell(), border: "1px solid #000", width: "30%" }}>
+              M/s. VITON ENGINEERS PVT LTD
             </td>
-            <td style={{ border: "1px solid #000", padding: "4px 8px", fontWeight: "700", fontSize: "8.5pt", background: "#f5f5f5" }}>
-              Inspected By
+          </tr>
+          <tr>
+            <td style={{ ...labelCell(), border: "1px solid #000" }}>Challan / Inv No.</td>
+            <td style={{ ...valueCell(), border: "1px solid #000" }}>—</td>
+            <td style={{ width: "4%" }} />
+            <td style={{ ...labelCell(), border: "1px solid #000" }}>Address</td>
+            <td style={{ ...valueCell(), border: "1px solid #000", fontSize: "7.5pt", lineHeight: 1.5 }}>
+              Plot No. B-40/1, Addl. Ambernath MIDC,<br />
+              Anand Nagar, Ambernath E, Dist. Thane - 421506
             </td>
-            <td style={{ border: "1px solid #000", padding: "4px 8px", fontSize: "8.5pt" }}>
-              {grn.inspected_by_name ?? "—"}
+          </tr>
+          <tr>
+            <td style={{ ...labelCell(), border: "1px solid #000" }}>Challan / Inv Date</td>
+            <td style={{ ...valueCell(), border: "1px solid #000" }}>—</td>
+            <td style={{ width: "4%" }} />
+            <td style={{ ...labelCell(), border: "1px solid #000" }}>Email</td>
+            <td style={{ ...valueCell(), border: "1px solid #000" }}>viton.engg@gmail.com</td>
+          </tr>
+          <tr>
+            <td style={{ ...labelCell(), border: "1px solid #000" }}>PO No.</td>
+            <td style={{ ...valueCell(), border: "1px solid #000", fontFamily: "monospace", color: "#1a1a6e", fontWeight: "700" }}>
+              {po?.po_number ?? (grn.po_id ? "Linked" : "Direct Receipt")}
             </td>
+            <td style={{ width: "4%" }} />
+            <td style={{ ...labelCell(), border: "1px solid #000" }}>GST No.</td>
+            <td style={{ ...valueCell(), border: "1px solid #000", fontWeight: "700" }}>27AACCV7755N1ZK</td>
+          </tr>
+          <tr>
+            <td style={{ ...labelCell(), border: "1px solid #000" }}>PO Date</td>
+            <td style={{ ...valueCell(), border: "1px solid #000" }}>{poDate}</td>
+            <td style={{ width: "4%" }} />
+            <td style={{ ...labelCell(), border: "1px solid #000" }}>Received By</td>
+            <td style={{ ...valueCell(), border: "1px solid #000" }}>{grn.received_by_name ?? "—"}</td>
+          </tr>
+          <tr>
+            <td style={{ ...labelCell(), border: "1px solid #000" }}>Inspected By</td>
+            <td style={{ ...valueCell(), border: "1px solid #000" }}>{grn.inspected_by_name ?? "—"}</td>
+            <td style={{ width: "4%" }} />
+            <td colSpan={2} style={{ border: "none" }} />
           </tr>
         </tbody>
       </table>
 
-      {/* ITEMS TABLE */}
-      <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "6px" }}>
+      {/* ── ITEMS TABLE ──────────────────────────────────────── */}
+      <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "8px" }}>
         <thead>
           <tr style={{ background: "#1a1a6e", color: "#fff" }}>
             {[
               { label: "Sr No.", w: "5%", align: "center" as const },
-              { label: "Item / Description", w: "35%", align: "left" as const },
-              { label: "Serial ID", w: "15%", align: "center" as const },
-              { label: "PO Qty", w: "10%", align: "center" as const },
-              { label: "Received", w: "10%", align: "center" as const },
-              { label: "Accepted", w: "10%", align: "center" as const },
-              { label: "Rejected", w: "10%", align: "center" as const },
-              { label: "Reason", w: "15%", align: "left" as const },
+              { label: "Description of Material", w: "32%", align: "left" as const },
+              { label: "PO No.", w: "14%", align: "center" as const },
+              { label: "PO Date", w: "10%", align: "center" as const },
+              { label: "Challan Qty\n(Kgs/Mtr)", w: "9%", align: "center" as const },
+              { label: "Challan Qty\n(Nos)", w: "8%", align: "center" as const },
+              { label: "Counted Qty\n(Nos)", w: "8%", align: "center" as const },
+              { label: "Accepted Qty\n(Nos)", w: "8%", align: "center" as const },
+              { label: "Rejection Qty\n(Nos)", w: "8%", align: "center" as const },
+              { label: "Remark", w: "10%", align: "left" as const },
             ].map((col) => (
               <th
                 key={col.label}
                 style={{
                   border: "1px solid #000",
-                  padding: "5px 6px",
+                  padding: "4px 4px",
                   fontWeight: "700",
-                  fontSize: "8.5pt",
+                  fontSize: "7.5pt",
                   textAlign: col.align,
                   width: col.w,
-                  letterSpacing: "0.3px",
+                  lineHeight: 1.3,
+                  whiteSpace: "pre-line",
                 }}
               >
                 {col.label}
@@ -236,29 +305,35 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
         </thead>
         <tbody>
           {paddedLines.map((line, i) => (
-            <tr key={i} style={{ background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
-              <td style={{ border: "1px solid #ccc", padding: "5px 6px", textAlign: "center", fontSize: "8.5pt", color: "#666" }}>
+            <tr key={i} style={{ background: i % 2 === 0 ? "#fff" : "#fafafa", minHeight: "22px" }}>
+              <td style={{ border: "1px solid #ccc", padding: "4px 5px", textAlign: "center", fontSize: "8pt", color: "#666" }}>
                 {line ? i + 1 : ""}
               </td>
-              <td style={{ border: "1px solid #ccc", padding: "5px 6px", fontSize: "8.5pt" }}>
+              <td style={{ border: "1px solid #ccc", padding: "4px 5px", fontSize: "8pt" }}>
                 {line?.name ?? ""}
               </td>
-              <td style={{ border: "1px solid #ccc", padding: "5px 6px", textAlign: "center", fontSize: "8pt", fontFamily: "monospace", color: "#1a1a6e", fontWeight: "700" }}>
-                {line?.serial_id ?? ""}
+              <td style={{ border: "1px solid #ccc", padding: "4px 5px", textAlign: "center", fontSize: "7.5pt", fontFamily: "monospace", color: "#1a1a6e" }}>
+                {line ? (po?.po_number ?? "—") : ""}
               </td>
-              <td style={{ border: "1px solid #ccc", padding: "5px 6px", textAlign: "center", fontSize: "8.5pt" }}>
-                {line?.po_qty ?? ""}
+              <td style={{ border: "1px solid #ccc", padding: "4px 5px", textAlign: "center", fontSize: "7.5pt" }}>
+                {line ? poDate : ""}
               </td>
-              <td style={{ border: "1px solid #ccc", padding: "5px 6px", textAlign: "center", fontSize: "8.5pt" }}>
-                {line?.received_qty ?? ""}
+              <td style={{ border: "1px solid #ccc", padding: "4px 5px", textAlign: "center", fontSize: "8pt" }}>
+                {(line as any)?.challan_weight ?? ""}
               </td>
-              <td style={{ border: "1px solid #ccc", padding: "5px 6px", textAlign: "center", fontSize: "8.5pt", fontWeight: line ? "700" : "400", color: line ? "green" : "#666" }}>
+              <td style={{ border: "1px solid #ccc", padding: "4px 5px", textAlign: "center", fontSize: "8pt" }}>
+                {(line as any)?.challan_nos ?? line?.received_qty ?? ""}
+              </td>
+              <td style={{ border: "1px solid #ccc", padding: "4px 5px", textAlign: "center", fontSize: "8pt" }}>
+                {(line as any)?.counted_nos ?? line?.received_qty ?? ""}
+              </td>
+              <td style={{ border: "1px solid #ccc", padding: "4px 5px", textAlign: "center", fontSize: "8pt", fontWeight: line && (line.accepted_qty ?? 0) > 0 ? "700" : "400", color: line && (line.accepted_qty ?? 0) > 0 ? "#006400" : "#000" }}>
                 {line?.accepted_qty ?? ""}
               </td>
-              <td style={{ border: "1px solid #ccc", padding: "5px 6px", textAlign: "center", fontSize: "8.5pt", fontWeight: line ? "700" : "400", color: line ? "red" : "#666" }}>
-                {line?.rejected_qty ?? ""}
+              <td style={{ border: "1px solid #ccc", padding: "4px 5px", textAlign: "center", fontSize: "8pt", fontWeight: line && (line.rejected_qty ?? 0) > 0 ? "700" : "400", color: line && (line.rejected_qty ?? 0) > 0 ? "#cc0000" : "#000" }}>
+                {line?.rejected_qty !== undefined && line.rejected_qty > 0 ? line.rejected_qty : (line ? "" : "")}
               </td>
-              <td style={{ border: "1px solid #ccc", padding: "5px 6px", fontSize: "8pt", color: "#444" }}>
+              <td style={{ border: "1px solid #ccc", padding: "4px 5px", fontSize: "7.5pt", color: "#444" }}>
                 {line?.rejection_reason ?? ""}
               </td>
             </tr>
@@ -266,47 +341,45 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
         </tbody>
       </table>
 
-      {/* INSPECTION NOTES */}
-      {grn.inspection_notes && (
-        <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "6px" }}>
-          <tbody>
-            <tr>
-              <td style={{ border: "1px solid #000", padding: "4px 8px", fontWeight: "700", fontSize: "8.5pt", background: "#f5f5f5", width: "15%" }}>
-                Inspection Notes
-              </td>
-              <td style={{ border: "1px solid #000", padding: "4px 8px", fontSize: "8.5pt" }}>
-                {grn.inspection_notes}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      )}
-
-      {/* SIGNATURES */}
-      <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "30px" }}>
+      {/* ── REMARK ROW ──────────────────────────────────────── */}
+      <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "0" }}>
         <tbody>
           <tr>
-            <td style={{ width: "33%", padding: "0 20px 0 0", verticalAlign: "bottom" }}>
+            <td style={{ border: "1px solid #ccc", padding: "5px 7px", fontSize: "8pt", fontWeight: "700", width: "12%" }}>
+              Remark :
+            </td>
+            <td style={{ border: "1px solid #ccc", padding: "5px 7px", fontSize: "8pt" }}>
+              {grn.inspection_notes ?? ""}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      {/* ── SIGNATURES ──────────────────────────────────────── */}
+      <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "32px" }}>
+        <tbody>
+          <tr>
+            <td style={{ width: "33%", paddingRight: "16px", verticalAlign: "bottom" }}>
               <div style={{ borderTop: "1.5px solid #000", paddingTop: "6px" }}>
-                <div style={{ fontWeight: "700", fontSize: "9pt" }}>Received By</div>
-                <div style={{ fontSize: "8.5pt", color: "#444", marginTop: "4px" }}>
-                  {grn.received_by_name ?? "_______________________"}
+                <div style={{ fontWeight: "700", fontSize: "9pt" }}>Prepared By</div>
+                <div style={{ fontSize: "8pt", color: "#444", marginTop: "4px" }}>
+                  {grn.received_by_name ?? ""}
                 </div>
               </div>
             </td>
-            <td style={{ width: "33%", padding: "0 20px", verticalAlign: "bottom" }}>
+            <td style={{ width: "33%", padding: "0 16px", verticalAlign: "bottom" }}>
               <div style={{ borderTop: "1.5px solid #000", paddingTop: "6px" }}>
                 <div style={{ fontWeight: "700", fontSize: "9pt" }}>Inspected By</div>
-                <div style={{ fontSize: "8.5pt", color: "#444", marginTop: "4px" }}>
-                  {grn.inspected_by_name ?? "_______________________"}
+                <div style={{ fontSize: "8pt", color: "#444", marginTop: "4px" }}>
+                  {grn.inspected_by_name ?? ""}
                 </div>
               </div>
             </td>
-            <td style={{ width: "33%", padding: "0 0 0 20px", verticalAlign: "bottom" }}>
+            <td style={{ width: "33%", paddingLeft: "16px", verticalAlign: "bottom" }}>
               <div style={{ borderTop: "1.5px solid #000", paddingTop: "6px" }}>
                 <div style={{ fontWeight: "700", fontSize: "9pt" }}>Approved By</div>
-                <div style={{ fontSize: "8.5pt", color: "#444", marginTop: "4px" }}>
-                  _______________________
+                <div style={{ fontSize: "8pt", color: "#444", marginTop: "4px" }}>
+                  {grn.approved_by_name ?? ""}
                 </div>
               </div>
             </td>
@@ -314,8 +387,8 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
         </tbody>
       </table>
 
-      {/* FOOTER */}
-      <div style={{ marginTop: "20px", textAlign: "center", fontSize: "7.5pt", color: "#888", borderTop: "1px solid #ddd", paddingTop: "6px" }}>
+      {/* ── FOOTER ──────────────────────────────────────────── */}
+      <div style={{ marginTop: "18px", textAlign: "center", fontSize: "7pt", color: "#888", borderTop: "1px solid #ddd", paddingTop: "5px" }}>
         This is a computer generated Goods Receipt Note and does not require a signature if digitally verified.
       </div>
     </div>
@@ -327,16 +400,8 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
         @media print {
           html, body { margin: 0; padding: 0; background: white; }
           .no-print { display: none !important; }
-          .print-wrapper {
-            display: block !important;
-            box-shadow: none !important;
-            margin: 0 !important;
-            padding: 0 !important;
-          }
-          @page {
-            size: A4 portrait;
-            margin: 0;
-          }
+          .print-wrapper { display: block !important; box-shadow: none !important; margin: 0 !important; padding: 0 !important; }
+          @page { size: A4 portrait; margin: 0; }
         }
       `}</style>
 
@@ -357,10 +422,8 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
           }}
         >
           <div>
-            <span style={{ fontSize: "13px", fontWeight: "700" }}>Print Preview</span>
-            <span style={{ fontSize: "12px", marginLeft: "10px", opacity: 0.7 }}>
-              {grn.grn_number}
-            </span>
+            <span style={{ fontSize: "13px", fontWeight: "700" }}>Print Preview — GRN</span>
+            <span style={{ fontSize: "12px", marginLeft: "10px", opacity: 0.7 }}>{grn.grn_number}</span>
           </div>
           <div style={{ display: "flex", gap: "10px" }}>
             <button
@@ -392,8 +455,7 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
           style={{
             width: "210mm", maxWidth: "100%",
             boxShadow: "0 8px 40px rgba(0,0,0,0.4)",
-            borderRadius: "4px",
-            overflow: "hidden",
+            borderRadius: "4px", overflow: "hidden",
           }}
         >
           <SlipDocument />

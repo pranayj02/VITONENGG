@@ -114,6 +114,9 @@ export interface GRNLineItem {
   rejected_qty: number;
   rejection_reason?: string;
   unit: string;
+  challan_weight?: number;
+  challan_nos?: number;
+  counted_nos?: number;
 }
 
 export interface GRN {
@@ -128,6 +131,9 @@ export interface GRN {
   received_by_name?: string | null;
   inspected_by?: string | null;
   inspected_by_name?: string | null;
+  approved_by?: string | null;
+  approved_by_name?: string | null;
+  approved_at?: string | null;
   line_items: GRNLineItem[];
   status: "pending" | "inspected" | "approved" | "rejected" | "partial";
   inspection_notes?: string | null;

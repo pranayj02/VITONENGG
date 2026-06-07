@@ -132,6 +132,9 @@ create table if not exists public.grn (
   received_by_name text,
   inspected_by uuid references auth.users,
   inspected_by_name text,
+  approved_by uuid references auth.users,
+  approved_by_name text,
+  approved_at timestamptz,
   line_items jsonb default '[]',         -- { item_id, serial_id, name, po_qty, received_qty, accepted_qty, rejected_qty, rejection_reason, unit }
   status text default 'pending' check (status in ('pending','inspected','approved','rejected','partial')),
   inspection_notes text,
