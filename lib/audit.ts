@@ -29,7 +29,8 @@ export async function audit(payload: AuditPayload) {
         .select("full_name")
         .eq("id", user.id)
         .single();
-      if (profile?.full_name) userName = profile.full_name;
+      const fullName = (profile as any)?.full_name;
+      if (typeof fullName === "string" && fullName.trim()) userName = fullName;
     } catch {
       // ignore
     }
