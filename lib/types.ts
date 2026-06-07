@@ -67,3 +67,115 @@ export interface Invoice {
   due_date: string | null;
   created_at: string;
 }
+
+// ── ERP: Material Requisition ───────────────────────────────────────────────
+
+export interface ReqLineItem {
+  item_id: string;
+  serial_id: string;
+  name: string;
+  unit: string;
+  qty_requested: number;
+  qty_approved?: number;
+  custom_note?: string;
+}
+
+export interface Requisition {
+  id: string;
+  req_number: string;
+  fy_label?: string | null;
+  fy_serial?: number | null;
+  requested_by: string;
+  requested_by_name?: string | null;
+  department?: string | null;
+  priority: "low" | "normal" | "high" | "urgent";
+  status: "pending" | "under_review" | "approved" | "rejected" | "converted_to_po" | "partially_fulfilled";
+  line_items: ReqLineItem[];
+  notes?: string | null;
+  required_by?: string | null;
+  approved_by?: string | null;
+  approved_by_name?: string | null;
+  approved_at?: string | null;
+  rejected_reason?: string | null;
+  po_id?: string | null;
+  created_at: string;
+  updated_at?: string | null;
+}
+
+// ── ERP: Goods Receipt Note ─────────────────────────────────────────────────
+
+export interface GRNLineItem {
+  item_id: string;
+  serial_id: string;
+  name: string;
+  po_qty: number;
+  received_qty: number;
+  accepted_qty: number;
+  rejected_qty: number;
+  rejection_reason?: string;
+  unit: string;
+}
+
+export interface GRN {
+  id: string;
+  grn_number: string;
+  fy_label?: string | null;
+  fy_serial?: number | null;
+  po_id: string;
+  vendor_id?: string | null;
+  received_by?: string | null;
+  received_by_name?: string | null;
+  inspected_by?: string | null;
+  inspected_by_name?: string | null;
+  line_items: GRNLineItem[];
+  status: "pending" | "inspected" | "approved" | "rejected" | "partial";
+  inspection_notes?: string | null;
+  documents?: unknown[] | null;
+  created_at: string;
+  updated_at?: string | null;
+}
+
+// ── ERP: Stock Ledger ───────────────────────────────────────────────────────
+
+export interface StockLedgerEntry {
+  id: string;
+  item_id: string;
+  transaction_type: "grn_in" | "po_commit" | "invoice_out" | "adjustment_in" | "adjustment_out" | "return_in" | "warranty_out";
+  reference_type?: string | null;
+  reference_id?: string | null;
+  reference_code?: string | null;
+  qty_in: number;
+  qty_out: number;
+  balance: number;
+  unit?: string | null;
+  notes?: string | null;
+  created_by?: string | null;
+  created_by_name?: string | null;
+  created_at: string;
+}
+
+export interface StockSummary {
+  item_id: string;
+  serial_id: string;
+  name: string;
+  category?: string | null;
+  unit: string;
+  total_in: number;
+  total_out: number;
+  balance: number;
+}
+
+// ── ERP: Activity Log ───────────────────────────────────────────────────────
+
+export interface ActivityLog {
+  id: string;
+  user_id?: string | null;
+  user_email?: string | null;
+  user_name?: string | null;
+  action: string;
+  entity_type: string;
+  entity_id?: string | null;
+  entity_code?: string | null;
+  details?: Record<string, unknown> | null;
+  created_at: string;
+}

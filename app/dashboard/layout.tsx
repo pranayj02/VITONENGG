@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { useTheme } from "@/components/ThemeProvider";
+import { useRole, can, type UserRole, type PermissionAction } from "@/lib/roles";
 import {
   LayoutDashboard,
   Package,
@@ -17,38 +18,88 @@ import {
   X,
   Sun,
   Moon,
+  ArrowRightLeft,
+  PackageOpen,
+  BarChart3,
+  Activity,
+  Shield,
+  ClipboardList,
 } from "lucide-react";
 
-const navSections = [
-  {
-    title: "Overview",
-    items: [
-      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    ],
-  },
-  {
-    title: "Master Data",
-    items: [
-      { href: "/dashboard/catalog", label: "Item Catalog", icon: Package },
-      { href: "/dashboard/vendors", label: "Vendors", icon: Users },
-      { href: "/dashboard/buyers", label: "Buyers", icon: Users },
-    ],
-  },
-  {
-    title: "Purchase Orders",
-    items: [
-      { href: "/dashboard/po/new", label: "New PO", icon: FileText },
-      { href: "/dashboard/history", label: "PO History", icon: History },
-    ],
-  },
-  {
-    title: "Invoices",
-    items: [
-      { href: "/dashboard/invoices/new", label: "New Invoice", icon: Receipt },
-      { href: "/dashboard/invoices/history", label: "Invoice History", icon: History },
-    ],
-  },
-];
+interface NavItem {
+  href: string;
+  label: string;
+  icon: React.ElementType;
+  permission?: PermissionAction;
+}
+
+interface NavSection {
+  title: string;
+  items: NavItem[];
+}
+
+function buildNavSections(role: UserRole | null): NavSection[] {
+  const sections: NavSection[] = [
+    {
+      title: "Overview",
+      items: [{ href: "/dashboard", label: "Dashboard", icon: LayoutDashboard }],
+    },
+    {
+      title: "Master Data",
+      items: [
+        { href: "/dashboard/catalog", label: "Item Catalog", icon: Package, permission: "manage_catalog" },
+        { href: "/dashboard/vendors", label: "Vendors", icon: Users, permission: "manage_vendors" },
+        { href: "/dashboard/buyers", label: "Buyers", icon: Users, permission: "manage_buyers" },
+      ],
+    },
+    {
+      title: "Requisitions",
+      items: [
+        { href: "/dashboard/requisitions/new", label: "New Requisition", icon: ClipboardList, permission: "create_requisition" },
+        { href: "/dashboard/requisitions", label: "Requisition Queue", icon: ArrowRightLeft },
+      ],
+    },
+    {
+      title: "Purchase Orders",
+      items: [
+        { href: "/dashboard/po/new", label: "New PO", icon: FileText, permission: "create_po" },
+        { href: "/dashboard/history", label: "PO History", icon: History },
+      ],
+    },
+    {
+      title: "Invoices",
+      items: [
+        { href: "/dashboard/invoices/new", label: "New Invoice", icon: Receipt, permission: "create_invoice" },
+        { href: "/dashboard/invoices/history", label: "Invoice History", icon: History },
+      ],
+    },
+    {
+      title: "Store & Stock",
+      items: [
+        { href: "/dashboard/grn", label: "Goods Receipt (GRN)", icon: PackageOpen, permission: "create_grn" },
+        { href: "/dashboard/stock", label: "Stock & Inventory", icon: BarChart3 },
+      ],
+    },
+    {
+      title: "System",
+      items: [
+        { href: "/dashboard/activity", label: "Activity Log", icon: Activity, permission: "view_activity" },
+        { href: "/dashboard/users", label: "Team & Roles", icon: Shield, permission: "manage_users" },
+      ],
+    },
+  ];
+
+  // Filter items by permission
+  return sections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => {
+        if (!item.permission) return true; // visible to all logged-in users
+        return can(role, item.permission);
+      }),
+    }))
+    .filter((section) => section.items.length > 0);
+}
 
 function isRouteActive(pathname: string, href: string) {
   if (href === "/dashboard") return pathname === "/dashboard";
@@ -60,11 +111,14 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [loading, setLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
   const { theme, toggle } = useTheme();
+  const { role, loading: roleLoading } = useRole();
+
+  const navSections = useMemo(() => buildNavSections(role), [role]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -72,7 +126,7 @@ export default function DashboardLayout({
       if (!data.user) {
         router.push("/");
       } else {
-        setLoading(false);
+        setAuthLoading(false);
       }
     });
   }, [router]);
@@ -83,7 +137,7 @@ export default function DashboardLayout({
     router.push("/");
   }
 
-  if (loading) {
+  if (authLoading || roleLoading) {
     return (
       <div className="min-h-screen bg-[#f1f3f8] dark:bg-gray-950 flex items-center justify-center">
         <div className="w-6 h-6 border-2 border-viton-red dark:border-orange-500 border-t-transparent rounded-full animate-spin" />
@@ -99,12 +153,10 @@ export default function DashboardLayout({
             <p className="px-4 mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#8892a8] dark:text-gray-600">
               {section.title}
             </p>
-
             <div className="space-y-1">
               {section.items.map((item) => {
                 const Icon = item.icon;
                 const isActive = isRouteActive(pathname, item.href);
-
                 return (
                   <Link
                     key={item.href}
@@ -139,9 +191,8 @@ export default function DashboardLayout({
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-viton-navy dark:text-white font-bold text-sm tracking-wide">VITONENGG</p>
-              <p className="text-[#8892a8] dark:text-gray-500 text-xs">Procurement Portal</p>
+              <p className="text-[#8892a8] dark:text-gray-500 text-xs">ERP Portal</p>
             </div>
-            {/* Theme Toggle */}
             <button
               onClick={toggle}
               aria-label="Toggle theme"
@@ -210,7 +261,7 @@ export default function DashboardLayout({
                 </div>
                 <div>
                   <p className="text-viton-navy dark:text-white font-bold text-sm">VITONENGG</p>
-                  <p className="text-[#8892a8] dark:text-gray-500 text-xs">Procurement Portal</p>
+                  <p className="text-[#8892a8] dark:text-gray-500 text-xs">ERP Portal</p>
                 </div>
               </div>
             </div>
@@ -239,4 +290,3 @@ export default function DashboardLayout({
     </div>
   );
 }
-

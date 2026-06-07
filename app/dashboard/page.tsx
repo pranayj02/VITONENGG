@@ -12,8 +12,16 @@ import {
   IndianRupee,
   TrendingUp,
   BarChart3,
+  ArrowRightLeft,
+  PackageOpen,
+  AlertTriangle,
+  Activity,
+  Clock,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import Link from "next/link";
+import type { ActivityLog, Requisition, StockSummary } from "@/lib/types";
 
 type PurchaseOrderRow = Record<string, any>;
 type TopItem = { name: string; count: number };
@@ -155,23 +163,43 @@ export default function DashboardPage() {
     topItems: [] as TopItem[],
   });
   const [poYearLoading, setPoYearLoading] = useState(true);
+
+  // ERP Widget State
+  const [pendingReqs, setPendingReqs] = useState<Requisition[]>([]);
+  const [pendingReqsLoading, setPendingReqsLoading] = useState(true);
+  const [recentActivity, setRecentActivity] = useState<ActivityLog[]>([]);
+  const [activityLoading, setActivityLoading] = useState(true);
+  const [stockAlerts, setStockAlerts] = useState<StockSummary[]>([]);
+  const [stockAlertsLoading, setStockAlertsLoading] = useState(true);
+
   const { text: greetingText, Icon: GreetingIcon } = getGreeting();
 
   useEffect(() => {
     async function load() {
       const supabase = createClient();
-      const [a, b, c, d, poRowsResponse] = await Promise.all([
+      const [a, b, c, d, poRowsResponse, reqRes, activityRes, stockRes] = await Promise.all([
         supabase.from("items").select("id", { count: "exact", head: true }),
         supabase.from("vendors").select("id", { count: "exact", head: true }),
         supabase.from("purchase_orders").select("id", { count: "exact", head: true }),
         supabase.from("invoices").select("id", { count: "exact", head: true }),
         supabase.from("purchase_orders").select("*"),
+        supabase.from("requisitions").select("*").in("status", ["pending", "under_review"]).order("created_at", { ascending: false }).limit(5),
+        supabase.from("activity_logs").select("*").order("created_at", { ascending: false }).limit(6),
+        supabase.rpc("get_stock_summary").then((r: any) => r).catch(() => ({ data: [] })),
       ]);
       setStats({ items: a.count ?? 0, vendors: b.count ?? 0, pos: c.count ?? 0, invoices: d.count ?? 0 });
       setStatsLoading(false);
       const poRows = poRowsResponse.data ?? [];
       setPoYearInsights(buildPOYearInsights(poRows));
       setPoYearLoading(false);
+
+      setPendingReqs((reqRes.data ?? []) as unknown as Requisition[]);
+      setPendingReqsLoading(false);
+      setRecentActivity((activityRes.data ?? []) as unknown as ActivityLog[]);
+      setActivityLoading(false);
+      const stockRows = (stockRes.data ?? []) as unknown as StockSummary[];
+      setStockAlerts(stockRows.filter((s: StockSummary) => s.balance >= 0 && s.balance < 5));
+      setStockAlertsLoading(false);
     }
     load();
   }, []);
@@ -192,9 +220,9 @@ export default function DashboardPage() {
   };
 
   const quickActions = [
-    { label: "New Purchase Order", desc: "Auto-fill from serial ID", href: "/dashboard/po/new", icon: FileText, bg: "bg-viton-red dark:bg-orange-500" },
-    { label: "New Invoice", desc: "Generate GST-compliant invoice", href: "/dashboard/invoices/new", icon: Receipt, bg: "bg-blue-600 dark:bg-blue-500" },
-    { label: "Add Item to Catalog", desc: "Register a new item or product", href: "/dashboard/catalog", icon: Package, bg: "bg-green-600 dark:bg-green-500" },
+    { label: "New Requisition", desc: "Request material for your department", href: "/dashboard/requisitions/new", icon: ArrowRightLeft, bg: "bg-viton-red dark:bg-orange-500" },
+    { label: "New Purchase Order", desc: "Auto-fill from serial ID", href: "/dashboard/po/new", icon: FileText, bg: "bg-blue-600 dark:bg-blue-500" },
+    { label: "Receive GRN", desc: "Record incoming stock against PO", href: "/dashboard/grn", icon: PackageOpen, bg: "bg-green-600 dark:bg-green-500" },
   ];
 
   return (
@@ -345,6 +373,132 @@ export default function DashboardPage() {
               </p>
             )}
           </div>
+        </div>
+      </div>
+
+      {/* ERP Widgets */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-10">
+        {/* Pending Requisitions */}
+        <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-md bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400 flex items-center justify-center">
+                <ArrowRightLeft size={13} />
+              </div>
+              <p className="text-viton-navy dark:text-white text-sm font-semibold">Pending Requisitions</p>
+            </div>
+            <Link href="/dashboard/requisitions" className="text-viton-red dark:text-orange-400 text-xs font-medium hover:underline">
+              View All
+            </Link>
+          </div>
+          {pendingReqsLoading ? (
+            <div className="space-y-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-8 bg-[#e8eaf2] dark:bg-gray-800 rounded animate-pulse" />
+              ))}
+            </div>
+          ) : pendingReqs.length === 0 ? (
+            <p className="text-[#8892a8] dark:text-gray-500 text-xs">No pending requisitions. Good job!</p>
+          ) : (
+            <div className="space-y-2">
+              {pendingReqs.slice(0, 4).map((req) => (
+                <div key={req.id} className="flex items-center justify-between text-sm">
+                  <div className="min-w-0">
+                    <p className="text-viton-navy dark:text-white font-medium truncate">{req.req_number}</p>
+                    <p className="text-[#8892a8] dark:text-gray-500 text-xs">By {req.requested_by_name ?? "—"} · {req.line_items?.length ?? 0} items</p>
+                  </div>
+                  <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
+                    req.priority === "urgent" ? "bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400" :
+                    req.priority === "high" ? "bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400" :
+                    "bg-yellow-50 text-yellow-600 dark:bg-yellow-500/10 dark:text-yellow-400"
+                  }`}>{req.priority}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Stock Alerts */}
+        <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-md bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400 flex items-center justify-center">
+                <AlertTriangle size={13} />
+              </div>
+              <p className="text-viton-navy dark:text-white text-sm font-semibold">Stock Alerts</p>
+            </div>
+            <Link href="/dashboard/stock" className="text-viton-red dark:text-orange-400 text-xs font-medium hover:underline">
+              View Stock
+            </Link>
+          </div>
+          {stockAlertsLoading ? (
+            <div className="space-y-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-8 bg-[#e8eaf2] dark:bg-gray-800 rounded animate-pulse" />
+              ))}
+            </div>
+          ) : stockAlerts.length === 0 ? (
+            <p className="text-[#8892a8] dark:text-gray-500 text-xs">All items are well stocked.</p>
+          ) : (
+            <div className="space-y-2">
+              {stockAlerts.slice(0, 5).map((item) => (
+                <div key={item.item_id} className="flex items-center justify-between text-sm">
+                  <div className="min-w-0">
+                    <p className="text-viton-navy dark:text-white font-medium truncate">{item.serial_id}</p>
+                    <p className="text-[#8892a8] dark:text-gray-500 text-xs truncate">{item.name}</p>
+                  </div>
+                  <span className={`text-xs font-bold tabular-nums ${item.balance <= 0 ? "text-red-500" : "text-orange-500"}`}>
+                    {item.balance} {item.unit}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Recent Activity */}
+        <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-md bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400 flex items-center justify-center">
+                <Activity size={13} />
+              </div>
+              <p className="text-viton-navy dark:text-white text-sm font-semibold">Recent Activity</p>
+            </div>
+            <Link href="/dashboard/activity" className="text-viton-red dark:text-orange-400 text-xs font-medium hover:underline">
+              View All
+            </Link>
+          </div>
+          {activityLoading ? (
+            <div className="space-y-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-8 bg-[#e8eaf2] dark:bg-gray-800 rounded animate-pulse" />
+              ))}
+            </div>
+          ) : recentActivity.length === 0 ? (
+            <p className="text-[#8892a8] dark:text-gray-500 text-xs">No recent activity.</p>
+          ) : (
+            <div className="space-y-2">
+              {recentActivity.slice(0, 5).map((log) => (
+                <div key={log.id} className="flex items-start gap-2 text-sm">
+                  <div className={`mt-0.5 w-2 h-2 rounded-full flex-shrink-0 ${
+                    log.action.includes("created") ? "bg-green-500" :
+                    log.action.includes("deleted") ? "bg-red-500" : "bg-blue-500"
+                  }`} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-viton-navy dark:text-white text-xs truncate">
+                      <span className="font-medium">{log.user_name ?? "System"}</span>{" "}
+                      <span className="text-[#4a5578] dark:text-gray-400">{log.action.replace(/_/g, " ")}</span>
+                      {log.entity_code && <span className="font-mono text-viton-red dark:text-orange-400 ml-1">{log.entity_code}</span>}
+                    </p>
+                    <p className="text-[#8892a8] dark:text-gray-600 text-[10px]">
+                      {new Date(log.created_at).toLocaleString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
