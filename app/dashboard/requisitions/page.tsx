@@ -18,6 +18,7 @@ import {
   AlertCircle,
   Plus,
   Trash2,
+  Printer,
 } from "lucide-react";
 
 type ReqWithUser = Requisition & { requested_by_email?: string };
@@ -411,16 +412,22 @@ export default function RequisitionsPage() {
                             </button>
                           )}
 
-                          {/* Delete button: requester can delete their own pending MR, admin can delete any */}
-                          {(req.status === "pending" && req.requested_by === (typeof window !== "undefined" ? null : null)) || true ? (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setDeleteId(req.id); }}
-                              className="flex items-center gap-2 bg-gray-50 hover:bg-red-500 text-gray-600 hover:text-white border border-gray-200 hover:border-red-500 dark:bg-gray-800 dark:hover:bg-red-500 dark:text-gray-400 dark:border-gray-700 dark:hover:border-red-500 font-semibold px-4 py-2 rounded-xl text-sm transition-all"
-                              title="Delete this requisition"
-                            >
-                              <Trash2 size={14} /> Delete
-                            </button>
-                          ) : null}
+                          {/* Delete button */}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setDeleteId(req.id); }}
+                            className="flex items-center gap-2 bg-gray-50 hover:bg-red-500 text-gray-600 hover:text-white border border-gray-200 hover:border-red-500 dark:bg-gray-800 dark:hover:bg-red-500 dark:text-gray-400 dark:border-gray-700 dark:hover:border-red-500 font-semibold px-4 py-2 rounded-xl text-sm transition-all"
+                            title="Delete this requisition"
+                          >
+                            <Trash2 size={14} /> Delete
+                          </button>
+
+                          {/* Print button */}
+                          <button
+                            onClick={(e) => { e.stopPropagation(); window.open(`/dashboard/requisitions/print/${encodeURIComponent(req.id)}`, "_blank", "noopener,noreferrer"); }}
+                            className="flex items-center gap-2 bg-[#f1f3f8] hover:bg-blue-500 dark:bg-gray-800 dark:hover:bg-blue-500 text-[#4a5578] dark:text-gray-300 hover:text-white border border-[#dde1ea] dark:border-gray-700 hover:border-blue-500 dark:hover:border-blue-500 font-semibold px-4 py-2 rounded-xl text-sm transition-all"
+                          >
+                            <Printer size={14} /> Print MR
+                          </button>
                         </div>
                       </div>
                     </div>

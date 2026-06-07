@@ -19,6 +19,9 @@ import {
   Truck,
   FileText,
   Trash2,
+  Printer,
+  Eye,
+  Pencil,
 } from "lucide-react";
 
 interface POWithVendor extends PurchaseOrder {
@@ -273,6 +276,16 @@ export default function GRNPage() {
         return next;
       })
     );
+  }
+
+  async function updateStatus(id: string, newStatus: string) {
+    const supabase = createClient();
+    await supabase.from("grn").update({ status: newStatus }).eq("id", id);
+    await load();
+  }
+
+  function openPrint(id: string) {
+    window.open(`/dashboard/grn/print/${encodeURIComponent(id)}`, "_blank", "noopener,noreferrer");
   }
 
   const canCreate = role && can(role, "create_grn");
@@ -693,6 +706,52 @@ export default function GRNPage() {
                         <span className="font-semibold text-[#8892a8] dark:text-gray-500">Inspection Notes:</span> {g.inspection_notes}
                       </div>
                     )}
+
+                    {/* Status Actions */}
+                    <div className="px-5 py-4 border-t border-[#dde1ea] dark:border-gray-800 flex items-center justify-between flex-wrap gap-3">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[#8892a8] dark:text-gray-500 text-xs font-semibold uppercase tracking-wider">Change Status:</span>
+                        {g.status !== "pending" && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); updateStatus(g.id, "pending"); }}
+                            className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-yellow-50 text-yellow-700 dark:bg-yellow-500/10 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-500/30 hover:bg-yellow-500 hover:text-white transition-all"
+                          >
+                            Pending
+                          </button>
+                        )}
+                        {g.status !== "inspected" && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); updateStatus(g.id, "inspected"); }}
+                            className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30 hover:bg-blue-500 hover:text-white transition-all"
+                          >
+                            Inspected
+                          </button>
+                        )}
+                        {g.status !== "approved" && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); updateStatus(g.id, "approved"); }}
+                            className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400 border border-green-200 dark:border-green-500/30 hover:bg-green-500 hover:text-white transition-all"
+                          >
+                            Approved
+                          </button>
+                        )}
+                        {g.status !== "rejected" && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); updateStatus(g.id, "rejected"); }}
+                            className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400 border border-red-200 dark:border-red-500/30 hover:bg-red-500 hover:text-white transition-all"
+                          >
+                            Rejected
+                          </button>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={(e) => { e.stopPropagation(); openPrint(g.id); }}
+                        className="flex items-center gap-2 bg-[#f1f3f8] hover:bg-viton-red dark:bg-gray-800 dark:hover:bg-orange-500 text-[#4a5578] dark:text-gray-300 hover:text-white font-semibold px-4 py-2 rounded-xl text-sm transition-all"
+                      >
+                        <Printer size={14} /> Print GRN
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
