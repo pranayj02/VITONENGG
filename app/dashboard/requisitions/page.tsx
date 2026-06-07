@@ -18,8 +18,10 @@ import {
   AlertCircle,
   Plus,
   Trash2,
-  Printer,
+  Download,
 } from "lucide-react";
+import { PDFDownloadLink } from "@react-pdf/renderer";
+import { MRPdfDocument } from "@/components/MRPdf";
 
 type ReqWithUser = Requisition & { requested_by_email?: string };
 
@@ -421,13 +423,13 @@ export default function RequisitionsPage() {
                             <Trash2 size={14} /> Delete
                           </button>
 
-                          {/* Print button */}
-                          <button
-                            onClick={(e) => { e.stopPropagation(); window.open(`/dashboard/requisitions/print/${encodeURIComponent(req.id)}`, "_blank", "noopener,noreferrer"); }}
-                            className="flex items-center gap-2 bg-[#f1f3f8] hover:bg-blue-500 dark:bg-gray-800 dark:hover:bg-blue-500 text-[#4a5578] dark:text-gray-300 hover:text-white border border-[#dde1ea] dark:border-gray-700 hover:border-blue-500 dark:hover:border-blue-500 font-semibold px-4 py-2 rounded-xl text-sm transition-all"
+                          <PDFDownloadLink
+                            document={<MRPdfDocument req={req} />}
+                            fileName={`${req.req_number.replace(/\//g, "-")}.pdf`}
+                            className="flex items-center gap-2 bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 text-white font-semibold px-4 py-2 rounded-xl text-sm transition-all"
                           >
-                            <Printer size={14} /> Print MR
-                          </button>
+                            <Download size={14} /> Download PDF
+                          </PDFDownloadLink>
                         </div>
                       </div>
                     </div>

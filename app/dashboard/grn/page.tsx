@@ -18,7 +18,6 @@ import {
   Truck,
   FileText,
   Trash2,
-  Printer,
   Package,
   Download,
 } from "lucide-react";
@@ -292,10 +291,6 @@ export default function GRNPage() {
     const supabase = createClient();
     await supabase.from("grn").update({ status: newStatus }).eq("id", id);
     await load();
-  }
-
-  function openPrint(id: string) {
-    window.open(`/dashboard/grn/print/${encodeURIComponent(id)}`, "_blank", "noopener,noreferrer");
   }
 
   const canCreate = role && can(role, "create_grn");
@@ -705,9 +700,6 @@ export default function GRNPage() {
                     >
                       <Download size={14} />
                     </PDFDownloadLink>
-                    <button onClick={() => openPrint(g.id)} className="text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white" title="Print">
-                      <Printer size={14} />
-                    </button>
                     <button onClick={() => setExpanded(isOpen ? null : g.id)} className="text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white">
                       {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                     </button>
@@ -763,9 +755,6 @@ export default function GRNPage() {
                       >
                         <Download size={12} /> Download PDF
                       </PDFDownloadLink>
-                      <button onClick={() => openPrint(g.id)} className="bg-[#f1f3f8] text-[#4a5578] dark:bg-gray-800 dark:text-gray-300 text-xs font-semibold px-3 py-1.5 rounded-md border border-[#dde1ea] dark:border-gray-800 flex items-center gap-1.5">
-                        <Printer size={12} /> Print
-                      </button>
                     </div>
                   </div>
                 )}
