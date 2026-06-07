@@ -107,9 +107,10 @@ export default function GRNPage() {
     setSaving(true); setError("");
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    const profile = user
+    const { data: profile } = user
       ? await supabase.from("profiles").select("full_name").eq("id", user.id).single()
       : { data: null };
+    const name = (profile as any)?.full_name ?? user?.email ?? "Unknown";
 
     // Determine next serial for FY
     const fy = selectedPO.fy_label ?? getCurrentFY();
@@ -129,7 +130,7 @@ export default function GRNPage() {
       po_id: selectedPO.id,
       vendor_id: selectedPO.vendor_id,
       received_by: user?.id ?? null,
-      received_by_name: profile?.data?.full_name ?? user?.email ?? "Unknown",
+      received_by_name: (profile as any)?.full_name ?? user?.email ?? "Unknown",
       line_items: grnLines,
       status: "pending" as const,
       inspection_notes: inspectionNotes.trim() || null,
@@ -153,7 +154,7 @@ export default function GRNPage() {
           unit: line.unit,
           notes: `Received against PO ${selectedPO.po_number}`,
           created_by: user?.id ?? null,
-          created_by_name: profile?.data?.full_name ?? user?.email ?? "Unknown",
+          created_by_name: (profile as any)?.full_name ?? user?.email ?? "Unknown",
         });
       }
     }

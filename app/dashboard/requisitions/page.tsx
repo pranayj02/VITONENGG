@@ -95,10 +95,10 @@ export default function RequisitionsPage() {
     setActing(true);
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    const profile = user
+    const { data: profile } = user
       ? await supabase.from("profiles").select("full_name").eq("id", user.id).single()
       : { data: null };
-    const name = profile?.data?.full_name ?? user?.email ?? "Unknown";
+    const name = (profile as any)?.full_name ?? user?.email ?? "Unknown";
 
     if (actionType === "reject") {
       await supabase

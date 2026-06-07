@@ -108,17 +108,18 @@ export default function NewRequisitionPage() {
 
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    const profile = user
+    const { data: profile } = user
       ? await supabase.from("profiles").select("full_name, department").eq("id", user.id).single()
       : { data: null };
+    const profileData = profile as any;
 
     const payload = {
       req_number: reqNumber,
       fy_label: getCurrentFY(),
       fy_serial: Number(reqNumber.split("/")[1]),
       requested_by: user?.id ?? null,
-      requested_by_name: profile?.data?.full_name ?? user?.email ?? "Unknown",
-      department: department.trim() || profile?.data?.department || null,
+      requested_by_name: profileData?.full_name ?? user?.email ?? "Unknown",
+      department: department.trim() || profileData?.department || null,
       priority,
       status: "pending",
       line_items: lines.map(({ tempId, ...rest }) => rest),
