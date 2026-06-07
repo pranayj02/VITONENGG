@@ -121,8 +121,9 @@ export interface GRN {
   grn_number: string;
   fy_label?: string | null;
   fy_serial?: number | null;
-  po_id: string;
+  po_id?: string | null;
   vendor_id?: string | null;
+  vendor_name?: string | null;
   received_by?: string | null;
   received_by_name?: string | null;
   inspected_by?: string | null;
