@@ -82,21 +82,48 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
     ...Array(Math.max(0, MIN_ROWS - lines.length)).fill(null),
   ];
 
-  const labelCell = (w?: string): React.CSSProperties => ({
+  const cellBase: React.CSSProperties = {
     border: "1px solid #000",
-    padding: "4px 7px",
-    fontWeight: "700",
+    padding: "4px 6px",
     fontSize: "8pt",
+    verticalAlign: "top",
+  };
+  const labelCell: React.CSSProperties = {
+    ...cellBase,
+    fontWeight: "700",
     background: "#ebebeb",
     whiteSpace: "nowrap",
-    width: w,
-  });
-  const valueCell = (w?: string): React.CSSProperties => ({
-    border: "1px solid #000",
-    padding: "4px 7px",
+  };
+  const valueCell: React.CSSProperties = {
+    ...cellBase,
+    fontWeight: "400",
+  };
+  const headerCell: React.CSSProperties = {
+    ...cellBase,
+    background: "#1a1a6e",
+    color: "#fff",
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: "0.8px",
+  };
+  const titleCell: React.CSSProperties = {
+    border: "2px solid #000",
+    padding: "6px 10px",
+    background: "#1a1a6e",
+    color: "#fff",
+    fontSize: "12pt",
+    fontWeight: "900",
+    letterSpacing: "1.5px",
+    textTransform: "uppercase",
+    textAlign: "center",
+  };
+  const subTitleCell: React.CSSProperties = {
     fontSize: "8pt",
-    width: w,
-  });
+    letterSpacing: "0.8px",
+    marginTop: "2px",
+    opacity: 0.85,
+    textAlign: "center",
+  };
 
   const SlipDocument = () => (
     <div
@@ -108,198 +135,130 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
         fontFamily: "Arial, Helvetica, sans-serif",
         fontSize: "9pt",
         color: "#000",
-        padding: "8mm 10mm",
+        padding: "5mm 8mm",
         boxSizing: "border-box",
       }}
     >
-      {/* ── TOP HEADER ROW ─────────────────────────────────── */}
+      {/* ── FLAT HEADER TABLE (matches Excel grid) ────────────────── */}
       <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "0" }}>
         <tbody>
+          {/* Row 1: Document No + Title + Company */}
           <tr>
-            {/* Left meta: Doc No / Rev / Title */}
-            <td style={{ verticalAlign: "top", width: "30%", paddingRight: "6px" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #000", fontSize: "7.5pt" }}>
-                <tbody>
-                  <tr>
-                    <td style={labelCell()}>Document No.</td>
-                    <td style={valueCell()}>VT-STR-R-02</td>
-                  </tr>
-                  <tr>
-                    <td style={labelCell()}>Revision No.</td>
-                    <td style={valueCell()}>00</td>
-                  </tr>
-                  <tr>
-                    <td style={labelCell()}>Revision Date</td>
-                    <td style={valueCell()}>01/10/2025</td>
-                  </tr>
-                </tbody>
-              </table>
-            </td>
-
-            {/* Centre: Document title + company name */}
-            <td style={{ verticalAlign: "middle", textAlign: "center", width: "40%", padding: "0 6px" }}>
-              <div style={{
-                border: "2px solid #000",
-                padding: "6px 10px",
-                background: "#1a1a6e",
-                color: "#fff",
-              }}>
-                <div style={{ fontSize: "12pt", fontWeight: "900", letterSpacing: "1.5px", textTransform: "uppercase" }}>
-                  Goods Receipt Note
-                </div>
-                <div style={{ fontSize: "8pt", letterSpacing: "0.8px", marginTop: "2px", opacity: 0.85 }}>
-                  GRN
-                </div>
-              </div>
+            <td style={{ ...labelCell, width: "15%" }}>Document No.</td>
+            <td style={{ ...valueCell, width: "15%" }}>VT-STR-R-02</td>
+            <td style={{ ...cellBase, textAlign: "center", width: "40%" }} rowSpan={3}>
+              <div style={titleCell}>Goods Receipt Note</div>
+              <div style={subTitleCell}>GRN</div>
               <div style={{ fontSize: "10pt", fontWeight: "900", marginTop: "6px", letterSpacing: "0.3px" }}>
                 VITON ENGINEERS PVT LTD
               </div>
             </td>
-
-            {/* Right: Logo + GRN meta */}
-            <td style={{ verticalAlign: "top", width: "30%", paddingLeft: "6px" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", border: "1px solid #000", fontSize: "7.5pt" }}>
-                <tbody>
-                  <tr>
-                    <td style={labelCell("45%")}>GRN No.</td>
-                    <td style={{ ...valueCell(), fontWeight: "700", fontSize: "8pt" }}>
-                      {grn.grn_number}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style={labelCell()}>GRN Date</td>
-                    <td style={valueCell()}>{grnDate}</td>
-                  </tr>
-                  <tr>
-                    <td style={labelCell()}>Status</td>
-                    <td style={{
-                      ...valueCell(),
-                      fontWeight: "700",
-                      color: grn.status === "approved" ? "#006400" : grn.status === "rejected" ? "#cc0000" : "#000",
-                    }}>
-                      {grn.status.toUpperCase()}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+            <td style={{ ...labelCell, width: "15%" }}>GRN No.</td>
+            <td style={{ ...valueCell, width: "15%", fontWeight: "700" }}>{grn.grn_number}</td>
+          </tr>
+          {/* Row 2: Revision No + GRN Date */}
+          <tr>
+            <td style={labelCell}>Revision No.</td>
+            <td style={valueCell}>00</td>
+            <td style={labelCell}>GRN Date</td>
+            <td style={valueCell}>{grnDate}</td>
+          </tr>
+          {/* Row 3: Revision Date + Status */}
+          <tr>
+            <td style={labelCell}>Revision Date</td>
+            <td style={valueCell}>01/10/2025</td>
+            <td style={labelCell}>Status</td>
+            <td style={{ ...valueCell, fontWeight: "700", color: grn.status === "approved" ? "#006400" : grn.status === "rejected" ? "#cc0000" : "#000" }}>
+              {grn.status.toUpperCase()}
             </td>
           </tr>
         </tbody>
       </table>
 
-      {/* ── SUPPLIER DETAILS + RECEIVED AT ──────────────────── */}
-      <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "6px" }}>
+      {/* ── SUPPLIER + RECEIVED TABLE (flat 5-col) ────────────────── */}
+      <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "4px" }}>
         <tbody>
+          {/* Section headers */}
           <tr>
-            <td
-              colSpan={2}
-              style={{
-                border: "1px solid #000",
-                background: "#1a1a6e",
-                color: "#fff",
-                fontWeight: "700",
-                fontSize: "8pt",
-                padding: "3px 7px",
-                width: "48%",
-                textTransform: "uppercase",
-                letterSpacing: "0.8px",
-              }}
-            >
-              Supplier Details
-            </td>
-            <td style={{ width: "4%" }} />
-            <td
-              colSpan={2}
-              style={{
-                border: "1px solid #000",
-                background: "#1a1a6e",
-                color: "#fff",
-                fontWeight: "700",
-                fontSize: "8pt",
-                padding: "3px 7px",
-                width: "48%",
-                textTransform: "uppercase",
-                letterSpacing: "0.8px",
-              }}
-            >
-              Received At
-            </td>
+            <td colSpan={3} style={{ ...headerCell, width: "55%" }}>Supplier Details</td>
+            <td colSpan={2} style={{ ...headerCell, width: "45%" }}>Received At</td>
           </tr>
+          {/* Supplier name | Company */}
           <tr>
-            <td style={{ ...labelCell("18%"), border: "1px solid #000" }}>Supplier Name</td>
-            <td style={{ ...valueCell(), border: "1px solid #000", fontWeight: "700", width: "30%" }}>
+            <td style={{ ...labelCell, width: "18%" }}>Supplier Name</td>
+            <td colSpan={2} style={{ ...valueCell, fontWeight: "700", width: "37%" }}>
               {grn.vendor_name ?? "—"}
             </td>
-            <td style={{ width: "4%" }} />
-            <td style={{ ...labelCell("18%"), border: "1px solid #000" }}>Company</td>
-            <td style={{ ...valueCell(), border: "1px solid #000", width: "30%" }}>
-              M/s. VITON ENGINEERS PVT LTD
-            </td>
+            <td style={{ ...labelCell, width: "22%" }}>Company</td>
+            <td style={{ ...valueCell, width: "23%" }}>M/s. VITON ENGINEERS PVT LTD</td>
           </tr>
+          {/* Supplier address | Address */}
           <tr>
-            <td style={{ ...labelCell(), border: "1px solid #000" }}>Supplier Address</td>
-            <td style={{ ...valueCell(), border: "1px solid #000", fontSize: "7.5pt", lineHeight: 1.5 }}>
+            <td style={labelCell}>Supplier Address</td>
+            <td colSpan={2} style={{ ...valueCell, fontSize: "7.5pt", lineHeight: 1.5 }}>
               {vendor?.address ?? "—"}
             </td>
-            <td style={{ width: "4%" }} />
-            <td style={{ ...labelCell(), border: "1px solid #000" }}>Address</td>
-            <td style={{ ...valueCell(), border: "1px solid #000", fontSize: "7.5pt", lineHeight: 1.5 }}>
+            <td style={labelCell}>Address</td>
+            <td style={{ ...valueCell, fontSize: "7.5pt", lineHeight: 1.5 }}>
               Plot No. B-40/1, Addl. Ambernath MIDC,<br />
               Anand Nagar, Ambernath E, Dist. Thane - 421506
             </td>
           </tr>
+          {/* Supplier GSTIN | Email */}
           <tr>
-            <td style={{ ...labelCell(), border: "1px solid #000" }}>Supplier GSTIN</td>
-            <td style={{ ...valueCell(), border: "1px solid #000", fontWeight: "700" }}>
+            <td style={labelCell}>Supplier GSTIN</td>
+            <td colSpan={2} style={{ ...valueCell, fontWeight: "700" }}>
               {vendor?.gstin ?? "—"}
             </td>
-            <td style={{ width: "4%" }} />
-            <td style={{ ...labelCell(), border: "1px solid #000" }}>Email</td>
-            <td style={{ ...valueCell(), border: "1px solid #000" }}>viton.engg@gmail.com</td>
+            <td style={labelCell}>Email</td>
+            <td style={valueCell}>viton.engg@gmail.com</td>
           </tr>
+          {/* Challan / Inv No. | GST No. */}
           <tr>
-            <td style={{ ...labelCell(), border: "1px solid #000" }}>Challan / Inv No.</td>
-            <td style={{ ...valueCell(), border: "1px solid #000", fontWeight: "700" }}>
+            <td style={labelCell}>Challan / Inv No.</td>
+            <td colSpan={2} style={{ ...valueCell, fontWeight: "700" }}>
               {grn.challan_no ?? "—"}
             </td>
-            <td style={{ width: "4%" }} />
-            <td style={{ ...labelCell(), border: "1px solid #000" }}>GST No.</td>
-            <td style={{ ...valueCell(), border: "1px solid #000", fontWeight: "700" }}>27AACCV7755N1ZK</td>
+            <td style={labelCell}>GST No.</td>
+            <td style={{ ...valueCell, fontWeight: "700" }}>27AACCV7755N1ZK</td>
           </tr>
+          {/* Challan / Inv Date | Received By */}
           <tr>
-            <td style={{ ...labelCell(), border: "1px solid #000" }}>Challan / Inv Date</td>
-            <td style={{ ...valueCell(), border: "1px solid #000" }}>
+            <td style={labelCell}>Challan / Inv Date</td>
+            <td colSpan={2} style={valueCell}>
               {grn.challan_date ?? "—"}
             </td>
-            <td style={{ width: "4%" }} />
-            <td style={{ ...labelCell(), border: "1px solid #000" }}>Received By</td>
-            <td style={{ ...valueCell(), border: "1px solid #000" }}>{grn.received_by_name ?? "—"}</td>
+            <td style={labelCell}>Received By</td>
+            <td style={valueCell}>{grn.received_by_name ?? "—"}</td>
           </tr>
+          {/* PO No. | (empty) */}
           <tr>
-            <td style={{ ...labelCell(), border: "1px solid #000" }}>PO No.</td>
-            <td style={{ ...valueCell(), border: "1px solid #000", fontFamily: "monospace", color: "#1a1a6e", fontWeight: "700" }}>
+            <td style={labelCell}>PO No.</td>
+            <td colSpan={2} style={{ ...valueCell, fontFamily: "monospace", color: "#1a1a6e", fontWeight: "700" }}>
               {po?.po_number ?? (grn.po_id ? "Linked" : "Direct Receipt")}
             </td>
-            <td style={{ width: "4%" }} />
-            <td colSpan={2} style={{ border: "none" }} />
+            <td style={labelCell} />
+            <td style={valueCell} />
           </tr>
+          {/* PO Date | (empty) */}
           <tr>
-            <td style={{ ...labelCell(), border: "1px solid #000" }}>PO Date</td>
-            <td style={{ ...valueCell(), border: "1px solid #000" }}>{poDate}</td>
-            <td style={{ width: "4%" }} />
-            <td colSpan={2} style={{ border: "none" }} />
+            <td style={labelCell}>PO Date</td>
+            <td colSpan={2} style={valueCell}>{poDate}</td>
+            <td style={labelCell} />
+            <td style={valueCell} />
           </tr>
+          {/* Inspected By | (empty) */}
           <tr>
-            <td style={{ ...labelCell(), border: "1px solid #000" }}>Inspected By</td>
-            <td style={{ ...valueCell(), border: "1px solid #000" }}>{grn.inspected_by_name ?? "—"}</td>
-            <td style={{ width: "4%" }} />
-            <td colSpan={2} style={{ border: "none" }} />
+            <td style={labelCell}>Inspected By</td>
+            <td colSpan={2} style={valueCell}>{grn.inspected_by_name ?? "—"}</td>
+            <td style={labelCell} />
+            <td style={valueCell} />
           </tr>
         </tbody>
       </table>
 
-      {/* ── ITEMS TABLE ──────────────────────────────────────── */}
-      <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "8px" }}>
+      {/* ── ITEMS TABLE ───────────────────────────────────────────── */}
+      <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "6px" }}>
         <thead>
           <tr style={{ background: "#1a1a6e", color: "#fff" }}>
             {[
@@ -370,7 +329,7 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
         </tbody>
       </table>
 
-      {/* ── REMARK ROW ──────────────────────────────────────── */}
+      {/* ── REMARK ROW ────────────────────────────────────────────── */}
       <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "0" }}>
         <tbody>
           <tr>
@@ -384,7 +343,7 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
         </tbody>
       </table>
 
-      {/* ── SIGNATURES ──────────────────────────────────────── */}
+      {/* ── SIGNATURES ────────────────────────────────────────────── */}
       <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "32px" }}>
         <tbody>
           <tr>
@@ -416,7 +375,7 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
         </tbody>
       </table>
 
-      {/* ── FOOTER ──────────────────────────────────────────── */}
+      {/* ── FOOTER ────────────────────────────────────────────────── */}
       <div style={{ marginTop: "18px", textAlign: "center", fontSize: "7pt", color: "#888", borderTop: "1px solid #ddd", paddingTop: "5px" }}>
         This is a computer generated Goods Receipt Note and does not require a signature if digitally verified.
       </div>

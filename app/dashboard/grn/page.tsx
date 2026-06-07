@@ -396,50 +396,45 @@ export default function GRNPage() {
               <div className="p-0 overflow-x-auto">
                 {/* ── GRN FORM ── */}
                 <div style={{ background:"#fff", fontFamily:"Arial, Helvetica, sans-serif", fontSize:"10pt", color:"#000", padding:"8mm 10mm", boxSizing:"border-box", borderRadius:"4px", border:"1px solid #ddd", minWidth:"800px" }}>
-                  {/* Top Header Row */}
+                  {/* ── FLAT HEADER TABLE ─────────────────────────────── */}
                   <table style={{ width:"100%", borderCollapse:"collapse", marginBottom:"0" }}>
                     <tbody>
                       <tr>
-                        <td style={{ verticalAlign:"top", width:"30%", paddingRight:"6px" }}>
-                          <table style={{ width:"100%", borderCollapse:"collapse", border:"1px solid #000", fontSize:"7.5pt" }}>
-                            <tbody>
-                              <tr><td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb", whiteSpace:"nowrap" }}>Document No.</td><td style={{ border:"1px solid #000", padding:"4px 7px", fontSize:"8pt" }}>VT-STR-R-02</td></tr>
-                              <tr><td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Revision No.</td><td style={{ border:"1px solid #000", padding:"4px 7px", fontSize:"8pt" }}>00</td></tr>
-                              <tr><td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Revision Date</td><td style={{ border:"1px solid #000", padding:"4px 7px", fontSize:"8pt" }}>{revDate}</td></tr>
-                            </tbody>
-                          </table>
-                        </td>
-                        <td style={{ verticalAlign:"middle", textAlign:"center", width:"40%", padding:"0 6px" }}>
-                          <div style={{ border:"2px solid #000", padding:"6px 10px", background:"#1a1a6e", color:"#fff" }}>
-                            <div style={{ fontSize:"12pt", fontWeight:"900", letterSpacing:"1.5px", textTransform:"uppercase" }}>Goods Receipt Note</div>
-                            <div style={{ fontSize:"8pt", letterSpacing:"0.8px", marginTop:"2px", opacity:0.85 }}>GRN</div>
-                          </div>
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb", whiteSpace:"nowrap", width:"15%" }}>Document No.</td>
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontSize:"8pt", width:"15%" }}>VT-STR-R-02</td>
+                        <td style={{ border:"2px solid #000", padding:"6px 10px", background:"#1a1a6e", color:"#fff", fontSize:"12pt", fontWeight:"900", letterSpacing:"1.5px", textTransform:"uppercase", textAlign:"center", width:"40%" }} rowSpan={3}>
+                          <div>Goods Receipt Note</div>
+                          <div style={{ fontSize:"8pt", letterSpacing:"0.8px", marginTop:"2px", opacity:0.85 }}>GRN</div>
                           <div style={{ fontSize:"10pt", fontWeight:"900", marginTop:"6px", letterSpacing:"0.3px" }}>VITON ENGINEERS PVT LTD</div>
                         </td>
-                        <td style={{ verticalAlign:"top", width:"30%", paddingLeft:"6px" }}>
-                          <table style={{ width:"100%", borderCollapse:"collapse", border:"1px solid #000", fontSize:"7.5pt" }}>
-                            <tbody>
-                              <tr><td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb", whiteSpace:"nowrap" }}>GRN No.</td><td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt" }}>Auto</td></tr>
-                              <tr><td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>GRN Date</td><td style={{ border:"1px solid #000", padding:"4px 7px", fontSize:"8pt" }}>{grnDate}</td></tr>
-                              <tr><td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Status</td><td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt" }}>PENDING</td></tr>
-                            </tbody>
-                          </table>
-                        </td>
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb", whiteSpace:"nowrap", width:"15%" }}>GRN No.</td>
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontSize:"8pt", fontWeight:"700", width:"15%" }}>Auto</td>
+                      </tr>
+                      <tr>
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Revision No.</td>
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontSize:"8pt" }}>00</td>
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>GRN Date</td>
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontSize:"8pt" }}>{grnDate}</td>
+                      </tr>
+                      <tr>
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Revision Date</td>
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontSize:"8pt" }}>{revDate}</td>
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Status</td>
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontSize:"8pt", fontWeight:"700" }}>PENDING</td>
                       </tr>
                     </tbody>
                   </table>
 
-                  {/* Supplier Details + Received At */}
-                  <table style={{ width:"100%", borderCollapse:"collapse", marginTop:"6px" }}>
+                  {/* ── FLAT SUPPLIER + RECEIVED TABLE ──────────────── */}
+                  <table style={{ width:"100%", borderCollapse:"collapse", marginTop:"4px" }}>
                     <tbody>
                       <tr>
-                        <td colSpan={2} style={{ border:"1px solid #000", background:"#1a1a6e", color:"#fff", fontWeight:"700", fontSize:"8pt", padding:"3px 7px", width:"48%", textTransform:"uppercase", letterSpacing:"0.8px" }}>Supplier Details</td>
-                        <td style={{ width:"4%" }} />
-                        <td colSpan={2} style={{ border:"1px solid #000", background:"#1a1a6e", color:"#fff", fontWeight:"700", fontSize:"8pt", padding:"3px 7px", width:"48%", textTransform:"uppercase", letterSpacing:"0.8px" }}>Received At</td>
+                        <td colSpan={3} style={{ border:"1px solid #000", background:"#1a1a6e", color:"#fff", fontWeight:"700", fontSize:"8pt", padding:"3px 7px", textTransform:"uppercase", letterSpacing:"0.8px", width:"55%" }}>Supplier Details</td>
+                        <td colSpan={2} style={{ border:"1px solid #000", background:"#1a1a6e", color:"#fff", fontWeight:"700", fontSize:"8pt", padding:"3px 7px", textTransform:"uppercase", letterSpacing:"0.8px", width:"45%" }}>Received At</td>
                       </tr>
                       <tr>
-                        <td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb", width:"18%" }}>Supplier Name</td>
-                        <td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", width:"30%" }}>
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb", width:"18%" }}>Supplier Name</td>
+                        <td colSpan={2} style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", width:"37%" }}>
                           {createMode === "without_po" ? (
                             <div className="flex gap-2">
                               <select value={manualVendorId} onChange={(e) => { setManualVendorId(e.target.value); const v = vendors.find(v => v.id === e.target.value); setManualVendorName(v?.name ?? ""); }} className="text-[10pt] font-normal border rounded px-1 w-full" style={{ fontSize:"10pt" }}>
@@ -451,53 +446,64 @@ export default function GRNPage() {
                             <input value={selectedPO?.vendors?.name ?? ""} readOnly style={{ width:"100%", fontSize:"8pt", border:"none", background:"transparent", outline:"none" }} />
                           )}
                         </td>
-                        <td style={{ width:"4%" }} />
-                        <td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb", width:"18%" }}>Company</td>
-                        <td style={{ border:"1px solid #000", padding:"4px 7px", fontSize:"8pt", width:"30%" }}>M/s. VITON ENGINEERS PVT LTD</td>
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb", width:"22%" }}>Company</td>
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontSize:"8pt", width:"23%" }}>M/s. VITON ENGINEERS PVT LTD</td>
                       </tr>
                       <tr>
-                        <td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Challan / Inv No.</td>
-                        <td style={{ border:"1px solid #000", padding:"4px 7px" }}>
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Supplier Address</td>
+                        <td colSpan={2} style={{ border:"1px solid #000", padding:"4px 6px", fontSize:"7.5pt", lineHeight:1.5 }}>
+                          {createMode === "without_po" ? (vendors.find(v => v.id === manualVendorId)?.address ?? "—") : (selectedPO?.vendors?.address ?? "—")}
+                        </td>
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Address</td>
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontSize:"7.5pt", lineHeight:1.5 }}>Plot No. B-40/1, Addl. Ambernath MIDC,<br />Anand Nagar, Ambernath E, Dist. Thane - 421506</td>
+                      </tr>
+                      <tr>
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Supplier GSTIN</td>
+                        <td colSpan={2} style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700" }}>
+                          {createMode === "without_po" ? (vendors.find(v => v.id === manualVendorId)?.gstin ?? "—") : (selectedPO?.vendors?.gstin ?? "—")}
+                        </td>
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Email</td>
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontSize:"8pt" }}>viton.engg@gmail.com</td>
+                      </tr>
+                      <tr>
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Challan / Inv No.</td>
+                        <td colSpan={2} style={{ border:"1px solid #000", padding:"4px 6px" }}>
                           <input value={challanNo} onChange={(e) => setChallanNo(e.target.value)} style={{ width:"100%", fontSize:"8pt", border:"none", background:"transparent", outline:"none" }} placeholder="Optional" />
                         </td>
-                        <td style={{ width:"4%" }} />
-                        <td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Address</td>
-                        <td style={{ border:"1px solid #000", padding:"4px 7px", fontSize:"7.5pt", lineHeight:1.5 }}>Plot No. B-40/1, Addl. Ambernath MIDC,<br />Anand Nagar, Ambernath E, Dist. Thane - 421506</td>
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>GST No.</td>
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt" }}>27AACCV7755N1ZK</td>
                       </tr>
                       <tr>
-                        <td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Challan / Inv Date</td>
-                        <td style={{ border:"1px solid #000", padding:"4px 7px" }}>
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Challan / Inv Date</td>
+                        <td colSpan={2} style={{ border:"1px solid #000", padding:"4px 6px" }}>
                           <input value={challanDate} onChange={(e) => setChallanDate(e.target.value)} style={{ width:"100%", fontSize:"8pt", border:"none", background:"transparent", outline:"none" }} placeholder="DD/MM/YYYY" />
                         </td>
-                        <td style={{ width:"4%" }} />
-                        <td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Email</td>
-                        <td style={{ border:"1px solid #000", padding:"4px 7px", fontSize:"8pt" }}>viton.engg@gmail.com</td>
-                      </tr>
-                      <tr>
-                        <td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>PO No.</td>
-                        <td style={{ border:"1px solid #000", padding:"4px 7px", fontFamily:"monospace", color:"#1a1a6e", fontWeight:"700" }}>{selectedPO?.po_number ?? "Direct Receipt"}</td>
-                        <td style={{ width:"4%" }} />
-                        <td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>GST No.</td>
-                        <td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt" }}>27AACCV7755N1ZK</td>
-                      </tr>
-                      <tr>
-                        <td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>PO Date</td>
-                        <td style={{ border:"1px solid #000", padding:"4px 7px", fontSize:"8pt" }}>
-                          {selectedPO ? new Date(selectedPO.created_at).toLocaleDateString("en-IN", { day:"2-digit", month:"2-digit", year:"numeric" }) : "—"}
-                        </td>
-                        <td style={{ width:"4%" }} />
-                        <td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Received By</td>
-                        <td style={{ border:"1px solid #000", padding:"4px 7px", fontSize:"8pt" }}>
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Received By</td>
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontSize:"8pt" }}>
                           <input value={""} readOnly placeholder="Auto-filled from profile" style={{ width:"100%", fontSize:"8pt", border:"none", background:"transparent", outline:"none", color:"#888" }} />
                         </td>
                       </tr>
                       <tr>
-                        <td style={{ border:"1px solid #000", padding:"4px 7px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Inspected By</td>
-                        <td style={{ border:"1px solid #000", padding:"4px 7px" }}>
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>PO No.</td>
+                        <td colSpan={2} style={{ border:"1px solid #000", padding:"4px 6px", fontFamily:"monospace", color:"#1a1a6e", fontWeight:"700" }}>{selectedPO?.po_number ?? "Direct Receipt"}</td>
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }} />
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontSize:"8pt" }} />
+                      </tr>
+                      <tr>
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>PO Date</td>
+                        <td colSpan={2} style={{ border:"1px solid #000", padding:"4px 6px", fontSize:"8pt" }}>
+                          {selectedPO ? new Date(selectedPO.created_at).toLocaleDateString("en-IN", { day:"2-digit", month:"2-digit", year:"numeric" }) : "—"}
+                        </td>
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }} />
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontSize:"8pt" }} />
+                      </tr>
+                      <tr>
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Inspected By</td>
+                        <td colSpan={2} style={{ border:"1px solid #000", padding:"4px 6px" }}>
                           <input value={inspectedBy} onChange={(e) => setInspectedBy(e.target.value)} style={{ width:"100%", fontSize:"8pt", border:"none", background:"transparent", outline:"none" }} placeholder="Name" />
                         </td>
-                        <td style={{ width:"4%" }} />
-                        <td colSpan={2} style={{ border:"none" }} />
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }} />
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontSize:"8pt" }} />
                       </tr>
                     </tbody>
                   </table>
