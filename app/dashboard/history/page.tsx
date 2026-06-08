@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
+import { audit } from "@/lib/audit";
 import {
   FileText, Copy, ChevronDown, ChevronUp,
   Search, X, Trash2, Download, Printer, Pencil,
@@ -327,7 +328,9 @@ export default function HistoryPage() {
   async function handleDelete(id: string) {
     setDeletingId(id);
     const supabase = createClient();
+    const target = pos.find((p) => p.id === id);
     await supabase.from("purchase_orders").delete().eq("id", id);
+    await audit({ action: "po_deleted", entity_type: "purchase_order", entity_id: id, entity_code: target?.po_number, details: { vendor: target?.vendors?.name ?? null } });
     setConfirmId(null);
     setDeletingId(null);
     await load();

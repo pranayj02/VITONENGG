@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
+import { audit } from "@/lib/audit";
 import { Plus, Search, X, Save, Pencil, RefreshCw, Trash2 } from "lucide-react";
 import type { Item } from "@/lib/types";
 

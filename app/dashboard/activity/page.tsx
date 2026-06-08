@@ -27,15 +27,38 @@ const ENTITY_ICONS: Record<string, React.ElementType> = {
   grn: Package,
   vendor: User,
   buyer: User,
+  user: User,
+  stock: Package,
 };
 
 const ACTION_COLORS: Record<string, string> = {
   po_created: "text-green-600 dark:text-green-400",
   po_updated: "text-blue-600 dark:text-blue-400",
   po_deleted: "text-red-600 dark:text-red-400",
+  po_confirmed: "text-green-600 dark:text-green-400",
+  mr_requested: "text-blue-600 dark:text-blue-400",
+  mr_approved: "text-green-600 dark:text-green-400",
+  mr_rejected: "text-red-600 dark:text-red-400",
+  mr_stock_issued: "text-orange-600 dark:text-orange-400",
+  grn_created: "text-blue-600 dark:text-blue-400",
+  grn_approved: "text-green-600 dark:text-green-400",
+  stock_received: "text-green-600 dark:text-green-400",
+  stock_issued: "text-orange-600 dark:text-orange-400",
   invoice_created: "text-green-600 dark:text-green-400",
   invoice_updated: "text-blue-600 dark:text-blue-400",
   invoice_deleted: "text-red-600 dark:text-red-400",
+  item_created: "text-green-600 dark:text-green-400",
+  item_updated: "text-blue-600 dark:text-blue-400",
+  item_deleted: "text-red-600 dark:text-red-400",
+  vendor_created: "text-green-600 dark:text-green-400",
+  vendor_updated: "text-blue-600 dark:text-blue-400",
+  vendor_deleted: "text-red-600 dark:text-red-400",
+  buyer_created: "text-green-600 dark:text-green-400",
+  buyer_updated: "text-blue-600 dark:text-blue-400",
+  buyer_deleted: "text-red-600 dark:text-red-400",
+  user_profile_updated: "text-blue-600 dark:text-blue-400",
+  user_role_updated: "text-orange-600 dark:text-orange-400",
+  user_deleted: "text-red-600 dark:text-red-400",
 };
 
 function formatAction(action: string): string {
@@ -134,6 +157,9 @@ export default function ActivityPage() {
             <option value="grn">GRN</option>
             <option value="item">Item</option>
             <option value="vendor">Vendor</option>
+            <option value="buyer">Buyer</option>
+            <option value="user">User</option>
+            <option value="stock">Stock</option>
           </select>
         </div>
       </div>

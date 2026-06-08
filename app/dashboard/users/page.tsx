@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
+import { audit } from "@/lib/audit";
 import { useRouter } from "next/navigation";
 import { useRole, ROLE_LABELS, type UserRole } from "@/lib/roles";
 import {
@@ -111,6 +112,8 @@ export default function UsersPage() {
     const supabase = createClient();
     const { error } = await supabase.from("profiles").update({ role: newRole }).eq("id", id);
     if (!error) {
+      const currentUserName = currentUser.full_name?.trim() || currentUser.email || "User";
+      await audit({ action: "user_role_updated", entity_type: "user", entity_id: id, entity_code: currentUserName, details: { previous_role: currentUser.role, next_role: newRole } });
       setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, role: newRole } : u)));
     } else {
       setDeleteError(error.message);
@@ -139,6 +142,8 @@ export default function UsersPage() {
     };
     const { error } = await supabase.from("profiles").update(nextPatch).eq("id", id);
     if (!error) {
+      const currentUser = users.find((u) => u.id === id);
+      await audit({ action: "user_profile_updated", entity_type: "user", entity_id: id, entity_code: currentUser?.full_name?.trim() || currentUser?.email || "User", details: { full_name: nextPatch.full_name, department: nextPatch.department } });
       setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...nextPatch } : u)));
       setEditingId(null);
       setProfileDraft({ full_name: "Yatish Jain", department: "" });
@@ -181,6 +186,7 @@ export default function UsersPage() {
         setSavingId(null);
         return;
       }
+      await audit({ action: "user_deleted", entity_type: "user", entity_id: user.id, entity_code: user.full_name?.trim() || user.email || "User", details: { role: user.role, department: user.department } });
       setUsers((prev) => prev.filter((u) => u.id !== user.id));
     } catch (err: any) {
       setDeleteError(err.message || "Network error");

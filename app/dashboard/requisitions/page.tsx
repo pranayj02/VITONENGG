@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase";
+import { audit } from "@/lib/audit";
 import { useRouter } from "next/navigation";
 import { can, useRole } from "@/lib/roles";
 import type { Requisition, ReqLineItem } from "@/lib/types";

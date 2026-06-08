@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { createClient } from "@/lib/supabase";
+import { audit } from "@/lib/audit";
 import { useRouter } from "next/navigation";
 import { can, useRole } from "@/lib/roles";
 import { getCurrentFY } from "@/lib/fy";

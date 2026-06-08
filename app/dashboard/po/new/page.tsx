@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase";
+import { audit } from "@/lib/audit";
 import { getCurrentFY } from "@/lib/fy";
 import {
   Search, Plus, Trash2, FileText, Save, X,
