@@ -40,7 +40,7 @@ export default function UsersPage() {
   const [form, setForm] = useState({
     email: "",
     password: "",
-    full_name: "",
+    full_name: "Yatish Jain",
     role: "viewer" as UserRole,
     department: "",
   });
@@ -88,7 +88,9 @@ export default function UsersPage() {
   async function updateProfile(id: string, patch: Partial<UserProfile>) {
     setSavingId(id);
     const supabase = createClient();
-    await supabase.from("profiles").update(patch).eq("id", id);
+    const nextPatch = { ...patch } as any;
+    if (Object.prototype.hasOwnProperty.call(nextPatch, "full_name")) nextPatch.full_name = String(nextPatch.full_name ?? "").trim() || "Yatish Jain";
+    await supabase.from("profiles").update(nextPatch).eq("id", id);
     setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...patch } : u)));
     setSavingId(null);
   }
@@ -110,7 +112,8 @@ export default function UsersPage() {
     }
 
     try {
-      const res = await fetch("/api/admin/create-user", {
+      if (!form.full_name.trim()) { setError("Full name is required."); return; }
+    const res = await fetch("/api/admin/create-user", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -127,7 +130,7 @@ export default function UsersPage() {
       }
 
       setCreateSuccess(true);
-      setForm({ email: "", password: "", full_name: "", role: "viewer", department: "" });
+      setForm({ email: "", password: "", full_name: "Yatish Jain", role: "viewer", department: "" });
       await load();
     } catch (err: any) {
       setCreateError(err.message || "Network error");
@@ -225,6 +228,7 @@ export default function UsersPage() {
                 <label className="block text-[#4a5578] dark:text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Full Name</label>
                 <input
                   value={form.full_name}
+                  required
                   onChange={(e) => setForm((f) => ({ ...f, full_name: e.target.value }))}
                   placeholder="e.g. Yatish Kumar"
                   className="w-full bg-[#f1f3f8] dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-viton-navy dark:text-white placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"

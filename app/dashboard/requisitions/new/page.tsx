@@ -117,7 +117,7 @@ export default function NewRequisitionPage() {
       fy_label: getCurrentFY(),
       fy_serial: Number(reqNumber.split("/")[1]),
       requested_by: user?.id ?? null,
-      requested_by_name: profileData?.full_name ?? user?.email ?? "Unknown",
+      requested_by_name: profileData?.full_name?.trim() || "Yatish Jain",
       department: department.trim() || profileData?.department || null,
       priority,
       status: "pending",

@@ -33,7 +33,7 @@ create or replace function public.handle_new_user()
 returns trigger as $$
 begin
   insert into public.profiles (id, email, full_name, role)
-  values (new.id, new.email, new.raw_user_meta_data->>'full_name', 'viewer');
+  values (new.id, new.email, coalesce(nullif(new.raw_user_meta_data->>'full_name',''), 'Yatish Jain'), 'viewer');
   return new;
 end;
 $$ language plpgsql security definer;
@@ -336,6 +336,27 @@ where full_name is null or btrim(full_name) = '';
 
 alter table public.profiles
   alter column full_name set default 'Yatish Jain';
+
+update public.requisitions r
+set requested_by_name = coalesce(nullif(btrim(p.full_name), ''), 'Yatish Jain')
+from public.profiles p
+where r.requested_by = p.id
+  and (r.requested_by_name is null or btrim(r.requested_by_name) = '' or position('@' in r.requested_by_name) > 0);
+
+update public.requisitions
+set requested_by_name = 'Yatish Jain'
+where requested_by_name is null or btrim(requested_by_name) = '' or position('@' in requested_by_name) > 0;
+
+update public.requisitions r
+set approved_by_name = coalesce(nullif(btrim(p.full_name), ''), 'Yatish Jain')
+from public.profiles p
+where r.approved_by = p.id
+  and (r.approved_by_name is null or btrim(r.approved_by_name) = '' or position('@' in r.approved_by_name) > 0);
+
+update public.requisitions
+set approved_by_name = 'Yatish Jain'
+where approved_by is not null
+  and (approved_by_name is null or btrim(approved_by_name) = '' or position('@' in approved_by_name) > 0);
 
 -- 10. SEED: If you already have users in auth.users, backfill profiles
 -- ------------------------------------------------------------

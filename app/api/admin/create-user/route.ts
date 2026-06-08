@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { email, password, full_name, role, department } = body;
+    const safeFullName = String(full_name ?? "").trim() || "Yatish Jain";
 
     if (!email || !password) {
       return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest) {
       email,
       password,
       email_confirm: true,
-      user_metadata: { full_name },
+      user_metadata: { full_name: safeFullName },
     });
 
     if (createError || !userData.user) {
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
     const { error: profileError } = await adminClient
       .from("profiles")
       .update({
-        full_name: full_name || email,
+        full_name: safeFullName,
         role: role || "viewer",
         department: department || null,
       })
