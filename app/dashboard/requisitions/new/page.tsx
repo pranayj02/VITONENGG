@@ -118,8 +118,7 @@ export default function NewRequisitionPage() {
     const finalNotes = [
       notesText,
       woText ? `WO No.: ${woText}` : "",
-    ].filter(Boolean).join("
-");
+    ].filter(Boolean).join("\n");
 
     const payload = {
       req_number: reqNumber,
