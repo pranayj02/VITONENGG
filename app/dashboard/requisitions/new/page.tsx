@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { createClient } from "@/lib/supabase";
+import { audit } from "@/lib/audit";
 import { getCurrentFY } from "@/lib/fy";
 import type { Item, ReqLineItem } from "@/lib/types";
 import {
@@ -112,6 +113,14 @@ export default function NewRequisitionPage() {
       : { data: null };
     const profileData = profile as any;
 
+    const woText = woNumber.trim();
+    const notesText = notes.trim();
+    const finalNotes = [
+      notesText,
+      woText ? `WO No.: ${woText}` : "",
+    ].filter(Boolean).join("
+");
+
     const payload = {
       req_number: reqNumber,
       fy_label: getCurrentFY(),
@@ -122,13 +131,27 @@ export default function NewRequisitionPage() {
       priority,
       status: "pending",
       line_items: lines.map(({ tempId, ...rest }) => rest),
-      notes: notes.trim() || null,
+      notes: finalNotes || null,
       required_by: requiredBy || null,
-      po_id: woNumber.trim() || null,
+      po_id: null,
     };
 
-    const { error: saveErr } = await supabase.from("requisitions").insert(payload);
+    const { data: insertedReq, error: saveErr } = await supabase.from("requisitions").insert(payload).select("id, req_number").single();
     if (saveErr) { setError(saveErr.message); setSaving(false); return; }
+
+    await audit({
+      action: "mr_requested",
+      entity_type: "requisition",
+      entity_id: (insertedReq as any)?.id,
+      entity_code: (insertedReq as any)?.req_number ?? reqNumber,
+      details: {
+        department: department.trim() || profileData?.department || null,
+        priority,
+        required_by: requiredBy || null,
+        wo_number: woText || null,
+        line_count: lines.length,
+      },
+    });
 
     setSaved(true);
     setSaving(false);
