@@ -242,7 +242,7 @@ const S = StyleSheet.create({
     paddingTop: 6,
   },
   signatureBlock: {
-    width: "33%",
+    width: "50%",
     paddingHorizontal: 8,
   },
   signatureLabel: {
@@ -253,17 +253,6 @@ const S = StyleSheet.create({
     fontSize: 7.5,
     color: "#444444",
     marginTop: 3,
-  },
-
-  // ── Footer ────────────────────────────────────────────────────
-  footer: {
-    marginTop: 18,
-    textAlign: "center",
-    fontSize: 6.5,
-    color: "#888888",
-    borderTopWidth: 0.5,
-    borderTopColor: "#dddddd",
-    paddingTop: 5,
   },
 });
 
@@ -277,7 +266,7 @@ export function GRNPdfDocument({
   vendor: Vendor | null;
 }) {
   const lines = (grn.line_items ?? []) as GRNLineItem[];
-  const grnDate = new Date(grn.created_at).toLocaleDateString("en-IN", {
+  const grnDate = grn.grn_date ?? new Date(grn.created_at).toLocaleDateString("en-IN", {
     day: "2-digit", month: "2-digit", year: "2-digit",
   });
   const poDate = po
@@ -313,14 +302,14 @@ export function GRNPdfDocument({
           </View>
           <View style={S.headerRow}>
             <Text style={S.headerLabel}>Revision No.</Text>
-            <Text style={S.headerValue}>00</Text>
+            <Text style={S.headerValue}>{grn.revision_no ?? "00"}</Text>
             <View style={{ width: "40%" }} />
             <Text style={S.headerLabel}>GRN Date</Text>
             <Text style={S.headerValue}>{grnDate}</Text>
           </View>
           <View style={S.headerRowLast}>
             <Text style={S.headerLabel}>Revision Date</Text>
-            <Text style={S.headerValue}>01/10/2025</Text>
+            <Text style={S.headerValue}>{grn.revision_date ?? "01/10/2025"}</Text>
             <View style={{ width: "40%" }} />
             <Text style={S.headerLabel}>Status</Text>
             <Text style={[S.headerValue, { fontFamily: "Helvetica-Bold" }]}>
@@ -401,8 +390,8 @@ export function GRNPdfDocument({
           <View style={S.sectionRowLast}>
             <Text style={S.sectionLabel}>Inspected By</Text>
             <Text style={S.sectionValue}>{grn.inspected_by_name ?? "—"}</Text>
-            <Text style={S.sectionLabel} />
-            <Text style={S.sectionValueRight} />
+            <Text style={S.sectionLabel}>Approved By</Text>
+            <Text style={[S.sectionValueRight, { fontFamily: "Helvetica-Bold" }]}>Yatish Jain</Text>
           </View>
         </View>
 
@@ -473,19 +462,10 @@ export function GRNPdfDocument({
             <Text style={S.signatureName}>{grn.received_by_name ?? ""}</Text>
           </View>
           <View style={S.signatureBlock}>
-            <Text style={S.signatureLabel}>Inspected By</Text>
-            <Text style={S.signatureName}>{grn.inspected_by_name ?? ""}</Text>
-          </View>
-          <View style={S.signatureBlock}>
             <Text style={S.signatureLabel}>Approved By</Text>
-            <Text style={S.signatureName}>{grn.approved_by_name ?? ""}</Text>
+            <Text style={S.signatureName}>Yatish Jain</Text>
           </View>
         </View>
-
-        {/* ── Footer ── */}
-        <Text style={S.footer}>
-          This is a computer generated Goods Receipt Note and does not require a signature if digitally verified.
-        </Text>
 
       </Page>
     </Document>

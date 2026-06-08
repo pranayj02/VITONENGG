@@ -139,6 +139,9 @@ export interface GRN {
   inspection_notes?: string | null;
   challan_no?: string | null;
   challan_date?: string | null;
+  revision_no?: string | null;
+  revision_date?: string | null;
+  grn_date?: string | null;
   documents?: unknown[] | null;
   created_at: string;
   updated_at?: string | null;

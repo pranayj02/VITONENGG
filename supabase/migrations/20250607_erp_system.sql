@@ -139,6 +139,9 @@ create table if not exists public.grn (
   status text default 'pending' check (status in ('pending','inspected','approved','rejected','partial')),
   challan_no text,
   challan_date text,
+  revision_no text,
+  revision_date text,
+  grn_date text,
   inspection_notes text,
   documents jsonb default '[]',          -- e.g. [{type:'photo',url:'...'}]
   created_at timestamptz default now(),

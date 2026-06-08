@@ -85,6 +85,14 @@ export default function UsersPage() {
     setSavingId(null);
   }
 
+  async function updateProfile(id: string, patch: Partial<UserProfile>) {
+    setSavingId(id);
+    const supabase = createClient();
+    await supabase.from("profiles").update(patch).eq("id", id);
+    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...patch } : u)));
+    setSavingId(null);
+  }
+
   async function handleCreateUser(e: React.FormEvent) {
     e.preventDefault();
     setCreating(true);
@@ -310,13 +318,25 @@ export default function UsersPage() {
                       <div className="w-8 h-8 rounded-lg bg-viton-red/10 dark:bg-orange-500/10 flex items-center justify-center text-viton-red dark:text-orange-400">
                         <User size={14} />
                       </div>
-                      <div>
-                        <p className="text-viton-navy dark:text-white font-medium">{u.full_name ?? "Unnamed"}</p>
-                        <p className="text-[#8892a8] dark:text-gray-500 text-xs">{u.email ?? "No email"}</p>
+                      <div className="flex-1 min-w-0">
+                        <input
+                          value={u.full_name ?? ""}
+                          onChange={(e) => updateProfile(u.id, { full_name: e.target.value })}
+                          placeholder="Full name"
+                          className="w-full bg-transparent border border-transparent hover:border-[#dde1ea] dark:hover:border-gray-700 focus:border-viton-red dark:focus:border-orange-500 focus:bg-white dark:focus:bg-gray-900 rounded px-2 py-1 text-sm text-viton-navy dark:text-white font-medium focus:outline-none transition-all"
+                        />
+                        <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-0.5">{u.email ?? "No email"}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-5 py-3.5 text-[#4a5578] dark:text-gray-400">{u.department ?? "—"}</td>
+                  <td className="px-5 py-3.5">
+                    <input
+                      value={u.department ?? ""}
+                      onChange={(e) => updateProfile(u.id, { department: e.target.value })}
+                      placeholder="Department"
+                      className="w-full bg-transparent border border-transparent hover:border-[#dde1ea] dark:hover:border-gray-700 focus:border-viton-red dark:focus:border-orange-500 focus:bg-white dark:focus:bg-gray-900 rounded px-2 py-1 text-sm text-[#4a5578] dark:text-gray-400 focus:outline-none transition-all"
+                    />
+                  </td>
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-2">
                       <select

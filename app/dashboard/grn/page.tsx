@@ -59,6 +59,11 @@ export default function GRNPage() {
   const [inspectedBy, setInspectedBy] = useState("");
   const [challanNo, setChallanNo] = useState("");
   const [challanDate, setChallanDate] = useState("");
+  const [revisionNo, setRevisionNo] = useState("00");
+  const [revisionDate, setRevisionDate] = useState("01/10/2025");
+  const [grnDate, setGrnDate] = useState(new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "2-digit" }));
+  const [grnNumber, setGrnNumber] = useState("Auto");
+  const [receivedByName, setReceivedByName] = useState("");
 
   const [itemSearch, setItemSearch] = useState("");
   const [itemResults, setItemResults] = useState<Item[]>([]);
@@ -126,6 +131,11 @@ export default function GRNPage() {
     setInspectedBy("");
     setChallanNo("");
     setChallanDate("");
+    setRevisionNo("00");
+    setRevisionDate("01/10/2025");
+    setGrnDate(new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "2-digit" }));
+    setGrnNumber("Auto");
+    setReceivedByName("");
     setError("");
     setItemSearch("");
     setItemResults([]);
@@ -222,7 +232,7 @@ export default function GRNPage() {
       .order("fy_serial", { ascending: false })
       .limit(1);
     const nextSerial = (Number((last as any)?.[0]?.fy_serial) || 0) + 1;
-    const finalGrnNumber = `GRN/${String(nextSerial).padStart(3, "0")}/${fy}`;
+    const finalGrnNumber = grnNumber === "Auto" ? `GRN/${String(nextSerial).padStart(3, "0")}/${fy}` : grnNumber.trim();
     const selectedVendor = vendors.find((v) => v.id === manualVendorId);
 
     const payload = {
@@ -233,7 +243,7 @@ export default function GRNPage() {
       vendor_id: selectedPO?.vendor_id ?? selectedVendor?.id ?? null,
       vendor_name: selectedPO?.vendors?.name ?? selectedVendor?.name ?? (manualVendorName.trim() || null),
       received_by: user?.id ?? null,
-      received_by_name: name,
+      received_by_name: receivedByName.trim() || name,
       inspected_by: null,
       inspected_by_name: inspectedBy.trim() || null,
       line_items: grnLines,
@@ -241,6 +251,9 @@ export default function GRNPage() {
       inspection_notes: inspectionNotes.trim() || null,
       challan_no: challanNo.trim() || null,
       challan_date: challanDate.trim() || null,
+      revision_no: revisionNo.trim() || null,
+      revision_date: revisionDate.trim() || null,
+      grn_date: grnDate.trim() || null,
     };
 
     const { error: saveErr, data } = await supabase.from("grn").insert(payload).select("id").single();
@@ -301,7 +314,6 @@ export default function GRNPage() {
   const displayLines = [...grnLines, ...Array(Math.max(0, MIN_ROWS - grnLines.length)).fill(null)];
 
   const revDate = "01/10/2025";
-  const grnDate = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "2-digit" });
   const fy = getCurrentFY();
 
   return (
@@ -406,17 +418,25 @@ export default function GRNPage() {
                           <div style={{ fontSize:"10pt", fontWeight:"900", marginTop:"6px", letterSpacing:"0.3px" }}>VITON ENGINEERS PVT LTD</div>
                         </td>
                         <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb", whiteSpace:"nowrap", width:"15%" }}>GRN No.</td>
-                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontSize:"8pt", fontWeight:"700", width:"15%" }}>Auto</td>
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontSize:"8pt", fontWeight:"700", width:"15%" }}>
+                          <input value={grnNumber} onChange={(e) => setGrnNumber(e.target.value)} style={{ width:"100%", fontSize:"8pt", border:"none", background:"transparent", outline:"none" }} />
+                        </td>
                       </tr>
                       <tr>
                         <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Revision No.</td>
-                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontSize:"8pt" }}>00</td>
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontSize:"8pt" }}>
+                          <input value={revisionNo} onChange={(e) => setRevisionNo(e.target.value)} style={{ width:"100%", fontSize:"8pt", border:"none", background:"transparent", outline:"none" }} />
+                        </td>
                         <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>GRN Date</td>
-                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontSize:"8pt" }}>{grnDate}</td>
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontSize:"8pt" }}>
+                          <input value={grnDate} onChange={(e) => setGrnDate(e.target.value)} style={{ width:"100%", fontSize:"8pt", border:"none", background:"transparent", outline:"none" }} placeholder="DD/MM/YY" />
+                        </td>
                       </tr>
                       <tr>
                         <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Revision Date</td>
-                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontSize:"8pt" }}>{revDate}</td>
+                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontSize:"8pt" }}>
+                          <input value={revisionDate} onChange={(e) => setRevisionDate(e.target.value)} style={{ width:"100%", fontSize:"8pt", border:"none", background:"transparent", outline:"none" }} placeholder="DD/MM/YYYY" />
+                        </td>
                         <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Status</td>
                         <td style={{ border:"1px solid #000", padding:"4px 6px", fontSize:"8pt", fontWeight:"700" }}>PENDING</td>
                       </tr>
@@ -478,7 +498,7 @@ export default function GRNPage() {
                         </td>
                         <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Received By</td>
                         <td style={{ border:"1px solid #000", padding:"4px 6px", fontSize:"8pt" }}>
-                          <input value={""} readOnly placeholder="Auto-filled from profile" style={{ width:"100%", fontSize:"8pt", border:"none", background:"transparent", outline:"none", color:"#888" }} />
+                          <input value={receivedByName} onChange={(e) => setReceivedByName(e.target.value)} placeholder="Enter name" style={{ width:"100%", fontSize:"8pt", border:"none", background:"transparent", outline:"none" }} />
                         </td>
                       </tr>
                       <tr>
