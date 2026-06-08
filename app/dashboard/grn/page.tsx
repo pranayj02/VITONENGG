@@ -912,10 +912,10 @@ export default function GRNPage() {
 
       {/* GRN list */}
       <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl overflow-hidden">
-        <div className="grid grid-cols-[1fr,140px,140px,120px,44px] px-5 py-3 border-b border-[#dde1ea] dark:border-gray-800 text-[#8892a8] dark:text-gray-500 text-xs font-semibold uppercase tracking-widest">
+        <div className="grid grid-cols-[minmax(0,1.4fr)_120px_150px_130px_56px] px-5 py-3 border-b border-[#dde1ea] dark:border-gray-800 text-[#8892a8] dark:text-gray-500 text-xs font-semibold uppercase tracking-widest">
           <div>GRN / Vendor</div>
-          <div>Items</div>
-          <div>Status</div>
+          <div className="text-center">Items</div>
+          <div className="text-center">Status</div>
           <div className="text-right">Date</div>
           <div />
         </div>
@@ -941,7 +941,7 @@ export default function GRNPage() {
             const isOpen = expanded === g.id;
             return (
               <div key={g.id} className="border-b border-[#dde1ea] dark:border-gray-800 last:border-0">
-                <div className="grid grid-cols-[1fr,140px,140px,120px,44px] px-5 py-4 items-center gap-3">
+                <div className="grid grid-cols-[minmax(0,1.4fr)_120px_150px_130px_56px] px-5 py-4 items-center gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="font-semibold text-viton-navy dark:text-white font-mono text-sm">{g.grn_number}</p>
@@ -952,13 +952,13 @@ export default function GRNPage() {
                     <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-0.5">{g.vendor_name ?? "—"}</p>
                     <p className="text-[#8892a8] dark:text-gray-500 text-[10px] mt-0.5">Received by {g.received_by_name ?? "—"}</p>
                   </div>
-                  <div className="text-sm text-[#4a5578] dark:text-gray-400">{lines.length} items</div>
-                  <div>
-                    <span className={`text-[10px] font-semibold px-2 py-1 rounded-md border ${statusColors[g.status] ?? "bg-gray-50 text-gray-700 dark:bg-gray-500/10 dark:text-gray-400"}`}>
+                  <div className="text-center text-sm text-[#4a5578] dark:text-gray-400 tabular-nums whitespace-nowrap">{lines.length} item{lines.length !== 1 ? "s" : ""}</div>
+                  <div className="flex justify-center">
+                    <span className={`inline-flex min-w-[104px] justify-center text-[10px] font-semibold px-2.5 py-1 rounded-md border ${statusColors[g.status] ?? "bg-gray-50 text-gray-700 dark:bg-gray-500/10 dark:text-gray-400"}`}>
                       {g.status.toUpperCase()}
                     </span>
                   </div>
-                  <div className="text-right text-[#8892a8] dark:text-gray-500 text-xs">
+                  <div className="text-right text-[#8892a8] dark:text-gray-500 text-xs tabular-nums whitespace-nowrap">
                     {new Date(g.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
                   </div>
                   <div className="flex items-center justify-end gap-2">

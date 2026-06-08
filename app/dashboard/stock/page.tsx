@@ -46,6 +46,30 @@ export default function StockPage() {
   const [showItemSearch, setShowItemSearch] = useState(false);
   const itemSearchRef = useRef<HTMLDivElement>(null);
 
+  function sortStockRows(rows: StockSummary[]) {
+    return [...rows].sort((a, b) => {
+      const catA = (a.category?.trim() || "Uncategorized").toLowerCase();
+      const catB = (b.category?.trim() || "Uncategorized").toLowerCase();
+
+      const categoryCompare = catA.localeCompare(catB, undefined, {
+        sensitivity: "base",
+        numeric: true,
+      });
+      if (categoryCompare !== 0) return categoryCompare;
+
+      const nameCompare = (a.name || "").localeCompare(b.name || "", undefined, {
+        sensitivity: "base",
+        numeric: true,
+      });
+      if (nameCompare !== 0) return nameCompare;
+
+      return (a.serial_id || "").localeCompare(b.serial_id || "", undefined, {
+        sensitivity: "base",
+        numeric: true,
+      });
+    });
+  }
+
   async function load() {
     setLoading(true);
     const supabase = createClient();
@@ -53,7 +77,7 @@ export default function StockPage() {
     const { data, error } = await supabase.rpc("get_stock_summary");
     if (error) {
       // Fallback if RPC not available yet
-      const { data: items } = await supabase.from("items").select("id, serial_id, name, category, unit").order("serial_id");
+      const { data: items } = await supabase.from("items").select("id, serial_id, name, category, unit").order("category", { ascending: true }).order("name", { ascending: true }).order("serial_id", { ascending: true });
       const { data: ledgerData } = await supabase.from("stock_ledger").select("*").order("created_at", { ascending: true });
       const lRows = (ledgerData ?? []) as unknown as StockLedgerEntry[];
       const balances = new Map<string, number>();
@@ -70,12 +94,14 @@ export default function StockPage() {
         total_out: 0,
         balance: balances.get(i.id) ?? 0,
       }));
-      setStock(rows);
-      setFiltered(rows);
+      const sortedRows = sortStockRows(rows);
+      setStock(sortedRows);
+      setFiltered(sortedRows);
     } else {
       const rows = (data ?? []) as unknown as StockSummary[];
-      setStock(rows);
-      setFiltered(rows);
+      const sortedRows = sortStockRows(rows);
+      setStock(sortedRows);
+      setFiltered(sortedRows);
     }
     setLoading(false);
   }
@@ -83,9 +109,20 @@ export default function StockPage() {
   useEffect(() => { load(); }, []);
 
   useEffect(() => {
-    if (!search.trim()) { setFiltered(stock); return; }
+    if (!search.trim()) {
+      setFiltered(sortStockRows(stock));
+      return;
+    }
     const q = search.toLowerCase();
-    setFiltered(stock.filter((s) => s.serial_id.toLowerCase().includes(q) || s.name.toLowerCase().includes(q) || (s.category ?? "").toLowerCase().includes(q)));
+    setFiltered(
+      sortStockRows(
+        stock.filter((s) =>
+          s.serial_id.toLowerCase().includes(q) ||
+          s.name.toLowerCase().includes(q) ||
+          (s.category ?? "").toLowerCase().includes(q)
+        )
+      )
+    );
   }, [search, stock]);
 
   // Item search for adjustment modal
