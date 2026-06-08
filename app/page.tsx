@@ -69,16 +69,6 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="rounded-3xl border border-[#dde1ea] bg-white/85 p-5 shadow-sm dark:border-white/10 dark:bg-white/5">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#8892a8] dark:text-gray-500">Fast access</p>
-                  <p className="mt-3 text-sm font-medium text-viton-navy dark:text-white">Built for daily ERP workflows</p>
-                </div>
-                <div className="rounded-3xl border border-[#dde1ea] bg-white/85 p-5 shadow-sm dark:border-white/10 dark:bg-white/5">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#8892a8] dark:text-gray-500">Internal only</p>
-                  <p className="mt-3 text-sm font-medium text-viton-navy dark:text-white">Secure access for authorized teams</p>
-                </div>
-              </div>
             </section>
 
             <section className="relative flex min-h-[100svh] items-center justify-center px-5 py-8 sm:px-8 lg:min-h-[720px] lg:px-10 xl:px-14">
