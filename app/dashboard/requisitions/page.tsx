@@ -57,6 +57,7 @@ export default function RequisitionsPage() {
   const [actionType, setActionType] = useState<"approve" | "reject" | "convert" | "fulfil" | "raise_po">("approve");
   const [stockMap, setStockMap] = useState<Record<string, number>>({});
   const [actionNote, setActionNote] = useState("");
+  const [actionError, setActionError] = useState<string>("");
   const [acting, setActing] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -108,6 +109,7 @@ export default function RequisitionsPage() {
 
   async function handleAction() {
     if (!actionId) return;
+    setActionError("");
     setActing(true);
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -163,8 +165,9 @@ export default function RequisitionsPage() {
     await load();
   }
 
-
   async function handleFulfil(req: ReqWithUser) {
+    setActionError("");
+    setActing(true);
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     const { data: profile } = user
@@ -173,46 +176,67 @@ export default function RequisitionsPage() {
     const actor = (profile as any)?.full_name?.trim() || "Yatish Jain";
     const lines = (req.line_items ?? []) as ReqLineItem[];
 
-    // Insert stock-out ledger rows for each line
-    for (const line of lines) {
-      const { data: lastLedger } = await supabase
-        .from("stock_ledger")
-        .select("balance")
-        .eq("item_id", line.item_id)
-        .order("created_at", { ascending: false })
-        .limit(1);
-      const curBalance = Number((lastLedger as any)?.[0]?.balance ?? 0);
-      await supabase.from("stock_ledger").insert({
-        item_id: line.item_id,
-        transaction_type: "mr_issue_out",
-        reference_type: "requisition",
-        reference_id: req.id,
-        reference_code: req.req_number,
-        qty_in: 0,
-        qty_out: Number(line.qty_requested),
-        balance: curBalance - Number(line.qty_requested),
-        unit: line.unit,
-        notes: `Issued to ${req.req_number}`,
-        created_by: user?.id ?? null,
-        created_by_name: actor,
+    try {
+      for (const line of lines) {
+        const requestedQty = Number(line.qty_requested ?? 0);
+        if (requestedQty <= 0) continue;
+
+        const { data: lastLedger, error: lastLedgerErr } = await supabase
+          .from("stock_ledger")
+          .select("balance")
+          .eq("item_id", line.item_id)
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+        if (lastLedgerErr) throw lastLedgerErr;
+
+        const curBalance = Number((lastLedger as any)?.[0]?.balance ?? 0);
+        if (curBalance < requestedQty) {
+          throw new Error(`Insufficient stock for ${line.name}. Available: ${curBalance}, required: ${requestedQty}.`);
+        }
+
+        const { error: insertErr } = await supabase.from("stock_ledger").insert({
+          item_id: line.item_id,
+          transaction_type: "mr_issue_out",
+          reference_type: "requisition",
+          reference_id: req.id,
+          reference_code: req.req_number,
+          qty_in: 0,
+          qty_out: requestedQty,
+          balance: curBalance - requestedQty,
+          unit: line.unit,
+          notes: `Issued to ${req.req_number}`,
+          created_by: user?.id ?? null,
+          created_by_name: actor,
+        });
+
+        if (insertErr) throw insertErr;
+      }
+
+      const { error: reqErr } = await supabase
+        .from("requisitions")
+        .update({ status: "fulfilled" })
+        .eq("id", req.id);
+      if (reqErr) throw reqErr;
+
+      const { error: auditErr } = await supabase.from("activity_logs").insert({
+        user_id: user?.id ?? null,
+        user_name: actor,
+        action: "requisition_fulfilled_from_stock",
+        entity_type: "requisition",
+        entity_id: req.id,
+        entity_code: req.req_number,
+        details: { items: lines.map((l) => ({ name: l.name, qty: l.qty_requested })) },
       });
+      if (auditErr) throw auditErr;
+
+      await load();
+    } catch (err: any) {
+      setActionError(err?.message || "Could not fulfil MR from stock.");
+      return;
+    } finally {
+      setActing(false);
     }
-
-    // Mark MR as fulfilled
-    await supabase.from("requisitions").update({ status: "fulfilled" }).eq("id", req.id);
-
-    // Audit
-    await supabase.from("activity_logs").insert({
-      user_id: user?.id ?? null,
-      user_name: actor,
-      action: "requisition_fulfilled_from_stock",
-      entity_type: "requisition",
-      entity_id: req.id,
-      entity_code: req.req_number,
-      details: { items: lines.map((l) => ({ name: l.name, qty: l.qty_requested })) },
-    });
-
-    await load();
   }
 
   async function handleDelete() {
@@ -337,7 +361,7 @@ export default function RequisitionsPage() {
 
             <div className="flex gap-3">
               <button
-                onClick={() => { setActionId(null); setActionNote(""); }}
+                onClick={() => { setActionId(null); setActionNote(""); setActionError(""); }}
                 className="flex-1 bg-[#f1f3f8] hover:bg-[#e7ebf3] dark:bg-gray-800 dark:hover:bg-gray-700 text-[#4a5578] dark:text-gray-300 font-semibold py-3 rounded-xl text-sm"
               >
                 Cancel
@@ -355,6 +379,12 @@ export default function RequisitionsPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {actionError && (
+        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-400">
+          {actionError}
         </div>
       )}
 
