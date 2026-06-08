@@ -103,6 +103,9 @@ function buildNavSections(role: UserRole | null): NavSection[] {
 
 function isRouteActive(pathname: string, href: string) {
   if (href === "/dashboard") return pathname === "/dashboard";
+  if (href === "/dashboard/requisitions") {
+    return pathname === "/dashboard/requisitions";
+  }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 

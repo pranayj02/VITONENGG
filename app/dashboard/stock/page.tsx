@@ -391,31 +391,6 @@ export default function StockPage() {
         </div>
       )}
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-        {[
-          { label: "Total Items", value: stock.length, icon: Package, accent: "blue" },
-          { label: "In Stock", value: stock.filter((s) => s.balance > 0).length, icon: TrendingUp, accent: "green" },
-          { label: "Low Stock (< 5)", value: stock.filter((s) => s.balance > 0 && s.balance < 5).length, icon: AlertTriangle, accent: "orange" },
-        ].map((card) => {
-          const Icon = card.icon;
-          return (
-            <div key={card.label} className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl p-5">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${
-                card.accent === "blue" ? "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400" :
-                card.accent === "green" ? "bg-green-50 text-green-600 dark:bg-green-500/10 dark:text-green-400" :
-                card.accent === "red" ? "bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400" :
-                "bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400"
-              }`}>
-                <Icon size={20} />
-              </div>
-              <p className="text-viton-navy dark:text-white text-2xl font-bold tabular-nums">{card.value}</p>
-              <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-1">{card.label}</p>
-            </div>
-          );
-        })}
-      </div>
-
       {/* Search */}
       <div className="relative mb-6">
         <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8892a8] dark:text-gray-500" />
