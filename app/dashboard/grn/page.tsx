@@ -398,11 +398,12 @@ export default function GRNPage() {
     const supabase = createClient();
     const rejectedGrns = grns.filter((g) => g.status === "rejected");
     let removed = 0;
+    let adjusted = 0;
 
     for (const g of rejectedGrns) {
       const { data: existing, error: existingErr } = await supabase
         .from("stock_ledger")
-        .select("id")
+        .select("id, item_id, qty_in, qty_out, unit")
         .eq("reference_type", "grn")
         .eq("reference_id", g.id);
 
@@ -411,8 +412,44 @@ export default function GRNPage() {
         return;
       }
 
-      const count = (existing ?? []).length;
-      if (count === 0) continue;
+      const entries = (existing ?? []) as any[];
+      if (entries.length === 0) continue;
+
+      for (const entry of entries) {
+        const { data: lastLedger, error: balanceErr } = await supabase
+          .from("stock_ledger")
+          .select("balance")
+          .eq("item_id", entry.item_id)
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+        if (balanceErr) {
+          setError(balanceErr.message);
+          return;
+        }
+
+        const baseBalance = Number((lastLedger as any)?.[0]?.balance ?? 0);
+        const reverseQty = Number(entry.qty_in ?? 0) - Number(entry.qty_out ?? 0);
+        if (reverseQty > 0) {
+          const { error: reverseErr } = await supabase.from("stock_ledger").insert({
+            item_id: entry.item_id,
+            transaction_type: "adjustment_out",
+            reference_type: "manual",
+            reference_code: `REJECT-CLEAN-${g.grn_number}`,
+            qty_in: 0,
+            qty_out: reverseQty,
+            balance: Math.max(0, baseBalance - reverseQty),
+            unit: entry.unit,
+            notes: `Auto reversal for rejected GRN ${g.grn_number}`,
+          });
+
+          if (reverseErr) {
+            setError(reverseErr.message);
+            return;
+          }
+          adjusted += 1;
+        }
+      }
 
       const { error: deleteErr } = await supabase
         .from("stock_ledger")
@@ -425,11 +462,11 @@ export default function GRNPage() {
         return;
       }
 
-      removed += count;
+      removed += entries.length;
     }
 
     await load();
-    alert(removed > 0 ? `Cleanup complete. Removed ${removed} stale stock ledger entr${removed === 1 ? "y" : "ies"} from rejected GRNs.` : "Cleanup complete. No stale stock ledger entries were found for rejected GRNs.");
+    alert(removed > 0 ? `Cleanup complete. Removed ${removed} rejected GRN entr${removed === 1 ? "y" : "ies"} and added ${adjusted} reversal adjustment${adjusted === 1 ? "" : "s"}.` : "Cleanup complete. No stale stock ledger entries were found for rejected GRNs.");
   }
 
   const MIN_ROWS = 10;
