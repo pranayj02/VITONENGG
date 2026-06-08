@@ -393,6 +393,45 @@ export default function GRNPage() {
   const canInspect = role && can(role, "inspect_grn");
   const canApprove = role && can(role, "approve_grn");
 
+  async function cleanupRejectedGRNStock() {
+    setError("");
+    const supabase = createClient();
+    const rejectedGrns = grns.filter((g) => g.status === "rejected");
+    let removed = 0;
+
+    for (const g of rejectedGrns) {
+      const { data: existing, error: existingErr } = await supabase
+        .from("stock_ledger")
+        .select("id")
+        .eq("reference_type", "grn")
+        .eq("reference_id", g.id);
+
+      if (existingErr) {
+        setError(existingErr.message);
+        return;
+      }
+
+      const count = (existing ?? []).length;
+      if (count === 0) continue;
+
+      const { error: deleteErr } = await supabase
+        .from("stock_ledger")
+        .delete()
+        .eq("reference_type", "grn")
+        .eq("reference_id", g.id);
+
+      if (deleteErr) {
+        setError(deleteErr.message);
+        return;
+      }
+
+      removed += count;
+    }
+
+    await load();
+    alert(removed > 0 ? `Cleanup complete. Removed ${removed} stale stock ledger entr${removed === 1 ? "y" : "ies"} from rejected GRNs.` : "Cleanup complete. No stale stock ledger entries were found for rejected GRNs.");
+  }
+
   const MIN_ROWS = 10;
   const displayLines = [...grnLines, ...Array(Math.max(0, MIN_ROWS - grnLines.length)).fill(null)];
 
@@ -408,14 +447,24 @@ export default function GRNPage() {
             Receive against PO, or record direct receipts. Inspect and update stock.
           </p>
         </div>
-        {canCreate && (
-          <button
-            onClick={openCreate}
-            className="flex items-center gap-2 bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-all"
-          >
-            <Plus size={16} /> New GRN
-          </button>
-        )}
+        <div className="flex items-center gap-3 flex-wrap">
+          {(canInspect || canApprove) && (
+            <button
+              onClick={cleanupRejectedGRNStock}
+              className="flex items-center gap-2 bg-[#f1f3f8] hover:bg-[#e8eaf2] dark:bg-gray-800 dark:hover:bg-gray-700 text-[#4a5578] dark:text-gray-200 text-sm font-semibold px-4 py-2.5 rounded-xl transition-all border border-[#dde1ea] dark:border-gray-700"
+            >
+              <Trash2 size={16} /> Clean Rejected Stock
+            </button>
+          )}
+          {canCreate && (
+            <button
+              onClick={openCreate}
+              className="flex items-center gap-2 bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-all"
+            >
+              <Plus size={16} /> New GRN
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Create Modal */}

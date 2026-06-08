@@ -202,6 +202,11 @@ create policy "Store keeper or admin can insert stock ledger"
     exists (select 1 from public.profiles where id = auth.uid() and role in ('admin','store_keeper','purchase_manager'))
   );
 
+create policy "Store keeper or admin can delete stock ledger"
+  on public.stock_ledger for delete using (
+    exists (select 1 from public.profiles where id = auth.uid() and role in ('admin','store_keeper','purchase_manager'))
+  );
+
 
 -- 6. TRIGGER: Auto-log PO changes to activity_logs
 -- ------------------------------------------------------------
