@@ -263,29 +263,44 @@ export default function DashboardPage() {
       </div>
 
       {/* Quick Actions */}
-      <h2 className="text-[#8892a8] dark:text-gray-400 text-xs font-semibold uppercase tracking-widest mb-4">
-        Quick Actions
-      </h2>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {quickActions.map((action) => {
-          const Icon = action.icon;
-          return (
-            <Link href={action.href} key={action.label}>
-              <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl p-6 hover:border-[#c0c8db] dark:hover:border-orange-500/40 hover:shadow-md dark:hover:shadow-none transition-all cursor-pointer">
-                <div className={`w-11 h-11 rounded-xl flex items-center justify-center mb-4 ${action.bg}`}>
-                  <Icon size={22} className="text-white" />
+      <section className="mb-10">
+        <div className="mb-4">
+          <p className="text-[#8892a8] dark:text-gray-400 text-xs font-semibold uppercase tracking-widest mb-1">
+            Quick Actions
+          </p>
+          <h2 className="text-viton-navy dark:text-white text-xl font-semibold tracking-tight">
+            Start a new workflow
+          </h2>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {quickActions.map((action) => {
+            const Icon = action.icon;
+            return (
+              <Link href={action.href} key={action.label}>
+                <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl p-6 hover:border-[#c0c8db] dark:hover:border-orange-500/40 hover:shadow-md dark:hover:shadow-none transition-all cursor-pointer h-full">
+                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center mb-4 ${action.bg}`}>
+                    <Icon size={22} className="text-white" />
+                  </div>
+                  <p className="text-viton-navy dark:text-white font-semibold text-sm">{action.label}</p>
+                  <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-1">{action.desc}</p>
                 </div>
-                <p className="text-viton-navy dark:text-white font-semibold text-sm">{action.label}</p>
-                <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-1">{action.desc}</p>
-              </div>
-            </Link>
-          );
-        })}
-      </div>
-
+              </Link>
+            );
+          })}
+        </div>
+      </section>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <section className="mb-10">
+        <div className="mb-4">
+          <p className="text-[#8892a8] dark:text-gray-400 text-xs font-semibold uppercase tracking-widest mb-1">
+            Overview
+          </p>
+          <h2 className="text-viton-navy dark:text-white text-xl font-semibold tracking-tight">
+            Core ERP snapshot
+          </h2>
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((card) => {
           const Icon = card.icon;
           return (
@@ -306,7 +321,8 @@ export default function DashboardPage() {
             </Link>
           );
         })}
-      </div>
+        </div>
+      </section>
 
       {/* PO Insights */}
       {canAccessPO && (
@@ -415,7 +431,16 @@ export default function DashboardPage() {
       )}
 
       {/* ERP Widgets */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-10">
+      <section className="mb-10">
+        <div className="mb-4">
+          <p className="text-[#8892a8] dark:text-gray-400 text-xs font-semibold uppercase tracking-widest mb-1">
+            Operations
+          </p>
+          <h2 className="text-viton-navy dark:text-white text-xl font-semibold tracking-tight">
+            Live workflow status
+          </h2>
+        </div>
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         {/* Pending Requisitions */}
         <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl p-5">
           <div className="flex items-center justify-between mb-4">
@@ -538,7 +563,8 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
-      </div>
+        </div>
+      </section>
 
       <style jsx>{`
         .wave {
