@@ -172,7 +172,8 @@ export default function DashboardPage() {
   const [activityLoading, setActivityLoading] = useState(true);
   const [stockAlerts, setStockAlerts] = useState<StockSummary[]>([]);
   const [stockAlertsLoading, setStockAlertsLoading] = useState(true);
-  const [userName, setUserName] = useState("Yatish Jain");
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [userName, setUserName] = useState("");
 
   const { text: greetingText, Icon: GreetingIcon } = getGreeting();
   const { role } = useRole();
@@ -180,43 +181,92 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function load() {
+      setInitialLoading(true);
       const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle();
-        setUserName((profile as any)?.full_name?.trim() || "Yatish Jain");
-      }
-      const [a, b, c, d, poRowsResponse, reqRes, activityRes] = await Promise.all([
-        supabase.from("items").select("id", { count: "exact", head: true }),
-        supabase.from("vendors").select("id", { count: "exact", head: true }),
-        supabase.from("purchase_orders").select("id", { count: "exact", head: true }),
-        supabase.from("invoices").select("id", { count: "exact", head: true }),
-        supabase.from("purchase_orders").select("*"),
-        supabase.from("requisitions").select("*").in("status", ["pending", "under_review"]).order("created_at", { ascending: false }).limit(5),
-        supabase.from("activity_logs").select("*").order("created_at", { ascending: false }).limit(6),
-      ]);
-      setStats({ items: a.count ?? 0, vendors: b.count ?? 0, pos: c.count ?? 0, invoices: d.count ?? 0 });
-      setStatsLoading(false);
-      const poRows = poRowsResponse.data ?? [];
-      setPoYearInsights(buildPOYearInsights(poRows));
-      setPoYearLoading(false);
-
-      setPendingReqs((reqRes.data ?? []) as unknown as Requisition[]);
-      setPendingReqsLoading(false);
-      setRecentActivity((activityRes.data ?? []) as unknown as ActivityLog[]);
-      setActivityLoading(false);
-
       try {
-        const { data: stockData } = await supabase.rpc("get_stock_summary");
-        const stockRows = (stockData ?? []) as unknown as StockSummary[];
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle();
+          setUserName((profile as any)?.full_name?.trim() || "");
+        } else {
+          setUserName("");
+        }
+
+        const [a, b, c, d, poRowsResponse, reqRes, activityRes, stockRpc] = await Promise.all([
+          supabase.from("items").select("id", { count: "exact", head: true }),
+          supabase.from("vendors").select("id", { count: "exact", head: true }),
+          supabase.from("purchase_orders").select("id", { count: "exact", head: true }),
+          supabase.from("invoices").select("id", { count: "exact", head: true }),
+          supabase.from("purchase_orders").select("*"),
+          supabase.from("requisitions").select("*").in("status", ["pending", "under_review"]).order("created_at", { ascending: false }).limit(5),
+          supabase.from("activity_logs").select("*").order("created_at", { ascending: false }).limit(6),
+          supabase.rpc("get_stock_summary"),
+        ]);
+
+        setStats({ items: a.count ?? 0, vendors: b.count ?? 0, pos: c.count ?? 0, invoices: d.count ?? 0 });
+        setStatsLoading(false);
+
+        const poRows = poRowsResponse.data ?? [];
+        setPoYearInsights(buildPOYearInsights(poRows));
+        setPoYearLoading(false);
+
+        setPendingReqs((reqRes.data ?? []) as unknown as Requisition[]);
+        setPendingReqsLoading(false);
+        setRecentActivity((activityRes.data ?? []) as unknown as ActivityLog[]);
+        setActivityLoading(false);
+
+        const stockRows = ((stockRpc.data ?? []) as unknown as StockSummary[]);
         setStockAlerts(stockRows.filter((s: StockSummary) => s.balance >= 0 && s.balance < 5));
+        setStockAlertsLoading(false);
       } catch {
         setStockAlerts([]);
+        setStockAlertsLoading(false);
+        setStatsLoading(false);
+        setPoYearLoading(false);
+        setPendingReqsLoading(false);
+        setActivityLoading(false);
+      } finally {
+        setInitialLoading(false);
       }
-      setStockAlertsLoading(false);
     }
     load();
   }, []);
+
+  if (initialLoading) {
+    return (
+      <div className="min-h-[calc(100vh-96px)] flex items-center justify-center px-6">
+        <div className="w-full max-w-md mx-auto">
+          <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-3xl shadow-sm px-8 py-10 flex flex-col items-center text-center">
+            <div className="relative mb-6">
+              <div className="absolute inset-0 rounded-2xl bg-viton-red/10 dark:bg-orange-500/10 blur-xl animate-pulse" />
+              <div className="relative w-20 h-20 rounded-2xl bg-white dark:bg-gray-950 border border-[#dde1ea] dark:border-gray-800 flex items-center justify-center shadow-sm overflow-hidden">
+                <img src="/Logo.JPG" alt="Viton Engineers" className="w-12 h-12 object-contain" />
+              </div>
+            </div>
+            <div className="flex items-center gap-2 text-viton-red dark:text-orange-400 mb-3">
+              <div className="w-2 h-2 rounded-full bg-current animate-pulse" />
+              <span className="text-xs font-semibold uppercase tracking-[0.24em]">Loading workspace</span>
+            </div>
+            <h2 className="text-viton-navy dark:text-white text-xl font-semibold tracking-tight mb-2">Preparing your dashboard</h2>
+            <p className="text-[#8892a8] dark:text-gray-500 text-sm max-w-xs mb-6">
+              Loading your ERP snapshot, activity feed, approvals, and stock alerts.
+            </p>
+            <div className="w-full space-y-3">
+              <div className="h-3 rounded-full bg-[#eef1f6] dark:bg-gray-800 overflow-hidden">
+                <div className="h-full w-1/2 rounded-full bg-viton-red/70 dark:bg-orange-500/70 animate-[pulse_1.2s_ease-in-out_infinite]" />
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="h-20 rounded-2xl bg-[#f6f8fc] dark:bg-gray-800/80 animate-pulse" />
+                <div className="h-20 rounded-2xl bg-[#f6f8fc] dark:bg-gray-800/80 animate-pulse [animation-delay:120ms]" />
+                <div className="h-20 rounded-2xl bg-[#f6f8fc] dark:bg-gray-800/80 animate-pulse [animation-delay:240ms]" />
+              </div>
+              <div className="h-24 rounded-2xl bg-[#f6f8fc] dark:bg-gray-800/80 animate-pulse [animation-delay:180ms]" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const statCards = [
     { label: "Items in Catalog", value: stats.items, icon: Package, href: "/dashboard/catalog", accent: "orange" },
