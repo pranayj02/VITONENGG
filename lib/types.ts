@@ -89,7 +89,7 @@ export interface Requisition {
   requested_by_name?: string | null;
   department?: string | null;
   priority: "low" | "normal" | "high" | "urgent";
-  status: "pending" | "under_review" | "approved" | "rejected" | "converted_to_po" | "partially_fulfilled";
+  status: "pending" | "under_review" | "approved" | "rejected" | "converted_to_po" | "partially_fulfilled" | "fulfilled" | "awaiting_procurement";
   line_items: ReqLineItem[];
   notes?: string | null;
   required_by?: string | null;

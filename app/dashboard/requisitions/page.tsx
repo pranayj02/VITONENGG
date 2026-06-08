@@ -409,7 +409,7 @@ export default function RequisitionsPage() {
 
                   <div className="flex items-center gap-3 ml-4 flex-shrink-0">
                     <span className={`text-xs font-semibold px-2.5 py-1 rounded-lg capitalize ${statusColors[req.status] ?? "bg-gray-100 text-gray-600"}`}>
-                      {req.status === "converted_to_po" ? "PO Raised" : req.status === "fulfilled" ? "Fulfilled ✓" : req.status.replace(/_/g, " ")}
+                      {(req.status as string) === "converted_to_po" ? "PO Raised" : (req.status as string) === "fulfilled" ? "Fulfilled ✓" : req.status.replace(/_/g, " ")}
                     </span>
                     {isOpen ? <ChevronUp size={16} className="text-[#8892a8] dark:text-gray-500" /> : <ChevronDown size={16} className="text-[#8892a8] dark:text-gray-500" />}
                   </div>
