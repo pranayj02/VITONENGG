@@ -16,6 +16,7 @@ import {
   EyeOff,
   Trash2,
   AlertTriangle,
+  Pencil,
 } from "lucide-react";
 
 interface UserProfile {
@@ -26,6 +27,18 @@ interface UserProfile {
   department: string | null;
   is_active: boolean;
   created_at: string;
+}
+
+interface ProfileDraft {
+  full_name: string;
+  department: string;
+}
+
+function toProfileDraft(user: UserProfile): ProfileDraft {
+  return {
+    full_name: (user.full_name ?? "").trim() || "Yatish Jain",
+    department: user.department ?? "",
+  };
 }
 
 function getAdminCount(rows: UserProfile[]) {
@@ -55,6 +68,8 @@ export default function UsersPage() {
   const [createError, setCreateError] = useState("");
   const [createSuccess, setCreateSuccess] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [profileDraft, setProfileDraft] = useState<ProfileDraft>({ full_name: "Yatish Jain", department: "" });
 
   async function load() {
     setLoading(true);
@@ -103,13 +118,33 @@ export default function UsersPage() {
     setSavingId(null);
   }
 
-  async function updateProfile(id: string, patch: Partial<UserProfile>) {
+  function startEditing(user: UserProfile) {
+    setDeleteError("");
+    setEditingId(user.id);
+    setProfileDraft(toProfileDraft(user));
+  }
+
+  function cancelEditing() {
+    setEditingId(null);
+    setProfileDraft({ full_name: "Yatish Jain", department: "" });
+  }
+
+  async function saveProfile(id: string) {
+    setDeleteError("");
     setSavingId(id);
     const supabase = createClient();
-    const nextPatch = { ...patch } as any;
-    if (Object.prototype.hasOwnProperty.call(nextPatch, "full_name")) nextPatch.full_name = String(nextPatch.full_name ?? "").trim() || "Yatish Jain";
-    await supabase.from("profiles").update(nextPatch).eq("id", id);
-    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...patch } : u)));
+    const nextPatch = {
+      full_name: profileDraft.full_name.trim() || "Yatish Jain",
+      department: profileDraft.department.trim() || null,
+    };
+    const { error } = await supabase.from("profiles").update(nextPatch).eq("id", id);
+    if (!error) {
+      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...nextPatch } : u)));
+      setEditingId(null);
+      setProfileDraft({ full_name: "Yatish Jain", department: "" });
+    } else {
+      setDeleteError(error.message);
+    }
     setSavingId(null);
   }
 
@@ -380,7 +415,9 @@ export default function UsersPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((u) => (
+              {filtered.map((u) => {
+                const isEditing = editingId === u.id;
+                return (
                 <tr key={u.id} className="border-b border-[#eef1f6] dark:border-gray-800/50 hover:bg-[#f7f8fb] dark:hover:bg-gray-800/40 transition-colors">
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-3">
@@ -388,30 +425,38 @@ export default function UsersPage() {
                         <User size={14} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <input
-                          value={u.full_name?.trim() || "Yatish Jain"}
-                          onChange={(e) => updateProfile(u.id, { full_name: e.target.value })}
-                          placeholder="Full name"
-                          className="w-full bg-transparent border border-transparent hover:border-[#dde1ea] dark:hover:border-gray-700 focus:border-viton-red dark:focus:border-orange-500 focus:bg-white dark:focus:bg-gray-900 rounded px-2 py-1 text-sm text-viton-navy dark:text-white font-medium focus:outline-none transition-all"
-                        />
+                        {isEditing ? (
+                          <input
+                            value={profileDraft.full_name}
+                            onChange={(e) => setProfileDraft((prev) => ({ ...prev, full_name: e.target.value }))}
+                            placeholder="Full name"
+                            className="w-full bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-700 focus:border-viton-red dark:focus:border-orange-500 rounded px-2 py-1 text-sm text-viton-navy dark:text-white font-medium focus:outline-none transition-all"
+                          />
+                        ) : (
+                          <p className="text-sm text-viton-navy dark:text-white font-medium">{u.full_name?.trim() || "Yatish Jain"}</p>
+                        )}
                         <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-0.5">{u.email ?? "No email"}</p>
                       </div>
                     </div>
                   </td>
                   <td className="px-5 py-3.5">
-                    <input
-                      value={u.department ?? ""}
-                      onChange={(e) => updateProfile(u.id, { department: e.target.value })}
-                      placeholder="Department"
-                      className="w-full bg-transparent border border-transparent hover:border-[#dde1ea] dark:hover:border-gray-700 focus:border-viton-red dark:focus:border-orange-500 focus:bg-white dark:focus:bg-gray-900 rounded px-2 py-1 text-sm text-[#4a5578] dark:text-gray-400 focus:outline-none transition-all"
-                    />
+                    {isEditing ? (
+                      <input
+                        value={profileDraft.department}
+                        onChange={(e) => setProfileDraft((prev) => ({ ...prev, department: e.target.value }))}
+                        placeholder="Department"
+                        className="w-full bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-700 focus:border-viton-red dark:focus:border-orange-500 rounded px-2 py-1 text-sm text-[#4a5578] dark:text-gray-400 focus:outline-none transition-all"
+                      />
+                    ) : (
+                      <p className="text-sm text-[#4a5578] dark:text-gray-400">{u.department?.trim() || "Department"}</p>
+                    )}
                   </td>
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-2">
                       <select
                         value={u.role}
                         onChange={(e) => updateRole(u.id, e.target.value as UserRole)}
-                        disabled={savingId === u.id}
+                        disabled={savingId === u.id || isEditing}
                         className="appearance-none bg-[#f1f3f8] dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-lg px-3 py-2 pr-8 text-sm text-viton-navy dark:text-white focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500 cursor-pointer disabled:opacity-50"
                       >
                         {Object.entries(ROLE_LABELS).map(([key, label]) => (
@@ -424,14 +469,49 @@ export default function UsersPage() {
                     </div>
                   </td>
                   <td className="px-5 py-3.5">
-                    {u.role === "admin" && (
-                      <span className="flex items-center gap-1 text-xs font-semibold text-viton-red dark:text-orange-400 bg-red-50 dark:bg-orange-500/10 px-2 py-1 rounded-lg">
-                        <Shield size={10} /> Admin
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2 flex-wrap justify-end lg:justify-start">
+                      {u.role === "admin" && (
+                        <span className="flex items-center gap-1 text-xs font-semibold text-viton-red dark:text-orange-400 bg-red-50 dark:bg-orange-500/10 px-2 py-1 rounded-lg">
+                          <Shield size={10} /> Admin
+                        </span>
+                      )}
+                      {isEditing ? (
+                        <>
+                          <button
+                            onClick={() => saveProfile(u.id)}
+                            disabled={savingId === u.id}
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-viton-red hover:bg-viton-red-hover text-white px-3 py-1.5 text-xs font-semibold disabled:opacity-60"
+                          >
+                            <Save size={12} /> Save
+                          </button>
+                          <button
+                            onClick={cancelEditing}
+                            disabled={savingId === u.id}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-[#dde1ea] dark:border-gray-700 px-3 py-1.5 text-xs font-semibold text-[#4a5578] dark:text-gray-300 disabled:opacity-60"
+                          >
+                            <X size={12} /> Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={() => startEditing(u)}
+                          disabled={editingId !== null || savingId === u.id}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-[#dde1ea] dark:border-gray-700 px-3 py-1.5 text-xs font-semibold text-[#4a5578] dark:text-gray-300 disabled:opacity-60"
+                        >
+                          <Pencil size={12} /> Edit Profile
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleDeleteUser(u)}
+                        disabled={savingId === u.id || isEditing}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 px-3 py-1.5 text-xs font-semibold disabled:opacity-60"
+                      >
+                        <Trash2 size={12} /> Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
         </div>
