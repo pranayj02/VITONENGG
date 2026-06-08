@@ -37,12 +37,13 @@ async function verifyAdmin(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const auth = await verifyAdmin(request);
-    if (auth.error) return NextResponse.json({ error: auth.error }, { status: 401 });
+    if (auth.error || !auth.user) return NextResponse.json({ error: auth.error || "Unauthorized" }, { status: 401 });
+    const adminUser = auth.user;
 
     const body = await request.json();
     const userId = String(body.userId ?? "").trim();
     if (!userId) return NextResponse.json({ error: "userId is required" }, { status: 400 });
-    if (userId === auth.user.id) return NextResponse.json({ error: "You cannot delete your own account." }, { status: 400 });
+    if (userId === adminUser.id) return NextResponse.json({ error: "You cannot delete your own account." }, { status: 400 });
 
     const adminClient = getAdminClient();
     const { data: admins } = await adminClient.from("profiles").select("id, role").eq("role", "admin");
