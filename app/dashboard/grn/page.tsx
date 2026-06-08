@@ -149,7 +149,7 @@ export default function GRNPage() {
 
   function selectPO(po: POWithVendor) {
     setSelectedPO(po);
-    const lines: GRNLineItem[] = (po.line_items ?? []).map((l: LineItem) => ({
+    const lines: GRNLineItem[] = (po.line_items ?? []).map((l: LineItem) => normalizeGRNLine({
       item_id: l.item_id,
       serial_id: l.serial_id,
       name: l.name,
@@ -175,7 +175,7 @@ export default function GRNPage() {
   function addManualItem(item: Item) {
     setGrnLines((prev) => [
       ...prev,
-      {
+      normalizeGRNLine({
         item_id: item.id,
         serial_id: item.serial_id,
         name: item.name,
@@ -188,7 +188,7 @@ export default function GRNPage() {
         challan_weight: 0,
         challan_nos: 1,
         counted_nos: 1,
-      },
+      }),
     ]);
     setItemSearch("");
     setShowItemSearch(false);
@@ -198,7 +198,7 @@ export default function GRNPage() {
     const nextId = `FREE-${Date.now()}`;
     setGrnLines((prev) => [
       ...prev,
-      {
+      normalizeGRNLine({
         item_id: nextId,
         serial_id: "",
         name: "",
@@ -211,7 +211,7 @@ export default function GRNPage() {
         challan_weight: 0,
         challan_nos: 1,
         counted_nos: 1,
-      },
+      }),
     ]);
   }
 
@@ -219,8 +219,31 @@ export default function GRNPage() {
     setGrnLines((prev) => prev.filter((_, i) => i !== index));
   }
 
+  function normalizeGRNLine(line: GRNLineItem, patch: Partial<GRNLineItem> = {}): GRNLineItem {
+    const next = { ...line, ...patch } as GRNLineItem;
+    const received = Math.max(0, Number(next.received_qty ?? line.received_qty ?? 0));
+    const challanNos = Math.max(0, Number(next.challan_nos ?? line.challan_nos ?? received));
+    const countedNos = Math.max(0, Number(next.counted_nos ?? line.counted_nos ?? received));
+    const cappedCounted = Math.min(countedNos, received);
+    const requestedAccepted = Math.max(0, Number(next.accepted_qty ?? line.accepted_qty ?? 0));
+    const cappedAccepted = Math.min(requestedAccepted, cappedCounted);
+    const rejected = Math.max(0, cappedCounted - cappedAccepted);
+
+    return {
+      ...next,
+      received_qty: received,
+      challan_nos: Math.min(challanNos, received),
+      counted_nos: cappedCounted,
+      accepted_qty: cappedAccepted,
+      rejected_qty: rejected,
+    };
+  }
+
   async function handleSaveGRN() {
     if (grnLines.length === 0) { setError("Add at least one item."); return; }
+    const normalizedLines = grnLines.map((line) => normalizeGRNLine(line));
+    const invalidLine = normalizedLines.find((line) => Number(line.accepted_qty ?? 0) + Number(line.rejected_qty ?? 0) !== Number(line.counted_nos ?? line.received_qty ?? 0));
+    if (invalidLine) { setError(`Accepted + Rejected must equal Counted/Received for ${invalidLine.name || invalidLine.serial_id || "the item"}.`); return; }
     setSaving(true); setError("");
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -252,7 +275,7 @@ export default function GRNPage() {
       received_by_name: receivedByName.trim() || name,
       inspected_by: null,
       inspected_by_name: inspectedBy.trim() || null,
-      line_items: grnLines,
+      line_items: normalizedLines,
       status: "pending" as const,
       inspection_notes: inspectionNotes.trim() || null,
       challan_no: challanNo.trim() || null,
@@ -283,15 +306,7 @@ export default function GRNPage() {
     setGrnLines((prev) =>
       prev.map((l, i) => {
         if (i !== index) return l;
-        const next = { ...l, ...patch };
-        if (next.counted_nos !== undefined) {
-          next.accepted_qty = Math.min(next.accepted_qty ?? l.accepted_qty, next.counted_nos);
-          next.rejected_qty = next.counted_nos - next.accepted_qty;
-        }
-        if (next.accepted_qty !== undefined) {
-          next.rejected_qty = (next.counted_nos ?? l.counted_nos ?? l.received_qty) - next.accepted_qty;
-        }
-        return next;
+        return normalizeGRNLine(l, patch);
       })
     );
   }
