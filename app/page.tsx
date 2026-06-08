@@ -55,9 +55,8 @@ export default function LoginPage() {
                   <p className="mb-4 text-xs font-semibold uppercase tracking-[0.26em] text-[#8892a8] dark:text-gray-500">
                     Procurement & Invoice Portal
                   </p>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-viton-red dark:text-orange-400">Vitonengg</p>
                   <h1 className="mt-3 text-4xl font-semibold tracking-tight text-viton-navy dark:text-white xl:text-[3.15rem] xl:leading-[1.02]">Viton Engineers Pvt. Ltd.</h1>
-                  <h2 className="mt-8 text-4xl font-semibold tracking-tight text-viton-navy dark:text-white xl:text-[3.35rem] xl:leading-[1.02]">
+                  <h2 className="mt-6 text-2xl font-medium tracking-tight text-viton-navy/90 dark:text-white/85 xl:text-[2rem] xl:leading-[1.15]">
                     Precision flow control starts here.
                   </h2>
                 </div>
