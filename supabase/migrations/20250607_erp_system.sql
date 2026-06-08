@@ -171,6 +171,11 @@ create policy "Store keeper or admin can update GRN"
     exists (select 1 from public.profiles where id = auth.uid() and role in ('admin','store_keeper','purchase_manager'))
   );
 
+create policy "Store keeper or admin can delete GRN"
+  on public.grn for delete using (
+    exists (select 1 from public.profiles where id = auth.uid() and role in ('admin','store_keeper','purchase_manager'))
+  );
+
 
 -- 5. STOCK LEDGER
 -- Per-item running balance. Source of truth for inventory.

@@ -221,19 +221,21 @@ export default function GRNPage() {
 
   function normalizeGRNLine(line: GRNLineItem, patch: Partial<GRNLineItem> = {}): GRNLineItem {
     const next = { ...line, ...patch } as GRNLineItem;
-    const received = Math.max(0, Number(next.received_qty ?? line.received_qty ?? 0));
-    const challanNos = Math.max(0, Number(next.challan_nos ?? line.challan_nos ?? received));
-    const countedNos = Math.max(0, Number(next.counted_nos ?? line.counted_nos ?? received));
-    const cappedCounted = Math.min(countedNos, received);
+    const rawChallan = Math.max(0, Number(next.challan_nos ?? line.challan_nos ?? line.received_qty ?? 0));
+    const rawCounted = Math.max(0, Number(next.counted_nos ?? line.counted_nos ?? line.received_qty ?? 0));
     const requestedAccepted = Math.max(0, Number(next.accepted_qty ?? line.accepted_qty ?? 0));
-    const cappedAccepted = Math.min(requestedAccepted, cappedCounted);
-    const rejected = Math.max(0, cappedCounted - cappedAccepted);
+    const explicitReceived = next.received_qty !== undefined ? Math.max(0, Number(next.received_qty)) : null;
+    const received = explicitReceived ?? Math.max(Number(line.received_qty ?? 0), rawChallan, rawCounted, requestedAccepted);
+    const challanNos = Math.min(rawChallan, received);
+    const countedNos = Math.min(rawCounted, received);
+    const cappedAccepted = Math.min(requestedAccepted, countedNos);
+    const rejected = Math.max(0, countedNos - cappedAccepted);
 
     return {
       ...next,
       received_qty: received,
-      challan_nos: Math.min(challanNos, received),
-      counted_nos: cappedCounted,
+      challan_nos: challanNos,
+      counted_nos: countedNos,
       accepted_qty: cappedAccepted,
       rejected_qty: rejected,
     };
@@ -407,6 +409,7 @@ export default function GRNPage() {
   const canCreate = role && can(role, "create_grn");
   const canInspect = role && can(role, "inspect_grn");
   const canApprove = role && can(role, "approve_grn");
+  const canDelete = !!role && (can(role, "create_grn") || can(role, "inspect_grn") || can(role, "approve_grn"));
 
   async function cleanupRejectedGRNStock() {
     setError("");
@@ -482,6 +485,36 @@ export default function GRNPage() {
 
     await load();
     alert(removed > 0 ? `Cleanup complete. Removed ${removed} rejected GRN entr${removed === 1 ? "y" : "ies"} and added ${adjusted} reversal adjustment${adjusted === 1 ? "" : "s"}.` : "Cleanup complete. No stale stock ledger entries were found for rejected GRNs.");
+  }
+
+
+  async function deleteGRN(grn: GRN) {
+    if (!confirm(`Delete ${grn.grn_number}? This will also remove any stock ledger entries linked to it.`)) return;
+    setError("");
+    const supabase = createClient();
+
+    const { error: ledgerErr } = await supabase
+      .from("stock_ledger")
+      .delete()
+      .eq("reference_type", "grn")
+      .eq("reference_id", grn.id);
+
+    if (ledgerErr) {
+      setError(ledgerErr.message);
+      return;
+    }
+
+    const { error: deleteErr } = await supabase
+      .from("grn")
+      .delete()
+      .eq("id", grn.id);
+
+    if (deleteErr) {
+      setError(deleteErr.message);
+      return;
+    }
+
+    await load();
   }
 
   const MIN_ROWS = 10;
@@ -991,6 +1024,11 @@ export default function GRNPage() {
                       >
                         <Download size={12} /> Download PDF
                       </PDFDownloadLink>
+                      {canDelete && (
+                        <button onClick={() => deleteGRN(g)} className="bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-700 dark:text-red-400 text-xs font-semibold px-3 py-1.5 rounded-md border border-red-100 dark:border-red-500/20 flex items-center gap-1.5">
+                          <Trash2 size={12} /> Delete GRN
+                        </button>
+                      )}
                     </div>
                   </div>
                 )}
