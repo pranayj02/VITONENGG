@@ -131,11 +131,6 @@ export default function RequisitionsPage() {
     } else if (actionType === "convert") {
       const req = reqs.find((r) => r.id === actionId);
       if (req) {
-        await supabase
-          .from("requisitions")
-          .update({ status: "converted_to_po" })
-          .eq("id", actionId);
-        // Pass req data to PO builder via query params
         const params = new URLSearchParams();
         params.set("from_req", req.id);
         params.set("items", JSON.stringify(req.line_items));
@@ -312,6 +307,9 @@ export default function RequisitionsPage() {
             const date = new Date(req.created_at).toLocaleDateString("en-IN", {
               day: "2-digit", month: "short", year: "numeric",
             });
+            const hasLinkedPo = !!req.po_id;
+            const showCreatePoAgain = req.status === "approved" && !hasLinkedPo;
+            const linkedPoLabel = req.po_id ? `PO linked · ${req.po_id.slice(0, 8)}` : null;
 
             return (
               <div
@@ -386,6 +384,16 @@ export default function RequisitionsPage() {
                               <CheckCircle size={12} /> Approved by {req.approved_by_name} on {req.approved_at ? new Date(req.approved_at).toLocaleDateString("en-IN") : ""}
                             </p>
                           )}
+                          {showCreatePoAgain && (
+                            <p className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                              <AlertCircle size={12} /> Approved but PO not created
+                            </p>
+                          )}
+                          {hasLinkedPo && linkedPoLabel && (
+                            <p className="text-purple-600 dark:text-purple-400 flex items-center gap-1">
+                              <ArrowRightLeft size={12} /> {linkedPoLabel}
+                            </p>
+                          )}
                         </div>
 
                         <div className="flex gap-2 flex-wrap">
@@ -406,12 +414,12 @@ export default function RequisitionsPage() {
                             </>
                           )}
 
-                          {req.status === "approved" && canConvert && (
+                          {showCreatePoAgain && canConvert && (
                             <button
                               onClick={(e) => { e.stopPropagation(); setActionType("convert"); setActionId(req.id); }}
                               className="flex items-center gap-2 bg-purple-50 hover:bg-purple-500 text-purple-700 hover:text-white border border-purple-200 hover:border-purple-500 dark:bg-purple-500/10 dark:hover:bg-purple-500 dark:text-purple-400 dark:border-purple-500/30 font-semibold px-4 py-2 rounded-xl text-sm transition-all"
                             >
-                              <ArrowRightLeft size={14} /> Convert to PO
+                              <ArrowRightLeft size={14} /> Create PO
                             </button>
                           )}
 

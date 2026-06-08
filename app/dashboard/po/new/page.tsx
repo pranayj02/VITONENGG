@@ -601,6 +601,7 @@ export default function NewPOPage() {
     setError("");
 
     const supabase = createClient();
+    const fromReq = searchParams.get("from_req");
 
     const payload = {
       po_number: poNumber,
@@ -651,6 +652,29 @@ export default function NewPOPage() {
       .eq("id", selectedVendorId);
 
     const row = data as unknown as { id: string };
+
+    if (!editId && fromReq && row?.id) {
+      await supabase
+        .from("requisitions")
+        .update({
+          po_id: row.id,
+          status: "converted_to_po",
+        })
+        .eq("id", fromReq)
+        .is("po_id", null);
+
+      await audit({
+        action: "mr_converted_to_po",
+        entity_type: "requisition",
+        entity_id: fromReq,
+        entity_code: poNumber,
+        details: {
+          po_id: row.id,
+          po_number: poNumber,
+        },
+      });
+    }
+
     setSavedPoId(row.id);
     setSaving(false);
   }
