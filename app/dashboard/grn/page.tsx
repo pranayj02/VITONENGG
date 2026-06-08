@@ -262,7 +262,7 @@ export default function GRNPage() {
       grn_date: grnDate.trim() || null,
     };
 
-    const { error: saveErr, data } = await supabase.from("grn").insert(payload).select("id").single();
+    const { error: saveErr } = await supabase.from("grn").insert(payload).select("id").single();
     if (saveErr) { setError(saveErr.message); setSaving(false); return; }
 
     // Save freeform vendor if no vendor_id and vendor_name provided
@@ -272,25 +272,6 @@ export default function GRNPage() {
         address: manualVendorAddress.trim() || null,
         gstin: manualVendorGstin.trim() || null,
       }).select("id").single();
-    }
-
-    for (const line of grnLines) {
-      if (line.accepted_qty > 0) {
-        await supabase.from("stock_ledger").insert({
-          item_id: line.item_id,
-          transaction_type: "grn_in",
-          reference_type: "grn",
-          reference_id: (data as any)?.id ?? null,
-          reference_code: finalGrnNumber,
-          qty_in: line.accepted_qty,
-          qty_out: 0,
-          balance: line.accepted_qty,
-          unit: line.unit,
-          notes: selectedPO ? `Received against PO ${selectedPO.po_number}` : `Direct receipt - ${payload.vendor_name}`,
-          created_by: user?.id ?? null,
-          created_by_name: name,
-        });
-      }
     }
 
     setCreateOpen(false);
@@ -315,9 +296,96 @@ export default function GRNPage() {
     );
   }
 
-  async function updateStatus(id: string, newStatus: string) {
+  async function syncStockForGRN(grnId: string, grnNumber: string, lines: GRNLineItem[], userId: string | null, actorName: string) {
     const supabase = createClient();
-    await supabase.from("grn").update({ status: newStatus }).eq("id", id);
+
+    const { error: deleteErr } = await supabase
+      .from("stock_ledger")
+      .delete()
+      .eq("reference_type", "grn")
+      .eq("reference_id", grnId);
+
+    if (deleteErr) throw deleteErr;
+
+    for (const line of lines) {
+      const acceptedQty = Number(line.accepted_qty ?? 0);
+      if (acceptedQty <= 0) continue;
+
+      const { data: lastLedger, error: balanceErr } = await supabase
+        .from("stock_ledger")
+        .select("balance")
+        .eq("item_id", line.item_id)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (balanceErr) throw balanceErr;
+
+      const baseBalance = Number((lastLedger as any)?.[0]?.balance ?? 0);
+      const { error: insertErr } = await supabase.from("stock_ledger").insert({
+        item_id: line.item_id,
+        transaction_type: "grn_in",
+        reference_type: "grn",
+        reference_id: grnId,
+        reference_code: grnNumber,
+        qty_in: acceptedQty,
+        qty_out: 0,
+        balance: baseBalance + acceptedQty,
+        unit: line.unit,
+        notes: `Stock received via ${grnNumber}`,
+        created_by: userId,
+        created_by_name: actorName,
+      });
+
+      if (insertErr) throw insertErr;
+    }
+  }
+
+
+  async function updateStatus(grn: GRN, newStatus: "inspected" | "approved" | "rejected" | "partial") {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data: profile } = user
+      ? await supabase.from("profiles").select("full_name").eq("id", user.id).single()
+      : { data: null };
+    const actorName = (profile as any)?.full_name ?? user?.email ?? "Unknown";
+
+    let nextLines = [ ...((grn.line_items ?? []) as GRNLineItem[]) ];
+
+    if (newStatus === "rejected") {
+      nextLines = nextLines.map((line) => {
+        const counted = Number(line.counted_nos ?? line.received_qty ?? 0);
+        return {
+          ...line,
+          accepted_qty: 0,
+          rejected_qty: counted,
+          rejection_reason: line.rejection_reason || "Rejected",
+        };
+      });
+    }
+
+    const { error: updateErr } = await supabase
+      .from("grn")
+      .update({ status: newStatus, line_items: nextLines })
+      .eq("id", grn.id);
+
+    if (updateErr) { setError(updateErr.message); return; }
+
+    try {
+      if (newStatus === "approved" || newStatus === "partial") {
+        await syncStockForGRN(grn.id, grn.grn_number, nextLines, user?.id ?? null, actorName);
+      } else if (newStatus === "rejected") {
+        const { error: deleteErr } = await supabase
+          .from("stock_ledger")
+          .delete()
+          .eq("reference_type", "grn")
+          .eq("reference_id", grn.id);
+        if (deleteErr) throw deleteErr;
+      }
+    } catch (err: any) {
+      setError(err?.message || "Failed to sync stock for GRN.");
+      return;
+    }
+
     await load();
   }
 
@@ -805,14 +873,14 @@ export default function GRNPage() {
                     <div className="mt-3 flex items-center gap-3 flex-wrap">
                       {g.status === "pending" && canInspect && (
                         <>
-                          <button onClick={() => updateStatus(g.id, "inspected")} className="bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 text-xs font-semibold px-3 py-1.5 rounded-md border border-blue-100 dark:border-blue-500/20">Mark Inspected</button>
-                          <button onClick={() => updateStatus(g.id, "rejected")} className="bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400 text-xs font-semibold px-3 py-1.5 rounded-md border border-red-100 dark:border-red-500/20">Reject</button>
+                          <button onClick={() => updateStatus(g, "inspected")} className="bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 text-xs font-semibold px-3 py-1.5 rounded-md border border-blue-100 dark:border-blue-500/20">Mark Inspected</button>
+                          <button onClick={() => updateStatus(g, "rejected")} className="bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400 text-xs font-semibold px-3 py-1.5 rounded-md border border-red-100 dark:border-red-500/20">Reject</button>
                         </>
                       )}
                       {g.status === "inspected" && canApprove && (
                         <>
-                          <button onClick={() => updateStatus(g.id, "approved")} className="bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400 text-xs font-semibold px-3 py-1.5 rounded-md border border-green-100 dark:border-green-500/20">Approve</button>
-                          <button onClick={() => updateStatus(g.id, "rejected")} className="bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400 text-xs font-semibold px-3 py-1.5 rounded-md border border-red-100 dark:border-red-500/20">Reject</button>
+                          <button onClick={() => updateStatus(g, "approved")} className="bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400 text-xs font-semibold px-3 py-1.5 rounded-md border border-green-100 dark:border-green-500/20">Approve</button>
+                          <button onClick={() => updateStatus(g, "rejected")} className="bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400 text-xs font-semibold px-3 py-1.5 rounded-md border border-red-100 dark:border-red-500/20">Reject</button>
                         </>
                       )}
                       <PDFDownloadLink
