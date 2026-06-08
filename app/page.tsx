@@ -47,28 +47,21 @@ export default function LoginPage() {
       <div className="relative z-10 min-h-screen px-4 py-6 sm:px-6 lg:px-8">
         <div className="mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-6xl items-center justify-center">
           <div className="grid w-full overflow-hidden rounded-[32px] border border-white/70 bg-white/72 shadow-[0_24px_80px_rgba(15,23,42,0.10)] backdrop-blur-2xl dark:border-white/10 dark:bg-[#0d1117]/88 dark:shadow-[0_24px_80px_rgba(0,0,0,0.45)] lg:grid-cols-[1.08fr_0.92fr]">
-            <section className="relative hidden min-h-[720px] overflow-hidden px-10 py-12 lg:flex lg:flex-col lg:justify-between xl:px-14">
-              <div>
-                <div className="inline-flex items-center gap-4 rounded-2xl border border-[#dde1ea] bg-white/80 px-4 py-3 shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/5">
-                  <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-black/5">
-                    <img src="/Logo.JPG" alt="Viton Engineers" className="h-10 w-10 object-contain" />
-                  </div>
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-viton-red dark:text-orange-400">Vitonengg</p>
-                    <h1 className="text-xl font-semibold tracking-tight text-viton-navy dark:text-white">Viton Engineers Pvt. Ltd.</h1>
-                  </div>
-                </div>
+            <section className="relative hidden min-h-[720px] overflow-hidden px-10 py-12 lg:flex lg:items-center lg:justify-center xl:px-14">
+              <div className="flex w-full max-w-2xl flex-col items-center text-center">
+                <img src="/Logo.JPG" alt="Viton Engineers" className="h-28 w-28 object-contain xl:h-36 xl:w-36" />
 
-                <div className="mt-14 max-w-xl">
+                <div className="mt-12">
                   <p className="mb-4 text-xs font-semibold uppercase tracking-[0.26em] text-[#8892a8] dark:text-gray-500">
                     Procurement & Invoice Portal
                   </p>
-                  <h2 className="text-4xl font-semibold tracking-tight text-viton-navy dark:text-white xl:text-[3.35rem] xl:leading-[1.02]">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-viton-red dark:text-orange-400">Vitonengg</p>
+                  <h1 className="mt-3 text-4xl font-semibold tracking-tight text-viton-navy dark:text-white xl:text-[3.15rem] xl:leading-[1.02]">Viton Engineers Pvt. Ltd.</h1>
+                  <h2 className="mt-8 text-4xl font-semibold tracking-tight text-viton-navy dark:text-white xl:text-[3.35rem] xl:leading-[1.02]">
                     Precision flow control starts here.
                   </h2>
                 </div>
               </div>
-
             </section>
 
             <section className="relative flex min-h-[100svh] items-center justify-center px-5 py-8 sm:px-8 lg:min-h-[720px] lg:px-10 xl:px-14">
