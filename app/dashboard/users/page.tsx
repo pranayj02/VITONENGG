@@ -112,7 +112,7 @@ export default function UsersPage() {
     }
 
     try {
-      if (!form.full_name.trim()) { setError("Full name is required."); return; }
+      if (!form.full_name.trim()) { setCreateError("Full name is required."); setCreating(false); return; }
     const res = await fetch("/api/admin/create-user", {
         method: "POST",
         headers: {

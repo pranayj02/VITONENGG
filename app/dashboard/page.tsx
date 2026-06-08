@@ -178,6 +178,11 @@ export default function DashboardPage() {
   useEffect(() => {
     async function load() {
       const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle();
+        setUserName((profile as any)?.full_name?.trim() || "Yatish Jain");
+      }
       const [a, b, c, d, poRowsResponse, reqRes, activityRes] = await Promise.all([
         supabase.from("items").select("id", { count: "exact", head: true }),
         supabase.from("vendors").select("id", { count: "exact", head: true }),
