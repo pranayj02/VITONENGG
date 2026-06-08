@@ -392,11 +392,10 @@ export default function StockPage() {
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
         {[
           { label: "Total Items", value: stock.length, icon: Package, accent: "blue" },
           { label: "In Stock", value: stock.filter((s) => s.balance > 0).length, icon: TrendingUp, accent: "green" },
-          { label: "Out of Stock", value: stock.filter((s) => s.balance <= 0).length, icon: TrendingDown, accent: "red" },
           { label: "Low Stock (< 5)", value: stock.filter((s) => s.balance > 0 && s.balance < 5).length, icon: AlertTriangle, accent: "orange" },
         ].map((card) => {
           const Icon = card.icon;
