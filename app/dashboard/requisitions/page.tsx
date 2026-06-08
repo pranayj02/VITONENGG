@@ -408,6 +408,10 @@ export default function RequisitionsPage() {
             const hasLinkedPo = !!req.po_id;
             const showCreatePoAgain = req.status === "approved" && !hasLinkedPo;
             const linkedPoLabel = req.po_id ? `PO linked · ${req.po_id.slice(0, 8)}` : null;
+            const allInStock = lines.every((li) => (stockMap[li.item_id] ?? 0) >= Number(li.qty_requested));
+            const anyShortage = lines.some((li) => (stockMap[li.item_id] ?? 0) < Number(li.qty_requested));
+            const isPoRaised = req.status === "converted_to_po";
+            const isReadyToFulfil = isPoRaised && allInStock;
 
             return (
               <div
@@ -439,7 +443,7 @@ export default function RequisitionsPage() {
 
                   <div className="flex items-center gap-3 ml-4 flex-shrink-0">
                     <span className={`text-xs font-semibold px-2.5 py-1 rounded-lg capitalize ${statusColors[req.status] ?? "bg-gray-100 text-gray-600"}`}>
-                      {(req.status as string) === "converted_to_po" ? "PO Raised" : (req.status as string) === "fulfilled" ? "Fulfilled ✓" : req.status.replace(/_/g, " ")}
+                      {isReadyToFulfil ? "Ready to Fulfil" : (req.status as string) === "converted_to_po" ? "PO Raised" : (req.status as string) === "fulfilled" ? "Fulfilled ✓" : req.status.replace(/_/g, " ")}
                     </span>
                     {isOpen ? <ChevronUp size={16} className="text-[#8892a8] dark:text-gray-500" /> : <ChevronDown size={16} className="text-[#8892a8] dark:text-gray-500" />}
                   </div>
@@ -491,6 +495,11 @@ export default function RequisitionsPage() {
                               <AlertCircle size={12} /> Approved but PO not created
                             </p>
                           )}
+                          {isReadyToFulfil && (
+                            <p className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                              <CheckCircle size={12} /> All requested items are now in stock and ready to fulfil
+                            </p>
+                          )}
                           {hasLinkedPo && linkedPoLabel && (
                             <p className="text-purple-600 dark:text-purple-400 flex items-center gap-1">
                               <ArrowRightLeft size={12} /> {linkedPoLabel}
@@ -516,46 +525,31 @@ export default function RequisitionsPage() {
                             </>
                           )}
 
-                          {/* MR Fulfillment Buttons — only on approved MRs */}
-                          {req.status === "approved" && canConvert && (() => {
-                            const lines = (req.line_items ?? []) as ReqLineItem[];
-                            const allInStock = lines.every((li) => (stockMap[li.item_id] ?? 0) >= Number(li.qty_requested));
-                            const anyShortage = lines.some((li) => (stockMap[li.item_id] ?? 0) < Number(li.qty_requested));
-                            return (
-                              <>
-                                {/* Fulfil From Stock */}
+                          {/* MR Fulfillment Buttons */}
+                          {(req.status === "approved" || isPoRaised) && canConvert && (
+                            <>
+                              <button
+                                disabled={!allInStock}
+                                onClick={(e) => { e.stopPropagation(); if (allInStock) handleFulfil(req); }}
+                                title={allInStock ? (isPoRaised ? "PO/GRN stock is now available — fulfil this MR" : "Issue all items from stock") : "Insufficient stock — wait for GRN or raise PO for shortage first"}
+                                className={`flex items-center gap-2 font-semibold px-4 py-2 rounded-xl text-sm transition-all border ${
+                                  allInStock
+                                    ? "bg-emerald-50 hover:bg-emerald-500 text-emerald-700 hover:text-white border-emerald-200 hover:border-emerald-500 dark:bg-emerald-500/10 dark:hover:bg-emerald-500 dark:text-emerald-400 dark:border-emerald-500/30"
+                                    : "bg-gray-50 text-gray-400 border-gray-200 dark:bg-gray-800/40 dark:text-gray-600 dark:border-gray-700 cursor-not-allowed opacity-50"
+                                }`}
+                              >
+                                <CheckCircle size={14} /> {isPoRaised ? "Fulfil MR" : "Fulfil From Stock"}
+                              </button>
+
+                              {anyShortage && (
                                 <button
-                                  disabled={!allInStock}
-                                  onClick={(e) => { e.stopPropagation(); if (allInStock) handleFulfil(req); }}
-                                  title={allInStock ? "Issue all items from stock" : "Insufficient stock — raise a PO for shortage first"}
-                                  className={`flex items-center gap-2 font-semibold px-4 py-2 rounded-xl text-sm transition-all border ${
-                                    allInStock
-                                      ? "bg-emerald-50 hover:bg-emerald-500 text-emerald-700 hover:text-white border-emerald-200 hover:border-emerald-500 dark:bg-emerald-500/10 dark:hover:bg-emerald-500 dark:text-emerald-400 dark:border-emerald-500/30"
-                                      : "bg-gray-50 text-gray-400 border-gray-200 dark:bg-gray-800/40 dark:text-gray-600 dark:border-gray-700 cursor-not-allowed opacity-50"
-                                  }`}
+                                  onClick={(e) => { e.stopPropagation(); setActionType("raise_po"); setActionId(req.id); }}
+                                  className="flex items-center gap-2 bg-purple-50 hover:bg-purple-500 text-purple-700 hover:text-white border border-purple-200 hover:border-purple-500 dark:bg-purple-500/10 dark:hover:bg-purple-500 dark:text-purple-400 dark:border-purple-500/30 font-semibold px-4 py-2 rounded-xl text-sm transition-all"
                                 >
-                                  <CheckCircle size={14} /> Fulfil From Stock
+                                  <ArrowRightLeft size={14} /> {isPoRaised ? "Raise Another PO" : "Raise PO for Shortage"}
                                 </button>
-                                {/* Raise PO for Shortage */}
-                                {anyShortage && (
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); setActionType("raise_po"); setActionId(req.id); }}
-                                    className="flex items-center gap-2 bg-purple-50 hover:bg-purple-500 text-purple-700 hover:text-white border border-purple-200 hover:border-purple-500 dark:bg-purple-500/10 dark:hover:bg-purple-500 dark:text-purple-400 dark:border-purple-500/30 font-semibold px-4 py-2 rounded-xl text-sm transition-all"
-                                  >
-                                    <ArrowRightLeft size={14} /> Raise PO for Shortage
-                                  </button>
-                                )}
-                              </>
-                            );
-                          })()}
-                          {/* Legacy: approved but no PO yet and not showing fulfil (edge-case catch) */}
-                          {req.status === "converted_to_po" && canConvert && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setActionType("raise_po"); setActionId(req.id); }}
-                              className="flex items-center gap-2 bg-purple-50 hover:bg-purple-500 text-purple-700 hover:text-white border border-purple-200 hover:border-purple-500 dark:bg-purple-500/10 dark:hover:bg-purple-500 dark:text-purple-400 dark:border-purple-500/30 font-semibold px-4 py-2 rounded-xl text-sm transition-all"
-                            >
-                              <ArrowRightLeft size={14} /> Raise Another PO
-                            </button>
+                              )}
+                            </>
                           )}
 
                           {/* Delete button */}
