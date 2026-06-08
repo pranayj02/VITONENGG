@@ -324,7 +324,7 @@ export default function UsersPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <input
-                          value={u.full_name ?? ""}
+                          value={u.full_name?.trim() || "Yatish Jain"}
                           onChange={(e) => updateProfile(u.id, { full_name: e.target.value })}
                           placeholder="Full name"
                           className="w-full bg-transparent border border-transparent hover:border-[#dde1ea] dark:hover:border-gray-700 focus:border-viton-red dark:focus:border-orange-500 focus:bg-white dark:focus:bg-gray-900 rounded px-2 py-1 text-sm text-viton-navy dark:text-white font-medium focus:outline-none transition-all"

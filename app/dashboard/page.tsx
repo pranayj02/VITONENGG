@@ -248,7 +248,7 @@ export default function DashboardPage() {
             </span>
           </div>
           <h1 className="text-viton-navy dark:text-white text-3xl font-bold tracking-tight">
-            Hello, Yatish <span className="wave">👋</span>
+            Hello, {userName} <span className="wave">👋</span>
           </h1>
           <p className="text-[#8892a8] dark:text-gray-500 text-sm mt-1">{getFormattedDate()}</p>
         </div>
