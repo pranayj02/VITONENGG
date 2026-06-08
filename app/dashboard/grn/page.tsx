@@ -912,15 +912,6 @@ export default function GRNPage() {
 
       {/* GRN list */}
       <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl overflow-hidden">
-        <div className="grid grid-cols-[minmax(0,1.6fr)_120px_170px_140px_44px_44px] px-5 py-3 border-b border-[#dde1ea] dark:border-gray-800 text-[#8892a8] dark:text-gray-500 text-xs font-semibold uppercase tracking-widest">
-          <div>GRN / Vendor</div>
-          <div className="text-center">Items</div>
-          <div className="text-center">Status</div>
-          <div className="text-center">Date</div>
-          <div />
-          <div />
-        </div>
-
         {loading ? (
           Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="px-5 py-4 border-b border-[#dde1ea] dark:border-gray-800 animate-pulse">
@@ -937,108 +928,143 @@ export default function GRNPage() {
             <p className="text-xs">Create a new receipt to start recording.</p>
           </div>
         ) : (
-          filteredGRN.map((g) => {
-            const lines = (g.line_items ?? []) as GRNLineItem[];
-            const isOpen = expanded === g.id;
-            return (
-              <div key={g.id} className="border-b border-[#dde1ea] dark:border-gray-800 last:border-0">
-                <div className="grid grid-cols-[minmax(0,1.6fr)_120px_170px_140px_44px_44px] px-5 py-4 items-center gap-3">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-semibold text-viton-navy dark:text-white font-mono text-sm">{g.grn_number}</p>
-                      {g.po_id && (
-                        <span className="text-[9px] bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 px-1.5 py-0.5 rounded border border-blue-100 dark:border-blue-500/20">Linked PO</span>
-                      )}
-                    </div>
-                    <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-0.5">{g.vendor_name ?? "—"}</p>
-                    <p className="text-[#8892a8] dark:text-gray-500 text-[10px] mt-0.5">Received by {g.received_by_name ?? "—"}</p>
-                  </div>
-                  <div className="text-center text-sm text-[#4a5578] dark:text-gray-400 tabular-nums whitespace-nowrap">{lines.length} item{lines.length !== 1 ? "s" : ""}</div>
-                  <div className="flex justify-center">
-                    <span className={`inline-flex min-w-[104px] justify-center text-[10px] font-semibold px-2.5 py-1 rounded-md border ${statusColors[g.status] ?? "bg-gray-50 text-gray-700 dark:bg-gray-500/10 dark:text-gray-400"}`}>
-                      {g.status.toUpperCase()}
-                    </span>
-                  </div>
-                  <div className="text-center text-[#8892a8] dark:text-gray-500 text-xs tabular-nums whitespace-nowrap">
-                    {new Date(g.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
-                  </div>
-                  <div className="flex items-center justify-center">
-                    <PDFDownloadLink
-                      document={<GRNPdfDocument grn={g} po={pos.find(p => p.id === g.po_id) ? { po_number: (pos.find(p => p.id === g.po_id) as POWithVendor).po_number, created_at: (pos.find(p => p.id === g.po_id) as POWithVendor).created_at } : null} vendor={vendors.find(v => v.id === g.vendor_id) ?? null} />}
-                      fileName={`${g.grn_number.replace(/\//g, "-")}.pdf`}
-                      className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white hover:bg-[#f1f3f8] dark:hover:bg-gray-800 transition-colors"
-                      title="Download PDF"
-                    >
-                      <Download size={14} />
-                    </PDFDownloadLink>
-                  </div>
-                  <div className="flex items-center justify-center">
-                    <button onClick={() => setExpanded(isOpen ? null : g.id)} className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white hover:bg-[#f1f3f8] dark:hover:bg-gray-800 transition-colors">
-                      {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                    </button>
-                  </div>
-                </div>
+          <div className="overflow-x-auto">
+            <table className="w-full table-fixed border-collapse">
+              <colgroup>
+                <col className="w-[48%]" />
+                <col className="w-[12%]" />
+                <col className="w-[16%]" />
+                <col className="w-[14%]" />
+                <col className="w-[5%]" />
+                <col className="w-[5%]" />
+              </colgroup>
+              <thead>
+                <tr className="border-b border-[#dde1ea] dark:border-gray-800 text-[#8892a8] dark:text-gray-500 text-xs font-semibold uppercase tracking-widest">
+                  <th className="text-left px-7 py-4">GRN / Vendor</th>
+                  <th className="text-center px-3 py-4">Items</th>
+                  <th className="text-center px-3 py-4">Status</th>
+                  <th className="text-center px-3 py-4">Date</th>
+                  <th className="px-2 py-4"></th>
+                  <th className="px-2 py-4"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredGRN.map((g) => {
+                  const lines = (g.line_items ?? []) as GRNLineItem[];
+                  const isOpen = expanded === g.id;
+                  return (
+                    <>
+                      <tr key={g.id} className="border-b border-[#dde1ea] dark:border-gray-800 last:border-0 align-middle">
+                        <td className="px-7 py-5 align-middle">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-semibold text-viton-navy dark:text-white font-mono text-sm">{g.grn_number}</p>
+                              {g.po_id && (
+                                <span className="text-[9px] bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 px-1.5 py-0.5 rounded border border-blue-100 dark:border-blue-500/20">Linked PO</span>
+                              )}
+                            </div>
+                            <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-1">{g.vendor_name ?? "—"}</p>
+                            <p className="text-[#8892a8] dark:text-gray-500 text-[10px] mt-1">Received by {g.received_by_name ?? "—"}</p>
+                          </div>
+                        </td>
+                        <td className="px-3 py-5 text-center align-middle text-sm text-[#4a5578] dark:text-gray-400 tabular-nums whitespace-nowrap">
+                          {lines.length} item{lines.length !== 1 ? "s" : ""}
+                        </td>
+                        <td className="px-3 py-5 align-middle">
+                          <div className="flex justify-center">
+                            <span className={`inline-flex w-[132px] justify-center text-[10px] font-semibold px-2.5 py-1.5 rounded-md border ${statusColors[g.status] ?? "bg-gray-50 text-gray-700 dark:bg-gray-500/10 dark:text-gray-400"}`}>
+                              {g.status.toUpperCase()}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-3 py-5 text-center align-middle text-[#8892a8] dark:text-gray-500 text-xs tabular-nums whitespace-nowrap">
+                          {new Date(g.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                        </td>
+                        <td className="px-2 py-5 align-middle text-center">
+                          <PDFDownloadLink
+                            document={<GRNPdfDocument grn={g} po={pos.find(p => p.id === g.po_id) ? { po_number: (pos.find(p => p.id === g.po_id) as POWithVendor).po_number, created_at: (pos.find(p => p.id === g.po_id) as POWithVendor).created_at } : null} vendor={vendors.find(v => v.id === g.vendor_id) ?? null} />}
+                            fileName={`${g.grn_number.replace(/\//g, "-")}.pdf`}
+                            className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white hover:bg-[#f1f3f8] dark:hover:bg-gray-800 transition-colors"
+                            title="Download PDF"
+                          >
+                            <Download size={14} />
+                          </PDFDownloadLink>
+                        </td>
+                        <td className="px-2 py-5 align-middle text-center">
+                          <button
+                            onClick={() => setExpanded(isOpen ? null : g.id)}
+                            className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white hover:bg-[#f1f3f8] dark:hover:bg-gray-800 transition-colors"
+                          >
+                            {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                          </button>
+                        </td>
+                      </tr>
 
-                {isOpen && (
-                  <div className="px-5 pb-4">
-                    <div className="bg-[#f1f3f8] dark:bg-gray-800 rounded-xl border border-[#dde1ea] dark:border-gray-800 overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="text-[#8892a8] dark:text-gray-500 text-xs border-b border-[#dde1ea] dark:border-gray-800">
-                            <th className="text-left px-4 py-3 font-semibold">Item</th>
-                            <th className="text-center px-3 py-3 font-semibold">PO Qty</th>
-                            <th className="text-center px-3 py-3 font-semibold">Received</th>
-                            <th className="text-center px-3 py-3 font-semibold">Accepted</th>
-                            <th className="text-center px-3 py-3 font-semibold">Rejected</th>
-                            <th className="text-left px-3 py-3 font-semibold">Reason</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {lines.map((l, i) => (
-                            <tr key={i} className="border-b border-[#dde1ea] dark:border-gray-800 last:border-0">
-                              <td className="px-4 py-2 text-viton-navy dark:text-white font-medium">{l.name}</td>
-                              <td className="px-3 py-2 text-center text-[#8892a8] dark:text-gray-500">{l.po_qty ?? 0}</td>
-                              <td className="px-3 py-2 text-center font-semibold">{l.received_qty}</td>
-                              <td className="px-3 py-2 text-center text-green-700 dark:text-green-400 font-semibold">{l.accepted_qty}</td>
-                              <td className="px-3 py-2 text-center text-viton-red font-semibold">{l.rejected_qty}</td>
-                              <td className="px-3 py-2 text-[#8892a8] dark:text-gray-500 text-xs">{l.rejection_reason || "—"}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                      {isOpen && (
+                        <tr className="border-b border-[#dde1ea] dark:border-gray-800 last:border-0">
+                          <td colSpan={6} className="px-5 pb-4">
+                            <div className="bg-[#f1f3f8] dark:bg-gray-800 rounded-xl border border-[#dde1ea] dark:border-gray-800 overflow-x-auto">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="text-[#8892a8] dark:text-gray-500 text-xs border-b border-[#dde1ea] dark:border-gray-800">
+                                    <th className="text-left px-4 py-3 font-semibold">Item</th>
+                                    <th className="text-center px-3 py-3 font-semibold">PO Qty</th>
+                                    <th className="text-center px-3 py-3 font-semibold">Received</th>
+                                    <th className="text-center px-3 py-3 font-semibold">Accepted</th>
+                                    <th className="text-center px-3 py-3 font-semibold">Rejected</th>
+                                    <th className="text-left px-3 py-3 font-semibold">Reason</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {lines.map((l, i) => (
+                                    <tr key={i} className="border-b border-[#dde1ea] dark:border-gray-800 last:border-0">
+                                      <td className="px-4 py-2 text-viton-navy dark:text-white font-medium">{l.name}</td>
+                                      <td className="px-3 py-2 text-center text-[#8892a8] dark:text-gray-500">{l.po_qty ?? 0}</td>
+                                      <td className="px-3 py-2 text-center font-semibold">{l.received_qty}</td>
+                                      <td className="px-3 py-2 text-center text-green-700 dark:text-green-400 font-semibold">{l.accepted_qty}</td>
+                                      <td className="px-3 py-2 text-center text-viton-red font-semibold">{l.rejected_qty}</td>
+                                      <td className="px-3 py-2 text-[#8892a8] dark:text-gray-500 text-xs">{l.rejection_reason || "—"}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
 
-                    <div className="mt-3 flex items-center gap-3 flex-wrap">
-                      {g.status === "pending" && canInspect && (
-                        <>
-                          <button onClick={() => updateStatus(g, "inspected")} className="bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 text-xs font-semibold px-3 py-1.5 rounded-md border border-blue-100 dark:border-blue-500/20">Mark Inspected</button>
-                          <button onClick={() => updateStatus(g, "rejected")} className="bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400 text-xs font-semibold px-3 py-1.5 rounded-md border border-red-100 dark:border-red-500/20">Reject</button>
-                        </>
+                            <div className="mt-3 flex items-center gap-3 flex-wrap">
+                              {g.status === "pending" && canInspect && (
+                                <>
+                                  <button onClick={() => updateStatus(g, "inspected")} className="bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 text-xs font-semibold px-3 py-1.5 rounded-md border border-blue-100 dark:border-blue-500/20">Mark Inspected</button>
+                                  <button onClick={() => updateStatus(g, "rejected")} className="bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400 text-xs font-semibold px-3 py-1.5 rounded-md border border-red-100 dark:border-red-500/20">Reject</button>
+                                </>
+                              )}
+                              {g.status === "inspected" && canApprove && (
+                                <>
+                                  <button onClick={() => updateStatus(g, "approved")} className="bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400 text-xs font-semibold px-3 py-1.5 rounded-md border border-green-100 dark:border-green-500/20">Approve</button>
+                                  <button onClick={() => updateStatus(g, "rejected")} className="bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400 text-xs font-semibold px-3 py-1.5 rounded-md border border-red-100 dark:border-red-500/20">Reject</button>
+                                </>
+                              )}
+                              <PDFDownloadLink
+                                document={<GRNPdfDocument grn={g} po={pos.find(p => p.id === g.po_id) ? { po_number: (pos.find(p => p.id === g.po_id) as POWithVendor).po_number, created_at: (pos.find(p => p.id === g.po_id) as POWithVendor).created_at } : null} vendor={vendors.find(v => v.id === g.vendor_id) ?? null} />}
+                                fileName={`${g.grn_number.replace(/\//g, "-")}.pdf`}
+                                className="bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 text-white text-xs font-semibold px-3 py-1.5 rounded-md flex items-center gap-1.5"
+                              >
+                                <Download size={12} /> Download PDF
+                              </PDFDownloadLink>
+                              {canDelete && (
+                                <button onClick={() => deleteGRN(g)} className="bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-700 dark:text-red-400 text-xs font-semibold px-3 py-1.5 rounded-md border border-red-100 dark:border-red-500/20 flex items-center gap-1.5">
+                                  <Trash2 size={12} /> Delete GRN
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
                       )}
-                      {g.status === "inspected" && canApprove && (
-                        <>
-                          <button onClick={() => updateStatus(g, "approved")} className="bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400 text-xs font-semibold px-3 py-1.5 rounded-md border border-green-100 dark:border-green-500/20">Approve</button>
-                          <button onClick={() => updateStatus(g, "rejected")} className="bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400 text-xs font-semibold px-3 py-1.5 rounded-md border border-red-100 dark:border-red-500/20">Reject</button>
-                        </>
-                      )}
-                      <PDFDownloadLink
-                        document={<GRNPdfDocument grn={g} po={pos.find(p => p.id === g.po_id) ? { po_number: (pos.find(p => p.id === g.po_id) as POWithVendor).po_number, created_at: (pos.find(p => p.id === g.po_id) as POWithVendor).created_at } : null} vendor={vendors.find(v => v.id === g.vendor_id) ?? null} />}
-                        fileName={`${g.grn_number.replace(/\//g, "-")}.pdf`}
-                        className="bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 text-white text-xs font-semibold px-3 py-1.5 rounded-md flex items-center gap-1.5"
-                      >
-                        <Download size={12} /> Download PDF
-                      </PDFDownloadLink>
-                      {canDelete && (
-                        <button onClick={() => deleteGRN(g)} className="bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-700 dark:text-red-400 text-xs font-semibold px-3 py-1.5 rounded-md border border-red-100 dark:border-red-500/20 flex items-center gap-1.5">
-                          <Trash2 size={12} /> Delete GRN
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })
+                    </>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>
