@@ -262,6 +262,28 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Quick Actions */}
+      <h2 className="text-[#8892a8] dark:text-gray-400 text-xs font-semibold uppercase tracking-widest mb-4">
+        Quick Actions
+      </h2>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {quickActions.map((action) => {
+          const Icon = action.icon;
+          return (
+            <Link href={action.href} key={action.label}>
+              <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl p-6 hover:border-[#c0c8db] dark:hover:border-orange-500/40 hover:shadow-md dark:hover:shadow-none transition-all cursor-pointer">
+                <div className={`w-11 h-11 rounded-xl flex items-center justify-center mb-4 ${action.bg}`}>
+                  <Icon size={22} className="text-white" />
+                </div>
+                <p className="text-viton-navy dark:text-white font-semibold text-sm">{action.label}</p>
+                <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-1">{action.desc}</p>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+
+
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {statCards.map((card) => {
@@ -516,27 +538,6 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
-      </div>
-
-      {/* Quick Actions */}
-      <h2 className="text-[#8892a8] dark:text-gray-400 text-xs font-semibold uppercase tracking-widest mb-4">
-        Quick Actions
-      </h2>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {quickActions.map((action) => {
-          const Icon = action.icon;
-          return (
-            <Link href={action.href} key={action.label}>
-              <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl p-6 hover:border-[#c0c8db] dark:hover:border-orange-500/40 hover:shadow-md dark:hover:shadow-none transition-all cursor-pointer">
-                <div className={`w-11 h-11 rounded-xl flex items-center justify-center mb-4 ${action.bg}`}>
-                  <Icon size={22} className="text-white" />
-                </div>
-                <p className="text-viton-navy dark:text-white font-semibold text-sm">{action.label}</p>
-                <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-1">{action.desc}</p>
-              </div>
-            </Link>
-          );
-        })}
       </div>
 
       <style jsx>{`
