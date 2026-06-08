@@ -64,11 +64,8 @@ export default function LoginPage() {
                     Procurement & Invoice Portal
                   </p>
                   <h2 className="text-4xl font-semibold tracking-tight text-viton-navy dark:text-white xl:text-[3.35rem] xl:leading-[1.02]">
-                    A more reliable front door for everyday operations.
+                    Precision flow control starts here.
                   </h2>
-                  <p className="mt-6 max-w-lg text-sm leading-7 text-[#5d6885] dark:text-gray-400 xl:text-[15px]">
-                    Sign in to manage requisitions, purchase orders, invoices, stock receipts, and internal workflows in one place.
-                  </p>
                 </div>
               </div>
 
@@ -98,9 +95,7 @@ export default function LoginPage() {
 
                 <div className="rounded-[28px] border border-[#dde1ea] bg-white/92 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur-xl dark:border-white/10 dark:bg-[#11161d]/92 dark:shadow-[0_20px_60px_rgba(0,0,0,0.38)] sm:p-8">
                   <div className="mb-8">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#8892a8] dark:text-gray-500">Welcome back</p>
-                    <h2 className="mt-3 text-3xl font-semibold tracking-tight text-viton-navy dark:text-white">Sign in</h2>
-                    <p className="mt-2 text-sm text-[#6c7690] dark:text-gray-400">Use your existing access to continue into the ERP portal.</p>
+                    <h2 className="text-3xl font-semibold tracking-tight text-viton-navy dark:text-white">Sign in</h2>
                   </div>
 
                   {error && (
