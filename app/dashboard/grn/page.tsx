@@ -52,6 +52,8 @@ export default function GRNPage() {
   const [selectedPO, setSelectedPO] = useState<POWithVendor | null>(null);
   const [manualVendorId, setManualVendorId] = useState("");
   const [manualVendorName, setManualVendorName] = useState("");
+  const [manualVendorAddress, setManualVendorAddress] = useState("");
+  const [manualVendorGstin, setManualVendorGstin] = useState("");
   const [grnLines, setGrnLines] = useState<GRNLineItem[]>([]);
   const [inspectionNotes, setInspectionNotes] = useState("");
   const [saving, setSaving] = useState(false);
@@ -126,6 +128,8 @@ export default function GRNPage() {
     setSelectedPO(null);
     setManualVendorId("");
     setManualVendorName("");
+    setManualVendorAddress("");
+    setManualVendorGstin("");
     setGrnLines([]);
     setInspectionNotes("");
     setInspectedBy("");
@@ -161,6 +165,8 @@ export default function GRNPage() {
     }));
     setGrnLines(lines);
     setManualVendorName(po.vendors?.name ?? "");
+    setManualVendorAddress(po.vendors?.address ?? "");
+    setManualVendorGstin(po.vendors?.gstin ?? "");
     setInspectionNotes("");
     setError("");
     setCreateMode("against_po");
@@ -258,6 +264,15 @@ export default function GRNPage() {
 
     const { error: saveErr, data } = await supabase.from("grn").insert(payload).select("id").single();
     if (saveErr) { setError(saveErr.message); setSaving(false); return; }
+
+    // Save freeform vendor if no vendor_id and vendor_name provided
+    if (!payload.vendor_id && manualVendorName.trim()) {
+      await supabase.from("vendors").insert({
+        name: manualVendorName.trim(),
+        address: manualVendorAddress.trim() || null,
+        gstin: manualVendorGstin.trim() || null,
+      }).select("id").single();
+    }
 
     for (const line of grnLines) {
       if (line.accepted_qty > 0) {
@@ -454,11 +469,29 @@ export default function GRNPage() {
                         <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb", width:"18%" }}>Supplier Name</td>
                         <td colSpan={2} style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", width:"37%" }}>
                           {createMode === "without_po" ? (
-                            <div className="flex gap-2">
-                              <select value={manualVendorId} onChange={(e) => { setManualVendorId(e.target.value); const v = vendors.find(v => v.id === e.target.value); setManualVendorName(v?.name ?? ""); }} className="text-[10pt] font-normal border rounded px-1 w-full" style={{ fontSize:"10pt" }}>
+                            <div className="flex gap-2 items-center">
+                              <select
+                                value={manualVendorId}
+                                onChange={(e) => {
+                                  const id = e.target.value;
+                                  setManualVendorId(id);
+                                  const v = vendors.find(v => v.id === id);
+                                  setManualVendorName(v?.name ?? "");
+                                }}
+                                className="text-[10pt] font-normal border rounded px-1 flex-1 min-w-0"
+                                style={{ fontSize:"10pt" }}
+                              >
                                 <option value="">Select vendor...</option>
                                 {vendors.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
                               </select>
+                              <span className="text-gray-400 text-[10px] flex-shrink-0">or</span>
+                              <input
+                                value={manualVendorName}
+                                onChange={(e) => { setManualVendorId(""); setManualVendorName(e.target.value); }}
+                                placeholder="Type freeform name"
+                                className="text-[10pt] font-normal border rounded px-1 flex-1 min-w-0"
+                                style={{ fontSize:"10pt", padding: "2px 6px" }}
+                              />
                             </div>
                           ) : (
                             <input value={selectedPO?.vendors?.name ?? ""} readOnly style={{ width:"100%", fontSize:"8pt", border:"none", background:"transparent", outline:"none" }} />
@@ -470,7 +503,14 @@ export default function GRNPage() {
                       <tr>
                         <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Supplier Address</td>
                         <td colSpan={2} style={{ border:"1px solid #000", padding:"4px 6px", fontSize:"7.5pt", lineHeight:1.5 }}>
-                          {createMode === "without_po" ? (vendors.find(v => v.id === manualVendorId)?.address ?? "—") : (selectedPO?.vendors?.address ?? "—")}
+                          {createMode === "without_po" ? (
+                            <input
+                              value={manualVendorId ? (vendors.find(v => v.id === manualVendorId)?.address ?? "") : manualVendorAddress}
+                              onChange={(e) => setManualVendorAddress(e.target.value)}
+                              placeholder="Address"
+                              style={{ width:"100%", fontSize:"8pt", border:"none", background:"transparent", outline:"none" }}
+                            />
+                          ) : (selectedPO?.vendors?.address ?? "—")}
                         </td>
                         <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Address</td>
                         <td style={{ border:"1px solid #000", padding:"4px 6px", fontSize:"7.5pt", lineHeight:1.5 }}>Plot No. B-40/1, Addl. Ambernath MIDC,<br />Anand Nagar, Ambernath E, Dist. Thane - 421506</td>
@@ -478,7 +518,14 @@ export default function GRNPage() {
                       <tr>
                         <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Supplier GSTIN</td>
                         <td colSpan={2} style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700" }}>
-                          {createMode === "without_po" ? (vendors.find(v => v.id === manualVendorId)?.gstin ?? "—") : (selectedPO?.vendors?.gstin ?? "—")}
+                          {createMode === "without_po" ? (
+                            <input
+                              value={manualVendorId ? (vendors.find(v => v.id === manualVendorId)?.gstin ?? "") : manualVendorGstin}
+                              onChange={(e) => setManualVendorGstin(e.target.value)}
+                              placeholder="GSTIN"
+                              style={{ width:"100%", fontSize:"8pt", border:"none", background:"transparent", outline:"none" }}
+                            />
+                          ) : (selectedPO?.vendors?.gstin ?? "—")}
                         </td>
                         <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Email</td>
                         <td style={{ border:"1px solid #000", padding:"4px 6px", fontSize:"8pt" }}>viton.engg@gmail.com</td>
