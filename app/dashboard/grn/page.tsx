@@ -912,11 +912,12 @@ export default function GRNPage() {
 
       {/* GRN list */}
       <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl overflow-hidden">
-        <div className="grid grid-cols-[minmax(0,1.4fr)_120px_150px_130px_56px] px-5 py-3 border-b border-[#dde1ea] dark:border-gray-800 text-[#8892a8] dark:text-gray-500 text-xs font-semibold uppercase tracking-widest">
+        <div className="grid grid-cols-[minmax(0,1.6fr)_120px_170px_140px_44px_44px] px-5 py-3 border-b border-[#dde1ea] dark:border-gray-800 text-[#8892a8] dark:text-gray-500 text-xs font-semibold uppercase tracking-widest">
           <div>GRN / Vendor</div>
           <div className="text-center">Items</div>
           <div className="text-center">Status</div>
-          <div className="text-right">Date</div>
+          <div className="text-center">Date</div>
+          <div />
           <div />
         </div>
 
@@ -941,7 +942,7 @@ export default function GRNPage() {
             const isOpen = expanded === g.id;
             return (
               <div key={g.id} className="border-b border-[#dde1ea] dark:border-gray-800 last:border-0">
-                <div className="grid grid-cols-[minmax(0,1.4fr)_120px_150px_130px_56px] px-5 py-4 items-center gap-3">
+                <div className="grid grid-cols-[minmax(0,1.6fr)_120px_170px_140px_44px_44px] px-5 py-4 items-center gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="font-semibold text-viton-navy dark:text-white font-mono text-sm">{g.grn_number}</p>
@@ -958,19 +959,21 @@ export default function GRNPage() {
                       {g.status.toUpperCase()}
                     </span>
                   </div>
-                  <div className="text-right text-[#8892a8] dark:text-gray-500 text-xs tabular-nums whitespace-nowrap">
+                  <div className="text-center text-[#8892a8] dark:text-gray-500 text-xs tabular-nums whitespace-nowrap">
                     {new Date(g.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
                   </div>
-                  <div className="flex items-center justify-end gap-2">
+                  <div className="flex items-center justify-center">
                     <PDFDownloadLink
                       document={<GRNPdfDocument grn={g} po={pos.find(p => p.id === g.po_id) ? { po_number: (pos.find(p => p.id === g.po_id) as POWithVendor).po_number, created_at: (pos.find(p => p.id === g.po_id) as POWithVendor).created_at } : null} vendor={vendors.find(v => v.id === g.vendor_id) ?? null} />}
                       fileName={`${g.grn_number.replace(/\//g, "-")}.pdf`}
-                      className="text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white"
+                      className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white hover:bg-[#f1f3f8] dark:hover:bg-gray-800 transition-colors"
                       title="Download PDF"
                     >
                       <Download size={14} />
                     </PDFDownloadLink>
-                    <button onClick={() => setExpanded(isOpen ? null : g.id)} className="text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white">
+                  </div>
+                  <div className="flex items-center justify-center">
+                    <button onClick={() => setExpanded(isOpen ? null : g.id)} className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white hover:bg-[#f1f3f8] dark:hover:bg-gray-800 transition-colors">
                       {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                     </button>
                   </div>
