@@ -30,10 +30,11 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen relative overflow-hidden bg-[#f4f6fb] dark:bg-[#090c11]">
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute inset-x-0 top-0 h-72 bg-[radial-gradient(circle_at_top,rgba(220,38,38,0.10),transparent_58%)] dark:bg-[radial-gradient(circle_at_top,rgba(249,115,22,0.10),transparent_58%)]" />
-        <div className="absolute left-[-8%] top-[18%] h-72 w-72 rounded-full bg-white/50 blur-3xl dark:bg-orange-500/5" />
-        <div className="absolute right-[-8%] bottom-[8%] h-80 w-80 rounded-full bg-red-100/70 blur-3xl dark:bg-red-500/5" />
-        <div className="absolute inset-0 opacity-[0.36] [background-image:linear-gradient(rgba(136,146,168,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(136,146,168,0.08)_1px,transparent_1px)] [background-size:40px_40px] dark:opacity-[0.14]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(255,255,255,0.95),transparent_28%),radial-gradient(circle_at_82%_14%,rgba(255,220,224,0.72),transparent_24%),radial-gradient(circle_at_56%_34%,rgba(255,72,72,0.14),transparent_20%),radial-gradient(circle_at_52%_48%,rgba(255,72,72,0.10),transparent_22%),linear-gradient(145deg,rgba(255,255,255,0.98)_14%,rgba(255,240,242,0.92)_38%,rgba(255,232,236,0.88)_52%,rgba(255,245,246,0.94)_66%,rgba(255,255,255,0.99)_100%)] dark:bg-[radial-gradient(circle_at_18%_18%,rgba(255,255,255,0.06),transparent_26%),radial-gradient(circle_at_82%_14%,rgba(249,115,22,0.07),transparent_22%),radial-gradient(circle_at_56%_34%,rgba(239,68,68,0.10),transparent_20%),radial-gradient(circle_at_52%_48%,rgba(239,68,68,0.08),transparent_24%),linear-gradient(145deg,rgba(9,12,17,0.98)_10%,rgba(24,15,18,0.96)_40%,rgba(34,14,18,0.92)_56%,rgba(15,18,24,0.97)_100%)]" />
+        <div className="absolute left-[8%] top-[6%] h-[240px] w-[560px] rounded-[999px] bg-red-500/10 blur-[96px] dark:bg-red-500/10" />
+        <div className="absolute left-[24%] top-[16%] h-[220px] w-[520px] -rotate-6 rounded-[999px] bg-red-400/8 blur-[84px] dark:bg-red-400/8" />
+        <div className="absolute right-[-8%] bottom-[4%] h-80 w-80 rounded-full bg-red-100/45 blur-3xl dark:bg-red-500/5" />
+        <div className="absolute inset-0 opacity-[0.22] [background-image:linear-gradient(rgba(136,146,168,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(136,146,168,0.08)_1px,transparent_1px)] [background-size:40px_40px] dark:opacity-[0.10]" />
       </div>
 
       <button
@@ -75,7 +76,7 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                <div className="rounded-[28px] border border-[#dde1ea] bg-white/92 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur-xl dark:border-white/10 dark:bg-[#11161d]/92 dark:shadow-[0_20px_60px_rgba(0,0,0,0.38)] sm:p-8">
+                <div className="rounded-[28px] border border-white/75 bg-white/58 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.10)] backdrop-blur-[28px] supports-[backdrop-filter]:bg-white/52 dark:border-white/12 dark:bg-white/[0.06] dark:shadow-[0_24px_70px_rgba(0,0,0,0.42)] sm:p-8">
                   <div className="mb-8">
                     <h2 className="text-3xl font-semibold tracking-tight text-viton-navy dark:text-white">Sign in</h2>
                   </div>

@@ -70,6 +70,15 @@ export default function StockPage() {
     });
   }
 
+  function sanitizeStockRows(rows: StockSummary[]) {
+    return rows.map((row) => ({
+      ...row,
+      total_in: Math.max(0, Number(row.total_in ?? 0)),
+      total_out: Math.max(0, Number(row.total_out ?? 0)),
+      balance: Math.max(0, Number(row.balance ?? 0)),
+    }));
+  }
+
   async function load() {
     setLoading(true);
     const supabase = createClient();
@@ -94,12 +103,14 @@ export default function StockPage() {
         total_out: 0,
         balance: balances.get(i.id) ?? 0,
       }));
-      const sortedRows = sortStockRows(rows);
+      const sanitizedRows = sanitizeStockRows(rows);
+      const sortedRows = sortStockRows(sanitizedRows);
       setStock(sortedRows);
       setFiltered(sortedRows);
     } else {
       const rows = (data ?? []) as unknown as StockSummary[];
-      const sortedRows = sortStockRows(rows);
+      const sanitizedRows = sanitizeStockRows(rows);
+      const sortedRows = sortStockRows(sanitizedRows);
       setStock(sortedRows);
       setFiltered(sortedRows);
     }
@@ -190,7 +201,7 @@ export default function StockPage() {
   async function handleAdjustSave() {
     if (!adjustItem) { setAdjustError("Select an item first."); return; }
     if (adjustQty <= 0) { setAdjustError("Quantity must be greater than 0."); return; }
-    if (adjustMode === "out" && adjustQty > adjustItem.balance) { setAdjustError("Cannot remove more than current balance."); return; }
+    if (adjustMode === "out" && adjustQty > Math.max(0, adjustItem.balance)) { setAdjustError("Cannot remove more than current balance."); return; }
     setAdjustSaving(true); setAdjustError("");
 
     const supabase = createClient();
@@ -200,9 +211,10 @@ export default function StockPage() {
       : { data: null };
 
     const name = (profile as any)?.full_name ?? user?.email ?? "Unknown";
+    const currentBalance = Math.max(0, adjustItem.balance);
     const newBalance = adjustMode === "in"
-      ? adjustItem.balance + adjustQty
-      : adjustItem.balance - adjustQty;
+      ? currentBalance + adjustQty
+      : Math.max(0, currentBalance - adjustQty);
 
     const { error: saveErr } = await supabase.from("stock_ledger").insert({
       item_id: adjustItem.item_id,
