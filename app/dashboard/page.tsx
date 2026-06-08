@@ -171,6 +171,7 @@ export default function DashboardPage() {
   const [activityLoading, setActivityLoading] = useState(true);
   const [stockAlerts, setStockAlerts] = useState<StockSummary[]>([]);
   const [stockAlertsLoading, setStockAlertsLoading] = useState(true);
+  const [userName, setUserName] = useState("Yatish Jain");
 
   const { text: greetingText, Icon: GreetingIcon } = getGreeting();
 

@@ -104,7 +104,7 @@ export default function RequisitionsPage() {
     const { data: profile } = user
       ? await supabase.from("profiles").select("full_name").eq("id", user.id).single()
       : { data: null };
-    const name = (profile as any)?.full_name ?? user?.email ?? "Unknown";
+    const name = (profile as any)?.full_name?.trim() || "Yatish Jain";
 
     if (actionType === "reject") {
       await supabase

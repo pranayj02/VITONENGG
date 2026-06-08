@@ -9,7 +9,7 @@
 create table if not exists public.profiles (
   id uuid references auth.users on delete cascade primary key,
   email text,
-  full_name text,
+  full_name text not null default 'Yatish Jain',
   role text check (role in ('admin','purchase_manager','accounts','store_keeper','viewer','engineer')) default 'viewer',
   department text,
   is_active boolean default true,
@@ -330,6 +330,12 @@ create index if not exists idx_grn_status on public.grn(status);
 create index if not exists idx_stock_ledger_item_id on public.stock_ledger(item_id);
 create index if not exists idx_stock_ledger_created_at on public.stock_ledger(created_at desc);
 
+update public.profiles
+set full_name = 'Yatish Jain'
+where full_name is null or btrim(full_name) = '';
+
+alter table public.profiles
+  alter column full_name set default 'Yatish Jain';
 
 -- 10. SEED: If you already have users in auth.users, backfill profiles
 -- ------------------------------------------------------------
@@ -337,7 +343,7 @@ insert into public.profiles (id, email, full_name, role)
 select 
   u.id,
   u.email,
-  coalesce(u.raw_user_meta_data->>'full_name', u.email),
+  coalesce(nullif(u.raw_user_meta_data->>'full_name',''), 'Yatish Jain'),
   'admin'
 from auth.users u
 left join public.profiles p on p.id = u.id
