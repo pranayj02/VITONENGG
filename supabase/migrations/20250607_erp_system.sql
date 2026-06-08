@@ -10,7 +10,7 @@ create table if not exists public.profiles (
   id uuid references auth.users on delete cascade primary key,
   email text,
   full_name text not null default 'Yatish Jain',
-  role text check (role in ('admin','purchase_manager','accounts','store_keeper','viewer','engineer')) default 'viewer',
+  role text check (role in ('admin','purchase_manager','accounts','store_keeper','viewer','engineer','quality_assurance')) default 'viewer',
   department text,
   is_active boolean default true,
   created_at timestamptz default now(),

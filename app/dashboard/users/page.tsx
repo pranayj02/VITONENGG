@@ -14,6 +14,8 @@ import {
   CheckCircle,
   Eye,
   EyeOff,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 
 interface UserProfile {
@@ -24,6 +26,10 @@ interface UserProfile {
   department: string | null;
   is_active: boolean;
   created_at: string;
+}
+
+function getAdminCount(rows: UserProfile[]) {
+  return rows.filter((u) => u.role === "admin").length;
 }
 
 export default function UsersPage() {
@@ -48,6 +54,7 @@ export default function UsersPage() {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState("");
   const [createSuccess, setCreateSuccess] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
   async function load() {
     setLoading(true);
@@ -78,10 +85,21 @@ export default function UsersPage() {
   }, [search, users]);
 
   async function updateRole(id: string, newRole: UserRole) {
+    setDeleteError("");
+    const currentUser = users.find((u) => u.id === id);
+    if (!currentUser) return;
+    if (currentUser.role === "admin" && newRole !== "admin" && getAdminCount(users) <= 1) {
+      setDeleteError("At least one administrator must remain in the system.");
+      return;
+    }
     setSavingId(id);
     const supabase = createClient();
-    await supabase.from("profiles").update({ role: newRole }).eq("id", id);
-    setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, role: newRole } : u)));
+    const { error } = await supabase.from("profiles").update({ role: newRole }).eq("id", id);
+    if (!error) {
+      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, role: newRole } : u)));
+    } else {
+      setDeleteError(error.message);
+    }
     setSavingId(null);
   }
 
@@ -92,6 +110,46 @@ export default function UsersPage() {
     if (Object.prototype.hasOwnProperty.call(nextPatch, "full_name")) nextPatch.full_name = String(nextPatch.full_name ?? "").trim() || "Yatish Jain";
     await supabase.from("profiles").update(nextPatch).eq("id", id);
     setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...patch } : u)));
+    setSavingId(null);
+  }
+
+  async function handleDeleteUser(user: UserProfile) {
+    setDeleteError("");
+    if (user.role === "admin" && getAdminCount(users) <= 1) {
+      setDeleteError("You cannot delete the last administrator.");
+      return;
+    }
+    const confirmed = window.confirm(`Delete ${user.full_name?.trim() || user.email || "this user"}? This cannot be undone.`);
+    if (!confirmed) return;
+
+    setSavingId(user.id);
+    try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        setDeleteError("You must be logged in to delete users.");
+        setSavingId(null);
+        return;
+      }
+      const res = await fetch("/api/admin/delete-user", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ userId: user.id }),
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        setDeleteError(result.error || "Failed to delete user");
+        setSavingId(null);
+        return;
+      }
+      setUsers((prev) => prev.filter((u) => u.id !== user.id));
+    } catch (err: any) {
+      setDeleteError(err.message || "Network error");
+    }
     setSavingId(null);
   }
 
@@ -168,6 +226,13 @@ export default function UsersPage() {
           <Plus size={16} /> Add User
         </button>
       </div>
+
+      {deleteError && (
+        <div className="mb-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <AlertTriangle size={16} className="mt-0.5 flex-shrink-0" />
+          <span>{deleteError}</span>
+        </div>
+      )}
 
       {/* Add User Modal */}
       {showForm && (

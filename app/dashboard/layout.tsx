@@ -63,7 +63,7 @@ function buildNavSections(role: UserRole | null): NavSection[] {
       title: "Purchase Orders",
       items: [
         { href: "/dashboard/po/new", label: "New PO", icon: FileText, permission: "create_po" },
-        { href: "/dashboard/history", label: "PO History", icon: History },
+        { href: "/dashboard/history", label: "PO History", icon: History, permission: "create_po" },
       ],
     },
     {

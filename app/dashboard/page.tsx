@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import type { ActivityLog, Requisition, StockSummary } from "@/lib/types";
+import { useRole, can } from "@/lib/roles";
 
 type PurchaseOrderRow = Record<string, any>;
 type TopItem = { name: string; count: number };
@@ -174,6 +175,8 @@ export default function DashboardPage() {
   const [userName, setUserName] = useState("Yatish Jain");
 
   const { text: greetingText, Icon: GreetingIcon } = getGreeting();
+  const { role } = useRole();
+  const canAccessPO = can(role, "create_po");
 
   useEffect(() => {
     async function load() {
@@ -218,7 +221,7 @@ export default function DashboardPage() {
   const statCards = [
     { label: "Items in Catalog", value: stats.items, icon: Package, href: "/dashboard/catalog", accent: "orange" },
     { label: "Vendors", value: stats.vendors, icon: Users, href: "/dashboard/vendors", accent: "blue" },
-    { label: "Purchase Orders", value: stats.pos, icon: FileText, href: "/dashboard/history", accent: "green" },
+    ...(canAccessPO ? [{ label: "Purchase Orders", value: stats.pos, icon: FileText, href: "/dashboard/history", accent: "green" }] : []),
     { label: "Invoices Raised", value: stats.invoices, icon: Receipt, href: "/dashboard/invoices/history", accent: "purple" },
   ];
 
@@ -232,7 +235,7 @@ export default function DashboardPage() {
 
   const quickActions = [
     { label: "New Requisition", desc: "Request material for your department", href: "/dashboard/requisitions/new", icon: ArrowRightLeft, bg: "bg-viton-red dark:bg-orange-500" },
-    { label: "New Purchase Order", desc: "Auto-fill from serial ID", href: "/dashboard/po/new", icon: FileText, bg: "bg-blue-600 dark:bg-blue-500" },
+    ...(canAccessPO ? [{ label: "New Purchase Order", desc: "Auto-fill from serial ID", href: "/dashboard/po/new", icon: FileText, bg: "bg-blue-600 dark:bg-blue-500" }] : []),
     { label: "Receive GRN", desc: "Record incoming stock against PO", href: "/dashboard/grn", icon: PackageOpen, bg: "bg-green-600 dark:bg-green-500" },
   ];
 
@@ -284,6 +287,7 @@ export default function DashboardPage() {
       </div>
 
       {/* PO Insights */}
+      {canAccessPO && (
       <div className="mb-10">
         <div className="flex items-end justify-between gap-4 flex-wrap mb-3">
           <div>
@@ -386,6 +390,7 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+      )}
 
       {/* ERP Widgets */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-10">

@@ -1,15 +1,16 @@
 // Role-based access control for VITONENGG ERP
 // These map to the profiles.role column in Supabase
 
-export type UserRole = "admin" | "purchase_manager" | "accounts" | "store_keeper" | "viewer" | "engineer";
+export type UserRole = "admin" | "purchase_manager" | "accounts" | "store_keeper" | "viewer" | "engineer" | "quality_assurance";
 
 export const ROLE_LABELS: Record<UserRole, string> = {
   admin: "Administrator",
-  purchase_manager: "Purchase Manager",
+  purchase_manager: "Project Manager",
   accounts: "Accounts",
   store_keeper: "Store Keeper",
   engineer: "Engineer",
   viewer: "Viewer",
+  quality_assurance: "Quality Assurance",
 };
 
 export interface Profile {
