@@ -32,7 +32,9 @@ const statusColors: Record<string, string> = {
   approved: "bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400",
   rejected: "bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400",
   converted_to_po: "bg-purple-50 text-purple-700 dark:bg-purple-500/10 dark:text-purple-400",
-  partially_fulfilled: "bg-orange-50 text-orange-700 dark:bg-orange-500/10 dark:text-orange-400",
+  fulfilled: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400",
+  awaiting_procurement: "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400",
+  partially_fulfilled: "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400",
 };
 
 const priorityColors: Record<string, string> = {
@@ -52,7 +54,8 @@ export default function RequisitionsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [expanded, setExpanded] = useState<string | null>(null);
   const [actionId, setActionId] = useState<string | null>(null);
-  const [actionType, setActionType] = useState<"approve" | "reject" | "convert">("approve");
+  const [actionType, setActionType] = useState<"approve" | "reject" | "convert" | "fulfil" | "raise_po">("approve");
+  const [stockMap, setStockMap] = useState<Record<string, number>>({});
   const [actionNote, setActionNote] = useState("");
   const [acting, setActing] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -61,11 +64,10 @@ export default function RequisitionsPage() {
   async function load() {
     setLoading(true);
     const supabase = createClient();
-    const { data, error } = await supabase
-      .from("requisitions")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(500);
+    const [{ data, error }, { data: stockData }] = await Promise.all([
+      supabase.from("requisitions").select("*").order("created_at", { ascending: false }).limit(500),
+      supabase.rpc("get_stock_summary"),
+    ]);
 
     if (error) {
       setReqs([]);
@@ -75,6 +77,13 @@ export default function RequisitionsPage() {
       setReqs(rows);
       setFiltered(rows);
     }
+
+    // Build item_id -> balance map
+    const map: Record<string, number> = {};
+    for (const row of (stockData ?? []) as any[]) {
+      map[row.item_id] = Number(row.balance ?? 0);
+    }
+    setStockMap(map);
     setLoading(false);
   }
 
@@ -128,12 +137,19 @@ export default function RequisitionsPage() {
           approved_at: new Date().toISOString(),
         })
         .eq("id", actionId);
-    } else if (actionType === "convert") {
+    } else if (actionType === "convert" || actionType === "raise_po") {
       const req = reqs.find((r) => r.id === actionId);
       if (req) {
+        const lines = (req.line_items ?? []) as ReqLineItem[];
+        // Only include shortage lines (requested > available in stock)
+        const shortageLines = lines.map((li) => ({
+          ...li,
+          quantity: Math.max(0, Number(li.qty_requested) - (stockMap[li.item_id] ?? 0)),
+        })).filter((li) => li.quantity > 0);
+        const itemsToOrder = shortageLines.length > 0 ? shortageLines : lines;
         const params = new URLSearchParams();
         params.set("from_req", req.id);
-        params.set("items", JSON.stringify(req.line_items));
+        params.set("items", JSON.stringify(itemsToOrder));
         params.set("notes", req.notes ?? "");
         router.push(`/dashboard/po/new?${params.toString()}`);
         setActing(false);
@@ -144,6 +160,58 @@ export default function RequisitionsPage() {
     setActionId(null);
     setActionNote("");
     setActing(false);
+    await load();
+  }
+
+
+  async function handleFulfil(req: ReqWithUser) {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data: profile } = user
+      ? await supabase.from("profiles").select("full_name").eq("id", user.id).single()
+      : { data: null };
+    const actor = (profile as any)?.full_name?.trim() || "Yatish Jain";
+    const lines = (req.line_items ?? []) as ReqLineItem[];
+
+    // Insert stock-out ledger rows for each line
+    for (const line of lines) {
+      const { data: lastLedger } = await supabase
+        .from("stock_ledger")
+        .select("balance")
+        .eq("item_id", line.item_id)
+        .order("created_at", { ascending: false })
+        .limit(1);
+      const curBalance = Number((lastLedger as any)?.[0]?.balance ?? 0);
+      await supabase.from("stock_ledger").insert({
+        item_id: line.item_id,
+        transaction_type: "mr_issue_out",
+        reference_type: "requisition",
+        reference_id: req.id,
+        reference_code: req.req_number,
+        qty_in: 0,
+        qty_out: Number(line.qty_requested),
+        balance: curBalance - Number(line.qty_requested),
+        unit: line.unit,
+        notes: `Issued to ${req.req_number}`,
+        created_by: user?.id ?? null,
+        created_by_name: actor,
+      });
+    }
+
+    // Mark MR as fulfilled
+    await supabase.from("requisitions").update({ status: "converted_to_po" }).eq("id", req.id);
+
+    // Audit
+    await supabase.from("activity_logs").insert({
+      user_id: user?.id ?? null,
+      user_name: actor,
+      action: "requisition_fulfilled_from_stock",
+      entity_type: "requisition",
+      entity_id: req.id,
+      entity_code: req.req_number,
+      details: { items: lines.map((l) => ({ name: l.name, qty: l.qty_requested })) },
+    });
+
     await load();
   }
 
@@ -167,7 +235,7 @@ export default function RequisitionsPage() {
         <div>
           <h1 className="text-viton-navy dark:text-white text-2xl font-bold">Material Requisitions</h1>
           <p className="text-[#8892a8] dark:text-gray-500 text-sm mt-1">
-            Request → Approve → Purchase Order workflow
+            Request → Approve → Fulfil from Stock or Raise PO for Shortage
           </p>
         </div>
         {canCreate && (
@@ -208,7 +276,7 @@ export default function RequisitionsPage() {
             <option value="under_review">Under Review</option>
             <option value="approved">Approved</option>
             <option value="rejected">Rejected</option>
-            <option value="converted_to_po">Converted to PO</option>
+            <option value="converted_to_po">Fulfilled / PO Raised</option>
           </select>
           <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8892a8] dark:text-gray-500 pointer-events-none" />
         </div>
@@ -254,7 +322,7 @@ export default function RequisitionsPage() {
             <p className="text-[#8892a8] dark:text-gray-500 text-sm mb-4">
               {actionType === "approve" && "This will mark the requisition as approved. A purchase officer can then convert it to a PO."}
               {actionType === "reject" && "Provide a reason so the requester understands why."}
-              {actionType === "convert" && "This will open the PO builder pre-filled with requested items."}
+              {(actionType === "convert" || actionType === "raise_po") && "This will open the PO builder pre-filled with shortage quantities only. Items already in stock will not be ordered."}
             </p>
 
             {actionType === "reject" && (
@@ -283,7 +351,7 @@ export default function RequisitionsPage() {
                     : "bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 text-white"
                 }`}
               >
-                {acting ? "Processing..." : actionType === "reject" ? "Reject" : actionType === "approve" ? "Approve" : "Convert to PO"}
+                {acting ? "Processing..." : actionType === "reject" ? "Reject" : actionType === "approve" ? "Approve" : "Raise PO for Shortage"}
               </button>
             </div>
           </div>
@@ -356,7 +424,9 @@ export default function RequisitionsPage() {
                             <th className="text-left text-[#8892a8] dark:text-gray-500 text-xs uppercase tracking-wider px-5 py-2.5">#</th>
                             <th className="text-left text-[#8892a8] dark:text-gray-500 text-xs uppercase tracking-wider px-5 py-2.5">Serial ID</th>
                             <th className="text-left text-[#8892a8] dark:text-gray-500 text-xs uppercase tracking-wider px-5 py-2.5">Description</th>
-                            <th className="text-left text-[#8892a8] dark:text-gray-500 text-xs uppercase tracking-wider px-5 py-2.5">Qty</th>
+                            <th className="text-left text-[#8892a8] dark:text-gray-500 text-xs uppercase tracking-wider px-5 py-2.5">Qty Requested</th>
+                            <th className="text-left text-[#8892a8] dark:text-gray-500 text-xs uppercase tracking-wider px-5 py-2.5">In Stock</th>
+                            <th className="text-left text-[#8892a8] dark:text-gray-500 text-xs uppercase tracking-wider px-5 py-2.5">Shortage</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -366,6 +436,8 @@ export default function RequisitionsPage() {
                               <td className="px-5 py-2.5 text-viton-red dark:text-orange-400 font-mono text-xs font-semibold">{line.serial_id}</td>
                               <td className="px-5 py-2.5 text-viton-navy dark:text-white">{line.name}</td>
                               <td className="px-5 py-2.5 text-[#4a5578] dark:text-gray-400">{line.qty_requested} {line.unit}</td>
+                              <td className="px-5 py-2.5 text-emerald-600 dark:text-emerald-400 font-semibold">{stockMap[line.item_id] ?? 0}</td>
+                              <td className={`px-5 py-2.5 font-semibold ${Math.max(0, Number(line.qty_requested) - (stockMap[line.item_id] ?? 0)) > 0 ? "text-red-500 dark:text-red-400" : "text-gray-400"}`}>{Math.max(0, Number(line.qty_requested) - (stockMap[line.item_id] ?? 0)) || "—"}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -414,12 +486,45 @@ export default function RequisitionsPage() {
                             </>
                           )}
 
-                          {showCreatePoAgain && canConvert && (
+                          {/* MR Fulfillment Buttons — only on approved MRs */}
+                          {req.status === "approved" && canConvert && (() => {
+                            const lines = (req.line_items ?? []) as ReqLineItem[];
+                            const allInStock = lines.every((li) => (stockMap[li.item_id] ?? 0) >= Number(li.qty_requested));
+                            const anyShortage = lines.some((li) => (stockMap[li.item_id] ?? 0) < Number(li.qty_requested));
+                            return (
+                              <>
+                                {/* Fulfil From Stock */}
+                                <button
+                                  disabled={!allInStock}
+                                  onClick={(e) => { e.stopPropagation(); if (allInStock) handleFulfil(req); }}
+                                  title={allInStock ? "Issue all items from stock" : "Insufficient stock — raise a PO for shortage first"}
+                                  className={`flex items-center gap-2 font-semibold px-4 py-2 rounded-xl text-sm transition-all border ${
+                                    allInStock
+                                      ? "bg-emerald-50 hover:bg-emerald-500 text-emerald-700 hover:text-white border-emerald-200 hover:border-emerald-500 dark:bg-emerald-500/10 dark:hover:bg-emerald-500 dark:text-emerald-400 dark:border-emerald-500/30"
+                                      : "bg-gray-50 text-gray-400 border-gray-200 dark:bg-gray-800/40 dark:text-gray-600 dark:border-gray-700 cursor-not-allowed opacity-50"
+                                  }`}
+                                >
+                                  <CheckCircle size={14} /> Fulfil From Stock
+                                </button>
+                                {/* Raise PO for Shortage */}
+                                {anyShortage && (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); setActionType("raise_po"); setActionId(req.id); }}
+                                    className="flex items-center gap-2 bg-purple-50 hover:bg-purple-500 text-purple-700 hover:text-white border border-purple-200 hover:border-purple-500 dark:bg-purple-500/10 dark:hover:bg-purple-500 dark:text-purple-400 dark:border-purple-500/30 font-semibold px-4 py-2 rounded-xl text-sm transition-all"
+                                  >
+                                    <ArrowRightLeft size={14} /> Raise PO for Shortage
+                                  </button>
+                                )}
+                              </>
+                            );
+                          })()}
+                          {/* Legacy: approved but no PO yet and not showing fulfil (edge-case catch) */}
+                          {req.status === "converted_to_po" && canConvert && (
                             <button
-                              onClick={(e) => { e.stopPropagation(); setActionType("convert"); setActionId(req.id); }}
+                              onClick={(e) => { e.stopPropagation(); setActionType("raise_po"); setActionId(req.id); }}
                               className="flex items-center gap-2 bg-purple-50 hover:bg-purple-500 text-purple-700 hover:text-white border border-purple-200 hover:border-purple-500 dark:bg-purple-500/10 dark:hover:bg-purple-500 dark:text-purple-400 dark:border-purple-500/30 font-semibold px-4 py-2 rounded-xl text-sm transition-all"
                             >
-                              <ArrowRightLeft size={14} /> Create PO
+                              <ArrowRightLeft size={14} /> Raise Another PO
                             </button>
                           )}
 
