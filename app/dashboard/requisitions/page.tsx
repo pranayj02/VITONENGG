@@ -199,7 +199,7 @@ export default function RequisitionsPage() {
     }
 
     // Mark MR as fulfilled
-    await supabase.from("requisitions").update({ status: "converted_to_po" }).eq("id", req.id);
+    await supabase.from("requisitions").update({ status: "fulfilled" }).eq("id", req.id);
 
     // Audit
     await supabase.from("activity_logs").insert({
@@ -409,7 +409,7 @@ export default function RequisitionsPage() {
 
                   <div className="flex items-center gap-3 ml-4 flex-shrink-0">
                     <span className={`text-xs font-semibold px-2.5 py-1 rounded-lg capitalize ${statusColors[req.status] ?? "bg-gray-100 text-gray-600"}`}>
-                      {req.status.replace(/_/g, " ")}
+                      {req.status === "converted_to_po" ? "PO Raised" : req.status === "fulfilled" ? "Fulfilled ✓" : req.status.replace(/_/g, " ")}
                     </span>
                     {isOpen ? <ChevronUp size={16} className="text-[#8892a8] dark:text-gray-500" /> : <ChevronDown size={16} className="text-[#8892a8] dark:text-gray-500" />}
                   </div>
