@@ -339,8 +339,6 @@ export default function GRNPage() {
           const qty = Math.max(0, Number(patch.counted_nos));
           return normalizeGRNLine(line, {
             ...patch,
-            received_qty: qty,
-            challan_nos: qty,
             counted_nos: qty,
             accepted_qty: qty,
             rejected_qty: 0,
