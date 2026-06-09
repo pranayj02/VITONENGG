@@ -1077,7 +1077,7 @@ export default function GRNPage() {
 
                       {isOpen && (
                         <tr className="border-b border-[#dde1ea] dark:border-gray-800 last:border-0">
-                          <td colSpan={6} className="px-5 pb-4">
+                          <td colSpan={6} className="px-5 pt-4 pb-4">
                             <div className="bg-[#f1f3f8] dark:bg-gray-800 rounded-xl border border-[#dde1ea] dark:border-gray-800 overflow-x-auto">
                               <table className="w-full text-sm">
                                 <thead>
@@ -1093,19 +1093,19 @@ export default function GRNPage() {
                                 <tbody>
                                   {lines.map((l, i) => (
                                     <tr key={i} className="border-b border-[#dde1ea] dark:border-gray-800 last:border-0">
-                                      <td className="px-4 py-2 text-viton-navy dark:text-white font-medium">{l.name}</td>
-                                      <td className="px-3 py-2 text-center text-[#8892a8] dark:text-gray-500">{l.po_qty ?? 0}</td>
-                                      <td className="px-3 py-2 text-center font-semibold">{l.received_qty}</td>
-                                      <td className="px-3 py-2 text-center text-green-700 dark:text-green-400 font-semibold">{l.accepted_qty}</td>
-                                      <td className="px-3 py-2 text-center text-viton-red font-semibold">{l.rejected_qty}</td>
-                                      <td className="px-3 py-2 text-[#8892a8] dark:text-gray-500 text-xs">{l.rejection_reason || "—"}</td>
+                                      <td className="px-4 py-3 text-viton-navy dark:text-white font-medium">{l.name}</td>
+                                      <td className="px-3 py-3 text-center text-[#8892a8] dark:text-gray-500">{l.po_qty ?? 0}</td>
+                                      <td className="px-3 py-3 text-center font-semibold">{l.received_qty}</td>
+                                      <td className="px-3 py-3 text-center text-green-700 dark:text-green-400 font-semibold">{l.accepted_qty}</td>
+                                      <td className="px-3 py-3 text-center text-viton-red font-semibold">{l.rejected_qty}</td>
+                                      <td className="px-3 py-3 text-[#8892a8] dark:text-gray-500 text-xs">{l.rejection_reason || "—"}</td>
                                     </tr>
                                   ))}
                                 </tbody>
                               </table>
                             </div>
 
-                            <div className="mt-3 flex items-center gap-3 flex-wrap">
+                            <div className="mt-4 flex items-center gap-3 flex-wrap">
                               {g.status === "pending" && canInspect && (
                                 <>
                                   <button onClick={() => updateStatus(g, "inspected")} className="bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 text-xs font-semibold px-3 py-1.5 rounded-md border border-blue-100 dark:border-blue-500/20">Mark Inspected</button>
