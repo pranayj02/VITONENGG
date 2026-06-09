@@ -117,14 +117,14 @@ export async function POST(request: NextRequest) {
         };
       });
 
-      const results = await Promise.all(
-        reversals.map(r => adminClient.from("stock_ledger").insert(r))
-      );
+      // Batch insert ALL reversals in ONE query
+      const { error: batchErr } = await adminClient
+        .from("stock_ledger")
+        .insert(reversals);
 
-      const firstErr = results.find(r => r.error)?.error;
-      if (firstErr) {
-        console.error("delete GRN: reversal error", firstErr);
-        return NextResponse.json({ error: `Failed to reverse stock: ${firstErr.message}` }, { status: 500 });
+      if (batchErr) {
+        console.error("delete GRN: reversal error", batchErr);
+        return NextResponse.json({ error: `Failed to reverse stock: ${batchErr.message}` }, { status: 500 });
       }
     }
 
@@ -160,27 +160,24 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const { error: activityErr } = await adminClient
-      .from("activity_logs")
-      .insert(activities);
+    // ── 4. Log activity + delete GRN in parallel ──
+    const [activityResult, deleteResult] = await Promise.all([
+      // Activity log (non-fatal if it fails)
+      adminClient.from("activity_logs").insert(activities),
+      // Delete the GRN itself
+      adminClient.from("grn").delete().eq("id", grnId).select("id"),
+    ]);
 
-    if (activityErr) {
-      console.error("delete GRN: activity log error", activityErr);
-      // Non-fatal — continue
+    if (activityResult.error) {
+      console.error("delete GRN: activity log error", activityResult.error);
     }
 
-    // ── 4. Delete the GRN record itself ──
-    const { data: deleted, error: deleteErr } = await adminClient
-      .from("grn")
-      .delete()
-      .eq("id", grnId)
-      .select("id");
-
-    if (deleteErr) {
-      console.error("delete GRN: grn delete error", deleteErr);
-      return NextResponse.json({ error: `Failed to delete GRN: ${deleteErr.message}` }, { status: 500 });
+    if (deleteResult.error) {
+      console.error("delete GRN: grn delete error", deleteResult.error);
+      return NextResponse.json({ error: `Failed to delete GRN: ${deleteResult.error.message}` }, { status: 500 });
     }
 
+    const deleted = deleteResult.data;
     if (!deleted || deleted.length === 0) {
       return NextResponse.json({ error: "GRN not found or already deleted." }, { status: 404 });
     }
