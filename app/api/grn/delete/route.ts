@@ -46,7 +46,7 @@ async function verifyUser(request: NextRequest): Promise<{ error: string } | { u
 export async function POST(request: NextRequest) {
   try {
     const auth = await verifyUser(request);
-    if (auth.error) return NextResponse.json({ error: auth.error }, { status: 401 });
+    if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: 401 });
 
     const body = await request.json();
     const grnId = String(body.grnId ?? "").trim();
