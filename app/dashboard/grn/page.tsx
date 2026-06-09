@@ -565,32 +565,43 @@ export default function GRNPage() {
 
 
   async function deleteGRN(grn: GRN) {
-    if (!confirm(`Delete ${grn.grn_number}? This will also remove any stock ledger entries linked to it.`)) return;
-    setError("");
-    const supabase = createClient();
+    try {
+      const ok = window.confirm(`Delete ${grn.grn_number}? This will also remove any stock ledger entries linked to it.`);
+      if (!ok) return;
 
-    const { error: ledgerErr } = await supabase
-      .from("stock_ledger")
-      .delete()
-      .eq("reference_type", "grn")
-      .eq("reference_id", grn.id);
+      setError("");
+      const supabase = createClient();
 
-    if (ledgerErr) {
-      setError(ledgerErr.message);
-      return;
+      // First delete any stock ledger entries linked to this GRN
+      const { error: ledgerErr } = await supabase
+        .from("stock_ledger")
+        .delete()
+        .eq("reference_type", "grn")
+        .eq("reference_id", grn.id);
+
+      if (ledgerErr) {
+        console.error("deleteGRN: stock_ledger delete error", ledgerErr);
+        setError(`Failed to delete stock entries: ${ledgerErr.message}`);
+        return;
+      }
+
+      // Then delete the GRN itself
+      const { error: deleteErr } = await supabase
+        .from("grn")
+        .delete()
+        .eq("id", grn.id);
+
+      if (deleteErr) {
+        console.error("deleteGRN: grn delete error", deleteErr);
+        setError(`Failed to delete GRN: ${deleteErr.message}`);
+        return;
+      }
+
+      await load();
+    } catch (err: any) {
+      console.error("deleteGRN: unexpected error", err);
+      setError(`Unexpected error: ${err?.message || 'Something went wrong'}`);
     }
-
-    const { error: deleteErr } = await supabase
-      .from("grn")
-      .delete()
-      .eq("id", grn.id);
-
-    if (deleteErr) {
-      setError(deleteErr.message);
-      return;
-    }
-
-    await load();
   }
 
   const MIN_ROWS = 10;
