@@ -32,37 +32,81 @@ const ENTITY_ICONS: Record<string, React.ElementType> = {
 };
 
 const ACTION_COLORS: Record<string, string> = {
-  po_created: "text-green-600 dark:text-green-400",
-  po_updated: "text-blue-600 dark:text-blue-400",
+  po_created: "text-blue-600 dark:text-blue-400",
+  po_updated: "text-violet-600 dark:text-violet-400",
   po_deleted: "text-red-600 dark:text-red-400",
-  po_confirmed: "text-green-600 dark:text-green-400",
+  po_confirmed: "text-emerald-600 dark:text-emerald-400",
   mr_requested: "text-blue-600 dark:text-blue-400",
-  mr_approved: "text-green-600 dark:text-green-400",
+  mr_approved: "text-emerald-600 dark:text-emerald-400",
   mr_rejected: "text-red-600 dark:text-red-400",
   mr_stock_issued: "text-orange-600 dark:text-orange-400",
+  requisition_fulfilled_from_stock: "text-emerald-600 dark:text-emerald-400",
   grn_created: "text-blue-600 dark:text-blue-400",
-  grn_approved: "text-green-600 dark:text-green-400",
-  stock_received: "text-green-600 dark:text-green-400",
+  grn_inspected: "text-amber-600 dark:text-amber-400",
+  grn_approved: "text-emerald-600 dark:text-emerald-400",
+  grn_partial: "text-amber-600 dark:text-amber-400",
+  grn_rejected: "text-red-600 dark:text-red-400",
+  stock_received: "text-emerald-600 dark:text-emerald-400",
   stock_issued: "text-orange-600 dark:text-orange-400",
-  invoice_created: "text-green-600 dark:text-green-400",
-  invoice_updated: "text-blue-600 dark:text-blue-400",
+  invoice_created: "text-blue-600 dark:text-blue-400",
+  invoice_updated: "text-violet-600 dark:text-violet-400",
   invoice_deleted: "text-red-600 dark:text-red-400",
-  item_created: "text-green-600 dark:text-green-400",
-  item_updated: "text-blue-600 dark:text-blue-400",
+  item_created: "text-blue-600 dark:text-blue-400",
+  item_updated: "text-violet-600 dark:text-violet-400",
   item_deleted: "text-red-600 dark:text-red-400",
-  vendor_created: "text-green-600 dark:text-green-400",
-  vendor_updated: "text-blue-600 dark:text-blue-400",
+  vendor_created: "text-blue-600 dark:text-blue-400",
+  vendor_updated: "text-violet-600 dark:text-violet-400",
   vendor_deleted: "text-red-600 dark:text-red-400",
-  buyer_created: "text-green-600 dark:text-green-400",
-  buyer_updated: "text-blue-600 dark:text-blue-400",
+  buyer_created: "text-blue-600 dark:text-blue-400",
+  buyer_updated: "text-violet-600 dark:text-violet-400",
   buyer_deleted: "text-red-600 dark:text-red-400",
-  user_profile_updated: "text-blue-600 dark:text-blue-400",
+  user_profile_updated: "text-violet-600 dark:text-violet-400",
   user_role_updated: "text-orange-600 dark:text-orange-400",
   user_deleted: "text-red-600 dark:text-red-400",
 };
 
+function getActionTone(action: string): string {
+  const normalized = action.toLowerCase();
+
+  if (normalized.includes("deleted") || normalized.includes("rejected")) {
+    return "bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400";
+  }
+
+  if (
+    normalized.includes("approved") ||
+    normalized.includes("confirmed") ||
+    normalized.includes("fulfilled") ||
+    normalized.includes("received")
+  ) {
+    return "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400";
+  }
+
+  if (normalized.includes("issued") || normalized.includes("role")) {
+    return "bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400";
+  }
+
+  if (
+    normalized.includes("updated") ||
+    normalized.includes("inspected") ||
+    normalized.includes("partial")
+  ) {
+    return "bg-violet-50 text-violet-600 dark:bg-violet-500/10 dark:text-violet-400";
+  }
+
+  if (normalized.includes("created") || normalized.includes("requested")) {
+    return "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400";
+  }
+
+  return "bg-gray-50 text-gray-600 dark:bg-gray-800 dark:text-gray-400";
+}
+
 function formatAction(action: string): string {
-  return action.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  return action
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .replace(/\bPo\b/g, "PO")
+    .replace(/\bMr\b/g, "MR")
+    .replace(/\bGrn\b/g, "GRN");
 }
 
 function timeAgo(date: string): string {
@@ -179,11 +223,7 @@ export default function ActivityPage() {
               const Icon = ENTITY_ICONS[log.entity_type] ?? AlertCircle;
               return (
                 <div key={log.id} className="px-5 py-4 flex items-start gap-4 hover:bg-[#f7f8fb] dark:hover:bg-gray-800/40 transition-colors">
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                    log.action.includes("created") ? "bg-green-50 text-green-600 dark:bg-green-500/10 dark:text-green-400" :
-                    log.action.includes("deleted") ? "bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400" :
-                    "bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400"
-                  }`}>
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 ${getActionTone(log.action)}`}>
                     <Icon size={16} />
                   </div>
                   <div className="flex-1 min-w-0">
