@@ -288,8 +288,21 @@ export default function GRNPage() {
       grn_date: grnDate.trim() || null,
     };
 
-    const { error: saveErr } = await supabase.from("grn").insert(payload).select("id").single();
+    const { data: savedGrn, error: saveErr } = await supabase.from("grn").insert(payload).select("id").single();
     if (saveErr) { setError(saveErr.message); setSaving(false); return; }
+
+    await audit({
+      action: "grn_created",
+      entity_type: "grn",
+      entity_id: (savedGrn as any)?.id,
+      entity_code: finalGrnNumber,
+      details: {
+        status: "pending",
+        vendor_name: payload.vendor_name,
+        po_id: payload.po_id,
+        line_count: normalizedLines.length,
+      },
+    });
 
     // Save freeform vendor if no vendor_id and vendor_name provided
     if (!payload.vendor_id && manualVendorName.trim()) {
@@ -402,6 +415,38 @@ export default function GRNPage() {
     } catch (err: any) {
       setError(err?.message || "Failed to sync stock for GRN.");
       return;
+    }
+
+    const actionMap: Record<"inspected" | "approved" | "rejected" | "partial", string> = {
+      inspected: "grn_inspected",
+      approved: "grn_approved",
+      rejected: "grn_rejected",
+      partial: "grn_partial",
+    };
+
+    await audit({
+      action: actionMap[newStatus],
+      entity_type: "grn",
+      entity_id: grn.id,
+      entity_code: grn.grn_number,
+      details: {
+        status: newStatus,
+        accepted_lines: nextLines.filter((line) => Number(line.accepted_qty ?? 0) > 0).length,
+        rejected_lines: nextLines.filter((line) => Number(line.rejected_qty ?? 0) > 0).length,
+      },
+    });
+
+    if (newStatus === "approved" || newStatus === "partial") {
+      await audit({
+        action: "stock_received",
+        entity_type: "grn",
+        entity_id: grn.id,
+        entity_code: grn.grn_number,
+        details: {
+          status: newStatus,
+          accepted_qty: nextLines.reduce((sum, line) => sum + Number(line.accepted_qty ?? 0), 0),
+        },
+      });
     }
 
     await load();
