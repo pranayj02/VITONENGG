@@ -572,35 +572,27 @@ export default function GRNPage() {
       setError("");
       const supabase = createClient();
 
-      // First delete any stock ledger entries linked to this GRN
-      const { error: ledgerErr } = await supabase
-        .from("stock_ledger")
-        .delete()
-        .eq("reference_type", "grn")
-        .eq("reference_id", grn.id);
-
-      if (ledgerErr) {
-        console.error("deleteGRN: stock_ledger delete error", ledgerErr);
-        setError(`Failed to delete stock entries: ${ledgerErr.message}`);
+      // Get the current session token for authorization
+      const { data: { session }, error: sessionErr } = await supabase.auth.getSession();
+      if (sessionErr || !session?.access_token) {
+        setError("Authentication error. Please log in again.");
         return;
       }
 
-      // Then delete the GRN itself — use .select() to confirm rows were actually removed
-      const { data: deletedRows, error: deleteErr } = await supabase
-        .from("grn")
-        .delete()
-        .eq("id", grn.id)
-        .select();
+      const res = await fetch("/api/grn/delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ grnId: grn.id, grnNumber: grn.grn_number }),
+      });
 
-      if (deleteErr) {
-        console.error("deleteGRN: grn delete error", deleteErr);
-        setError(`Failed to delete GRN: ${deleteErr.message}`);
-        return;
-      }
+      const data = await res.json();
 
-      if (!deletedRows || deletedRows.length === 0) {
-        console.error("deleteGRN: no rows deleted — RLS or permission issue", { id: grn.id, grn_number: grn.grn_number });
-        setError(`Cannot delete ${grn.grn_number}. No rows matched — likely a permission issue. Ensure your role (admin/store_keeper/purchase_manager) has delete rights.`);
+      if (!res.ok) {
+        console.error("deleteGRN: API error", data);
+        setError(data.error || "Failed to delete GRN");
         return;
       }
 
