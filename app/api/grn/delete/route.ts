@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type User } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
 
 function getAdminClient() {
@@ -15,7 +15,7 @@ function getAdminClient() {
   });
 }
 
-async function verifyUser(request: NextRequest) {
+async function verifyUser(request: NextRequest): Promise<{ error: string } | { user: User; role: string; name: string }> {
   const authHeader = request.headers.get("authorization");
   if (!authHeader?.startsWith("Bearer ")) return { error: "Unauthorized" };
 
