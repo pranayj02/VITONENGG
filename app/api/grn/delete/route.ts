@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
 
     if (entries.length > 0) {
       // Grab unique item IDs
-      const itemIds = [...new Set(entries.map(e => e.item_id))];
+      const itemIds = Array.from(new Set(entries.map(e => e.item_id)));
 
       // ONE query: get latest balance for ALL items at once
       const { data: allBalances, error: balanceErr } = await adminClient
