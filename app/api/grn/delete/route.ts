@@ -67,28 +67,43 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Failed to look up stock: ${lookupErr.message}` }, { status: 500 });
     }
 
-    // ── 2. Reverse each stock entry (add "out" transaction) ──
+    // ── 2. Reverse stock entries in parallel ──
     // We keep the original entries for audit trail and add reversal entries.
+    const entries = (stockEntries ?? []).filter(e => Number(e.qty_in ?? 0) - Number(e.qty_out ?? 0) > 0);
     let totalReversed = 0;
-    for (const entry of (stockEntries ?? [])) {
-      const netIn = Number(entry.qty_in ?? 0) - Number(entry.qty_out ?? 0);
-      if (netIn <= 0) continue;
 
-      // Get latest balance for this item
-      const { data: lastLedger } = await adminClient
+    if (entries.length > 0) {
+      // Grab unique item IDs
+      const itemIds = [...new Set(entries.map(e => e.item_id))];
+
+      // ONE query: get latest balance for ALL items at once
+      const { data: allBalances, error: balanceErr } = await adminClient
         .from("stock_ledger")
-        .select("balance")
-        .eq("item_id", entry.item_id)
-        .order("created_at", { ascending: false })
-        .limit(1);
+        .select("item_id, balance")
+        .in("item_id", itemIds)
+        .order("created_at", { ascending: false });
 
-      const baseBalance = Number((lastLedger as any)?.[0]?.balance ?? 0);
+      if (balanceErr) {
+        console.error("delete GRN: balance lookup error", balanceErr);
+        return NextResponse.json({ error: `Failed to look up balances: ${balanceErr.message}` }, { status: 500 });
+      }
 
-      const { error: reverseErr } = await adminClient
-        .from("stock_ledger")
-        .insert({
+      // Build a map of item_id → latest balance (first entry per item after ordering desc)
+      const balanceMap: Record<string, number> = {};
+      for (const entry of (allBalances ?? [])) {
+        if (!(entry.item_id in balanceMap)) {
+          balanceMap[entry.item_id] = Number(entry.balance ?? 0);
+        }
+      }
+
+      // Build reversals and run all inserts in parallel
+      const reversals = entries.map(entry => {
+        const netIn = Number(entry.qty_in ?? 0) - Number(entry.qty_out ?? 0);
+        const baseBalance = balanceMap[entry.item_id] ?? 0;
+        totalReversed += netIn;
+        return {
           item_id: entry.item_id,
-          transaction_type: "adjustment_out",
+          transaction_type: "adjustment_out" as const,
           reference_type: "grn",
           reference_id: grnId,
           reference_code: `REVERSAL-${grnNumber}`,
@@ -99,62 +114,62 @@ export async function POST(request: NextRequest) {
           notes: `Stock reversal for deleted GRN ${grnNumber}`,
           created_by: auth.user.id,
           created_by_name: auth.name,
-        });
+        };
+      });
 
-      if (reverseErr) {
-        console.error("delete GRN: reversal error", reverseErr);
-        return NextResponse.json({ error: `Failed to reverse stock: ${reverseErr.message}` }, { status: 500 });
+      const results = await Promise.all(
+        reversals.map(r => adminClient.from("stock_ledger").insert(r))
+      );
+
+      const firstErr = results.find(r => r.error)?.error;
+      if (firstErr) {
+        console.error("delete GRN: reversal error", firstErr);
+        return NextResponse.json({ error: `Failed to reverse stock: ${firstErr.message}` }, { status: 500 });
       }
-      totalReversed += netIn;
     }
 
-    // ── 3. Log the activity ──
-    const { error: activityErr } = await adminClient
-      .from("activity_logs")
-      .insert({
+    // ── 3. Log both activities in parallel ──
+    const activities: any[] = [{
+      user_id: auth.user.id,
+      user_email: auth.user.email,
+      user_name: auth.name,
+      action: "grn_deleted",
+      entity_type: "grn",
+      entity_id: grnId,
+      entity_code: grnNumber,
+      details: {
+        stock_reversed: totalReversed > 0,
+        reversed_quantity: totalReversed,
+        entries_count: entries.length,
+      },
+    }];
+
+    if (totalReversed > 0) {
+      activities.push({
         user_id: auth.user.id,
         user_email: auth.user.email,
         user_name: auth.name,
-        action: "grn_deleted",
+        action: "stock_reversed",
         entity_type: "grn",
         entity_id: grnId,
         entity_code: grnNumber,
         details: {
-          stock_reversed: totalReversed > 0,
           reversed_quantity: totalReversed,
-          entries_count: (stockEntries ?? []).length,
+          reason: "GRN deleted",
         },
       });
+    }
+
+    const { error: activityErr } = await adminClient
+      .from("activity_logs")
+      .insert(activities);
 
     if (activityErr) {
       console.error("delete GRN: activity log error", activityErr);
       // Non-fatal — continue
     }
 
-    // ── 4. If stock was reversed, also log a stock_ledger activity ──
-    if (totalReversed > 0) {
-      const { error: stockActivityErr } = await adminClient
-        .from("activity_logs")
-        .insert({
-          user_id: auth.user.id,
-          user_email: auth.user.email,
-          user_name: auth.name,
-          action: "stock_reversed",
-          entity_type: "grn",
-          entity_id: grnId,
-          entity_code: grnNumber,
-          details: {
-            reversed_quantity: totalReversed,
-            reason: "GRN deleted",
-          },
-        });
-
-      if (stockActivityErr) {
-        console.error("delete GRN: stock activity log error", stockActivityErr);
-      }
-    }
-
-    // ── 5. Delete the GRN record itself ──
+    // ── 4. Delete the GRN record itself ──
     const { data: deleted, error: deleteErr } = await adminClient
       .from("grn")
       .delete()
