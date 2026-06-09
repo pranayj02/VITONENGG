@@ -44,18 +44,6 @@ const priorityColors: Record<string, string> = {
   urgent: "text-red-500",
 };
 
-// Status sort order: active/urgent statuses first, completed/closed last
-const STATUS_SORT_ORDER: Record<string, number> = {
-  pending: 0,
-  under_review: 1,
-  approved: 2,
-  awaiting_procurement: 3,
-  converted_to_po: 4,
-  partially_fulfilled: 5,
-  rejected: 6,
-  fulfilled: 7,
-};
-
 export default function RequisitionsPage() {
   const router = useRouter();
   const { role, loading: roleLoading } = useRole();
@@ -117,13 +105,6 @@ export default function RequisitionsPage() {
       out = out.filter((r) => r.status === statusFilter);
     }
 
-    // Sort: active statuses first (by STATUS_SORT_ORDER), then by created_at desc within same status
-    out = [...out].sort((a, b) => {
-      const orderA = STATUS_SORT_ORDER[a.status] ?? 5;
-      const orderB = STATUS_SORT_ORDER[b.status] ?? 5;
-      if (orderA !== orderB) return orderA - orderB;
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-    });
 
     setFiltered(out);
   }, [search, statusFilter, reqs]);
