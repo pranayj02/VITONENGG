@@ -44,6 +44,18 @@ const priorityColors: Record<string, string> = {
   urgent: "text-red-500",
 };
 
+// Status sort order: active/urgent statuses first, completed/closed last
+const STATUS_SORT_ORDER: Record<string, number> = {
+  pending: 0,
+  under_review: 1,
+  approved: 2,
+  awaiting_procurement: 3,
+  converted_to_po: 4,
+  partially_fulfilled: 5,
+  rejected: 6,
+  fulfilled: 7,
+};
+
 export default function RequisitionsPage() {
   const router = useRouter();
   const { role, loading: roleLoading } = useRole();
@@ -104,6 +116,15 @@ export default function RequisitionsPage() {
     if (statusFilter) {
       out = out.filter((r) => r.status === statusFilter);
     }
+
+    // Sort: active statuses first (by STATUS_SORT_ORDER), then by created_at desc within same status
+    out = [...out].sort((a, b) => {
+      const orderA = STATUS_SORT_ORDER[a.status] ?? 5;
+      const orderB = STATUS_SORT_ORDER[b.status] ?? 5;
+      if (orderA !== orderB) return orderA - orderB;
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+
     setFiltered(out);
   }, [search, statusFilter, reqs]);
 
@@ -295,12 +316,15 @@ export default function RequisitionsPage() {
             onChange={(e) => setStatusFilter(e.target.value)}
             className="appearance-none bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-xl px-4 py-3 pr-10 text-sm text-viton-navy dark:text-white focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500 cursor-pointer"
           >
-            <option value="">All Status</option>
+            <option value="">All Statuses</option>
             <option value="pending">Pending</option>
             <option value="under_review">Under Review</option>
             <option value="approved">Approved</option>
+            <option value="awaiting_procurement">Awaiting Procurement</option>
+            <option value="converted_to_po">PO Raised</option>
+            <option value="partially_fulfilled">Partially Fulfilled</option>
             <option value="rejected">Rejected</option>
-            <option value="converted_to_po">Fulfilled / PO Raised</option>
+            <option value="fulfilled">Fulfilled</option>
           </select>
           <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8892a8] dark:text-gray-500 pointer-events-none" />
         </div>
