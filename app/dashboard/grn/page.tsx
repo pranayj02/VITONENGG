@@ -320,9 +320,41 @@ export default function GRNPage() {
 
   function updateGRNLine(index: number, patch: Partial<GRNLineItem>) {
     setGrnLines((prev) =>
-      prev.map((l, i) => {
-        if (i !== index) return l;
-        return normalizeGRNLine(l, patch);
+      prev.map((line, i) => {
+        if (i !== index) return line;
+
+        if (patch.challan_nos !== undefined) {
+          const qty = Math.max(0, Number(patch.challan_nos));
+          return normalizeGRNLine(line, {
+            ...patch,
+            received_qty: qty,
+            challan_nos: qty,
+            counted_nos: qty,
+            accepted_qty: qty,
+            rejected_qty: 0,
+          });
+        }
+
+        if (patch.counted_nos !== undefined) {
+          const qty = Math.max(0, Number(patch.counted_nos));
+          return normalizeGRNLine(line, {
+            ...patch,
+            received_qty: qty,
+            challan_nos: qty,
+            counted_nos: qty,
+            accepted_qty: qty,
+            rejected_qty: 0,
+          });
+        }
+
+        if (patch.accepted_qty !== undefined) {
+          return normalizeGRNLine(line, {
+            ...patch,
+            accepted_qty: Math.max(0, Number(patch.accepted_qty)),
+          });
+        }
+
+        return normalizeGRNLine(line, patch);
       })
     );
   }
