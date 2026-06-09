@@ -585,15 +585,22 @@ export default function GRNPage() {
         return;
       }
 
-      // Then delete the GRN itself
-      const { error: deleteErr } = await supabase
+      // Then delete the GRN itself — use .select() to confirm rows were actually removed
+      const { data: deletedRows, error: deleteErr } = await supabase
         .from("grn")
         .delete()
-        .eq("id", grn.id);
+        .eq("id", grn.id)
+        .select();
 
       if (deleteErr) {
         console.error("deleteGRN: grn delete error", deleteErr);
         setError(`Failed to delete GRN: ${deleteErr.message}`);
+        return;
+      }
+
+      if (!deletedRows || deletedRows.length === 0) {
+        console.error("deleteGRN: no rows deleted — RLS or permission issue", { id: grn.id, grn_number: grn.grn_number });
+        setError(`Cannot delete ${grn.grn_number}. No rows matched — likely a permission issue. Ensure your role (admin/store_keeper/purchase_manager) has delete rights.`);
         return;
       }
 
