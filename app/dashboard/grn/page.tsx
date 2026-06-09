@@ -225,7 +225,7 @@ export default function GRNPage() {
     const rawChallan = Math.max(0, Number(next.challan_nos ?? line.challan_nos ?? line.received_qty ?? 0));
     const rawCounted = Math.max(0, Number(next.counted_nos ?? line.counted_nos ?? line.received_qty ?? 0));
     const requestedAccepted = Math.max(0, Number(next.accepted_qty ?? line.accepted_qty ?? 0));
-    const explicitReceived = next.received_qty !== undefined ? Math.max(0, Number(next.received_qty)) : null;
+    const explicitReceived = patch.received_qty !== undefined ? Math.max(0, Number(patch.received_qty)) : null;
     const received = explicitReceived ?? Math.max(Number(line.received_qty ?? 0), rawChallan, rawCounted, requestedAccepted);
     const challanNos = Math.min(rawChallan, received);
     const countedNos = Math.min(rawCounted, received);
