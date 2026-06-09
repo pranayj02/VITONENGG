@@ -66,13 +66,15 @@ function buildNavSections(role: UserRole | null): NavSection[] {
         { href: "/dashboard/history", label: "PO History", icon: History, permission: "create_po" },
       ],
     },
-    {
-      title: "Invoices",
-      items: [
-        { href: "/dashboard/invoices/new", label: "New Invoice", icon: Receipt, permission: "create_invoice" },
-        { href: "/dashboard/invoices/history", label: "Invoice History", icon: History },
-      ],
-    },
+    // INVOICES SECTION — hidden from all users (e-invoicing handled externally)
+    // Uncomment to restore when needed.
+    // {
+    //   title: "Invoices",
+    //   items: [
+    //     { href: "/dashboard/invoices/new", label: "New Invoice", icon: Receipt, permission: "create_invoice" },
+    //     { href: "/dashboard/invoices/history", label: "Invoice History", icon: History },
+    //   ],
+    // },
     {
       title: "Store & Stock",
       items: [
