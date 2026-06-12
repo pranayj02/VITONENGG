@@ -754,9 +754,23 @@ export default function GRNPage() {
                     .map((po) => (
                     <div key={po.id} className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl p-5 hover:border-viton-red dark:hover:border-orange-500 hover:shadow-md transition-all">
                       <button type="button" className="w-full text-left" onClick={() => selectPO(po)}>
-                        <div className="flex items-center justify-between gap-2 mb-2">
+                        <div className="flex items-start justify-between gap-2 mb-2">
                           <p className="text-viton-navy dark:text-white font-semibold font-mono text-sm">{po.po_number}</p>
-                          <Plus size={14} className="text-viton-red dark:text-orange-500" />
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setRemovePanelPOId((current) => current === po.id ? null : po.id);
+                              }}
+                              className="text-[#a8afbf] hover:text-red-500 dark:text-gray-500 dark:hover:text-red-400 transition-colors"
+                              aria-label="Remove PO"
+                              title="Remove PO"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                            <Plus size={14} className="text-viton-red dark:text-orange-500" />
+                          </div>
                         </div>
                         <p className="text-[#8892a8] dark:text-gray-500 text-xs">{po.vendors?.name ?? "—"}</p>
                         <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-1">Status: {po.status ?? "—"}</p>
@@ -765,37 +779,24 @@ export default function GRNPage() {
                           Items: {po.line_items?.length ? po.line_items.map((line) => line.name || line.serial_id || "Item").join(", ") : "—"}
                         </p>
                       </button>
-                      <div className="mt-4 pt-4 border-t border-[#dde1ea] dark:border-gray-800">
-                        <div className="flex items-center justify-end">
+                      {removePanelPOId === po.id && (
+                        <div className="mt-4 pt-4 border-t border-[#dde1ea] dark:border-gray-800">
+                          <input
+                            value={removeReasonByPO[po.id] ?? ""}
+                            onChange={(e) => setRemoveReasonByPO((prev) => ({ ...prev, [po.id]: e.target.value }))}
+                            placeholder="Reason for removing this PO"
+                            className="w-full rounded-xl border border-[#dde1ea] dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-viton-navy dark:text-white outline-none focus:border-viton-red dark:focus:border-orange-500"
+                          />
                           <button
                             type="button"
-                            onClick={() => setRemovePanelPOId((current) => current === po.id ? null : po.id)}
-                            className="text-lg leading-none hover:scale-110 transition-transform"
-                            aria-label="Remove PO"
-                            title="Remove PO"
+                            onClick={() => hidePOFromGRN(po)}
+                            disabled={removingPOId === po.id || !(removeReasonByPO[po.id] ?? "").trim()}
+                            className="mt-2 w-full rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300 px-3 py-2 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            🗑️
+                            {removingPOId === po.id ? "Removing..." : "Confirm delete"}
                           </button>
                         </div>
-                        {removePanelPOId === po.id && (
-                          <div className="mt-3">
-                            <input
-                              value={removeReasonByPO[po.id] ?? ""}
-                              onChange={(e) => setRemoveReasonByPO((prev) => ({ ...prev, [po.id]: e.target.value }))}
-                              placeholder="Reason for removing this PO"
-                              className="w-full rounded-xl border border-[#dde1ea] dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-viton-navy dark:text-white outline-none focus:border-viton-red dark:focus:border-orange-500"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => hidePOFromGRN(po)}
-                              disabled={removingPOId === po.id || !(removeReasonByPO[po.id] ?? "").trim()}
-                              className="mt-2 w-full rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300 px-3 py-2 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              {removingPOId === po.id ? "Removing..." : "Confirm delete"}
-                            </button>
-                          </div>
-                        )}
-                      </div>
+                      )}
                     </div>
                   ))}
                   {pos
