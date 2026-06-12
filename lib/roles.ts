@@ -39,9 +39,9 @@ export const PERMISSIONS = {
 
   // Requisition
   create_requisition: ["admin", "engineer", "purchase_manager", "store_keeper", "quality_assurance"],
-  approve_requisition: ["admin", "purchase_manager", "quality_assurance"],
-  reject_requisition: ["admin", "purchase_manager", "quality_assurance"],
-  convert_requisition: ["admin", "purchase_manager", "quality_assurance"],
+  approve_requisition: ["admin", "purchase_manager"],
+  reject_requisition: ["admin", "purchase_manager"],
+  convert_requisition: ["admin", "purchase_manager"],
 
   // GRN / Stock
   create_grn: ["quality_assurance"],
@@ -56,7 +56,7 @@ export const PERMISSIONS = {
   approve_stock_adjustment: ["admin"],
 
   // Master data
-  manage_catalog: ["admin", "purchase_manager", "store_keeper", "quality_assurance"],
+  manage_catalog: ["admin", "purchase_manager", "store_keeper"],
   manage_vendors: ["admin", "purchase_manager"],
   manage_buyers: ["admin", "accounts"],
 
