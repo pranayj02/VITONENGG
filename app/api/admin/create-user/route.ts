@@ -82,20 +82,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // The trigger `on_auth_user_created` will auto-create a profile,
-    // but we update it with the correct role since the trigger defaults to 'viewer'
-    const { error: profileError } = await adminClient
-      .from("profiles")
-      .update({
-        full_name: safeFullName,
-        role: role || "viewer",
-        department: department || null,
-      })
-      .eq("id", userData.user.id);
+    const profilePayload = {
+      id: userData.user.id,
+      email,
+      full_name: safeFullName,
+      role: role || "viewer",
+      department: department || null,
+    };
 
-    if (profileError) {
-      // Log but don't fail — user exists, profile just needs manual fix
-      console.error("Profile update failed:", profileError.message);
+    const { error: profileUpsertError } = await adminClient
+      .from("profiles")
+      .upsert(profilePayload, { onConflict: "id" });
+
+    if (profileUpsertError) {
+      console.error("Profile upsert failed:", profileUpsertError.message);
+      return NextResponse.json({
+        error: "User created but profile role save failed",
+        profile_error: profileUpsertError.message,
+        user: { id: userData.user.id, email: userData.user.email },
+      }, { status: 500 });
     }
 
     return NextResponse.json({
