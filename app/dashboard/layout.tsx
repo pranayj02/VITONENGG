@@ -32,6 +32,7 @@ interface NavItem {
   label: string;
   icon: React.ElementType;
   permission?: PermissionAction;
+  badge?: number;
 }
 
 interface NavSection {
@@ -39,7 +40,7 @@ interface NavSection {
   items: NavItem[];
 }
 
-function buildNavSections(role: UserRole | null): NavSection[] {
+function buildNavSections(role: UserRole | null, pendingReqs: number, pendingStock: number): NavSection[] {
   const sections: NavSection[] = [
     {
       title: "Overview",
@@ -59,7 +60,7 @@ function buildNavSections(role: UserRole | null): NavSection[] {
       title: "Requisitions",
       items: [
         { href: "/dashboard/requisitions/new", label: "New Requisition", icon: ClipboardList, permission: "create_requisition" },
-        { href: "/dashboard/requisitions", label: "Requisition Queue", icon: ArrowRightLeft },
+        { href: "/dashboard/requisitions", label: "Requisition Queue", icon: ArrowRightLeft, badge: pendingReqs },
       ],
     },
     {
@@ -89,7 +90,7 @@ function buildNavSections(role: UserRole | null): NavSection[] {
       title: "System",
       items: [
         { href: "/dashboard/activity", label: "Activity Log", icon: Activity, permission: "view_activity" },
-        { href: "/dashboard/stock/adjustments", label: "Stock Approvals", icon: CheckCircle, permission: "approve_stock_adjustment" },
+        { href: "/dashboard/stock/adjustments", label: "Stock Approvals", icon: CheckCircle, permission: "approve_stock_adjustment", badge: pendingStock },
         { href: "/dashboard/users", label: "Team & Roles", icon: Shield, permission: "manage_users" },
       ],
     },
@@ -127,7 +128,30 @@ export default function DashboardLayout({
   const { theme, toggle } = useTheme();
   const { role, loading: roleLoading } = useRole();
 
-  const navSections = useMemo(() => buildNavSections(role), [role]);
+  const [pendingReqs, setPendingReqs] = useState(0);
+  const [pendingStock, setPendingStock] = useState(0);
+
+  useEffect(() => {
+    if (roleLoading) return;
+    const supabase = createClient();
+    async function loadBadges() {
+      const { count: reqCount } = await supabase
+        .from("requisitions")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending");
+      const { count: stockCount } = await supabase
+        .from("stock_adjustment_requests")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending");
+      setPendingReqs(reqCount ?? 0);
+      setPendingStock(stockCount ?? 0);
+    }
+    loadBadges();
+    const interval = setInterval(loadBadges, 30000);
+    return () => clearInterval(interval);
+  }, [roleLoading, role]);
+
+  const navSections = useMemo(() => buildNavSections(role, pendingReqs, pendingStock), [role, pendingReqs, pendingStock]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -178,7 +202,16 @@ export default function DashboardLayout({
                     }`}
                   >
                     <Icon size={18} />
-                    {item.label}
+                    <span className="flex-1">{item.label}</span>
+                    {item.badge ? (
+                      <span className={`ml-auto text-[11px] font-bold min-w-[20px] h-5 px-1.5 rounded-full flex items-center justify-center ${
+                        isActive
+                          ? "bg-white text-viton-red dark:bg-white dark:text-orange-500"
+                          : "bg-viton-red text-white dark:bg-orange-500 dark:text-white"
+                      }`}>
+                        {item.badge > 99 ? "99+" : item.badge}
+                      </span>
+                    ) : null}
                   </Link>
                 );
               })}
