@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { createClient } from "@/lib/supabase";
 import { audit } from "@/lib/audit";
 import { useRouter } from "next/navigation";
-import { can, useRole } from "@/lib/roles";
+import { can, useRole, isAdmin } from "@/lib/roles";
 import { getCurrentFY } from "@/lib/fy";
 import type { PurchaseOrder, Vendor, GRN, GRNLineItem, LineItem, Item } from "@/lib/types";
 import {
