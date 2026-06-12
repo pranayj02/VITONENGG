@@ -238,6 +238,23 @@ export default function StockPage() {
 
       if (saveErr) { setAdjustError(saveErr.message); setAdjustSaving(false); return; }
 
+      // Log activity
+      await supabase.from("activity_logs").insert({
+        action: adjustMode === "in" ? "stock_adjusted_in" : "stock_adjusted_out",
+        entity_type: "stock",
+        entity_code: adjustItem.serial_id,
+        entity_id: adjustItem.item_id,
+        details: {
+          item_name: adjustItem.name,
+          qty: adjustQty,
+          unit: adjustItem.unit,
+          note: note,
+          new_balance: newBalance,
+        },
+        user_id: user?.id ?? null,
+        user_name: name,
+      });
+
       setAdjustResult("applied");
       setAdjustSaving(false);
       await load();
@@ -261,6 +278,23 @@ export default function StockPage() {
     });
 
     if (reqErr) { setAdjustError(reqErr.message); setAdjustSaving(false); return; }
+
+    // Log activity for pending request
+    await supabase.from("activity_logs").insert({
+      action: "stock_adjustment_requested",
+      entity_type: "stock",
+      entity_code: adjustItem.serial_id,
+      entity_id: adjustItem.item_id,
+      details: {
+        item_name: adjustItem.name,
+        qty: adjustQty,
+        unit: adjustItem.unit,
+        note: note,
+        adjustment_type: adjustMode === "in" ? "adjustment_in" : "adjustment_out",
+      },
+      user_id: user?.id ?? null,
+      user_name: name,
+    });
 
     setAdjustResult("pending");
     setAdjustSaving(false);
@@ -290,7 +324,7 @@ export default function StockPage() {
       {/* Adjustment Modal */}
       {adjustOpen && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-start justify-center p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl w-full max-w-lg my-8 shadow-2xl overflow-hidden">
+          <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto my-8 shadow-2xl">
             <div className="px-6 py-4 border-b border-[#dde1ea] dark:border-gray-800 flex items-center justify-between sticky top-0 bg-white dark:bg-gray-900">
               <div>
                 <h2 className="text-viton-navy dark:text-white font-bold">Manual Stock Adjustment</h2>
