@@ -47,6 +47,8 @@ export default function StockPage() {
   const [itemResults, setItemResults] = useState<Item[]>([]);
   const [showItemSearch, setShowItemSearch] = useState(false);
   const itemSearchRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const [dropdownStyle, setDropdownStyle] = useState({ top: 0, left: 0, width: 0 });
 
   function sortStockRows(rows: StockSummary[]) {
     return [...rows].sort((a, b) => {
@@ -122,6 +124,17 @@ export default function StockPage() {
   useEffect(() => { load(); }, []);
 
   useEffect(() => {
+    if (showItemSearch && itemSearchRef.current && dropdownRef.current) {
+      const rect = itemSearchRef.current.getBoundingClientRect();
+      setDropdownStyle({
+        top: rect.bottom + 8,
+        left: rect.left,
+        width: rect.width,
+      });
+    }
+  }, [showItemSearch, itemResults]);
+
+  useEffect(() => {
     if (!search.trim()) {
       setFiltered(sortStockRows(stock));
       return;
@@ -158,6 +171,18 @@ export default function StockPage() {
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  useEffect(() => {
+    function handleResize() {
+      setShowItemSearch(false);
+    }
+    window.addEventListener("resize", handleResize);
+    window.addEventListener("scroll", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("scroll", handleResize);
+    };
   }, []);
 
   async function loadLedger(itemId: string) {
@@ -423,7 +448,11 @@ export default function StockPage() {
                         className="w-full bg-[#f1f3f8] dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-xl pl-10 pr-4 py-3 text-sm text-viton-navy dark:text-white placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
                       />
                       {showItemSearch && itemResults.length > 0 && (
-                        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-950 border border-[#dde1ea] dark:border-gray-800 rounded-2xl overflow-hidden shadow-2xl z-[100] max-h-60 overflow-y-auto">
+                        <div
+                          ref={dropdownRef}
+                          className="fixed bg-white dark:bg-gray-950 border border-[#dde1ea] dark:border-gray-800 rounded-2xl overflow-hidden shadow-2xl z-[9999] max-h-60 overflow-y-auto"
+                          style={{ top: dropdownStyle.top, left: dropdownStyle.left, width: dropdownStyle.width }}
+                        >
                           {itemResults.map((item) => (
                             <button
                               key={item.id}
