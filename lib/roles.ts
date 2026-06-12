@@ -69,7 +69,7 @@ export function can(role: UserRole | undefined | null, action: keyof typeof PERM
   if (!role) return false;
   if (role === "admin") return true;
   const allowed = PERMISSIONS[action];
-  return allowed.includes(role as any);
+  return (allowed as readonly string[]).includes(role);
 }
 
 export function isAdmin(role: UserRole | undefined | null): boolean {
