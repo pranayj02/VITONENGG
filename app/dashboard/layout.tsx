@@ -243,6 +243,11 @@ export default function DashboardLayout({
               {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
             </button>
           </div>
+          {!role && !roleLoading && (
+            <div className="mt-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-lg p-2 text-amber-700 dark:text-amber-300 text-xs font-medium">
+              ⚠️ Role not assigned. Contact admin.
+            </div>
+          )}
         </div>
 
         <nav className="flex-1 p-4 overflow-y-auto">
