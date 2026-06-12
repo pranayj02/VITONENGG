@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase";
-import { can, useRole } from "@/lib/roles";
+import { can, isAdmin, useRole } from "@/lib/roles";
 import type { StockSummary, StockLedgerEntry, Item } from "@/lib/types";
 import {
   Package,
@@ -18,6 +18,7 @@ import {
   ArrowDown,
   ArrowUp,
   CheckCircle,
+  Clock,
   Trash2,
 } from "lucide-react";
 
@@ -38,7 +39,8 @@ export default function StockPage() {
   const [adjustNote, setAdjustNote] = useState("");
   const [adjustSaving, setAdjustSaving] = useState(false);
   const [adjustError, setAdjustError] = useState("");
-  const [adjustSuccess, setAdjustSuccess] = useState(false);
+  // "applied" = admin direct apply, "pending" = sent for approval
+  const [adjustResult, setAdjustResult] = useState<"applied" | "pending" | null>(null);
 
   // Item search for adjustment
   const [itemSearch, setItemSearch] = useState("");
@@ -176,7 +178,7 @@ export default function StockPage() {
     setAdjustQty(1);
     setAdjustNote("");
     setAdjustError("");
-    setAdjustSuccess(false);
+    setAdjustResult(null);
     setItemSearch("");
     setItemResults([]);
     setShowItemSearch(false);
@@ -211,31 +213,57 @@ export default function StockPage() {
       : { data: null };
 
     const name = (profile as any)?.full_name ?? user?.email ?? "Unknown";
-    const currentBalance = Math.max(0, adjustItem.balance);
-    const newBalance = adjustMode === "in"
-      ? currentBalance + adjustQty
-      : Math.max(0, currentBalance - adjustQty);
+    const note = adjustNote.trim() || `Manual adjustment: ${adjustMode === "in" ? "added" : "removed"} ${adjustQty} ${adjustItem.unit}`;
 
-    const { error: saveErr } = await supabase.from("stock_ledger").insert({
+    // ── ADMIN: apply directly to stock_ledger ───────────────────────────────
+    if (isAdmin(role)) {
+      const currentBalance = Math.max(0, adjustItem.balance);
+      const newBalance = adjustMode === "in"
+        ? currentBalance + adjustQty
+        : Math.max(0, currentBalance - adjustQty);
+
+      const { error: saveErr } = await supabase.from("stock_ledger").insert({
+        item_id: adjustItem.item_id,
+        transaction_type: adjustMode === "in" ? "adjustment_in" : "adjustment_out",
+        reference_type: "manual",
+        reference_code: "STOCK-ADJ",
+        qty_in: adjustMode === "in" ? adjustQty : 0,
+        qty_out: adjustMode === "out" ? adjustQty : 0,
+        balance: newBalance,
+        unit: adjustItem.unit,
+        notes: note,
+        created_by: user?.id ?? null,
+        created_by_name: name,
+      });
+
+      if (saveErr) { setAdjustError(saveErr.message); setAdjustSaving(false); return; }
+
+      setAdjustResult("applied");
+      setAdjustSaving(false);
+      await load();
+      if (adjustItem) loadLedger(adjustItem.item_id);
+      return;
+    }
+
+    // ── NON-ADMIN: submit pending approval request ──────────────────────────
+    const { error: reqErr } = await supabase.from("stock_adjustment_requests").insert({
       item_id: adjustItem.item_id,
-      transaction_type: adjustMode === "in" ? "adjustment_in" : "adjustment_out",
-      reference_type: "manual",
-      reference_code: "STOCK-ADJ",
-      qty_in: adjustMode === "in" ? adjustQty : 0,
-      qty_out: adjustMode === "out" ? adjustQty : 0,
-      balance: newBalance,
-      unit: adjustItem.unit,
-      notes: adjustNote.trim() || `Manual adjustment: ${adjustMode === "in" ? "added" : "removed"} ${adjustQty} ${adjustItem.unit}`,
-      created_by: user?.id ?? null,
-      created_by_name: name,
+      item_serial_id: adjustItem.serial_id,
+      item_name: adjustItem.name,
+      item_unit: adjustItem.unit,
+      adjustment_type: adjustMode === "in" ? "adjustment_in" : "adjustment_out",
+      qty: adjustQty,
+      balance_at_request: Math.max(0, adjustItem.balance),
+      notes: note,
+      status: "pending",
+      requested_by: user?.id ?? null,
+      requested_by_name: name,
     });
 
-    if (saveErr) { setAdjustError(saveErr.message); setAdjustSaving(false); return; }
+    if (reqErr) { setAdjustError(reqErr.message); setAdjustSaving(false); return; }
 
-    setAdjustSuccess(true);
+    setAdjustResult("pending");
     setAdjustSaving(false);
-    await load();
-    if (adjustItem) loadLedger(adjustItem.item_id);
   }
 
   const canAdjust = role && can(role, "adjust_stock");
@@ -276,7 +304,8 @@ export default function StockPage() {
             </div>
 
             <div className="p-6 space-y-5">
-              {adjustSuccess ? (
+              {/* ── Success: Admin applied directly ── */}
+              {adjustResult === "applied" && (
                 <div className="text-center py-4">
                   <div className="w-14 h-14 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
                     <CheckCircle size={28} className="text-green-500 dark:text-green-400" />
@@ -300,10 +329,52 @@ export default function StockPage() {
                     </button>
                   </div>
                 </div>
-              ) : (
+              )}
+
+              {/* ── Success: Non-admin sent for approval ── */}
+              {adjustResult === "pending" && (
+                <div className="text-center py-4">
+                  <div className="w-14 h-14 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Clock size={28} className="text-amber-500" />
+                  </div>
+                  <h3 className="text-viton-navy dark:text-white font-bold text-lg mb-1">Sent for Approval</h3>
+                  <p className="text-[#8892a8] dark:text-gray-500 text-sm mb-1">
+                    Your request to {adjustMode === "in" ? "add" : "remove"} <span className="font-semibold text-viton-navy dark:text-white">{adjustQty} {adjustItem?.unit}</span> of <span className="font-semibold text-viton-navy dark:text-white">{adjustItem?.name}</span> has been submitted.
+                  </p>
+                  <p className="text-[#8892a8] dark:text-gray-500 text-xs mb-6">
+                    An admin will review and apply this adjustment.
+                  </p>
+                  <div className="flex gap-3 justify-center">
+                    <button
+                      onClick={() => openAdjust()}
+                      className="bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 text-white font-semibold px-5 py-2.5 rounded-xl text-sm"
+                    >
+                      Another Request
+                    </button>
+                    <button
+                      onClick={() => setAdjustOpen(false)}
+                      className="bg-[#f1f3f8] dark:bg-gray-800 hover:bg-[#e8eaf2] dark:hover:bg-gray-700 text-[#4a5578] dark:text-gray-300 font-semibold px-5 py-2.5 rounded-xl text-sm"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {adjustResult === null && (
                 <>
                   {adjustError && (
                     <div className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-xl p-3 text-red-600 dark:text-red-300 text-sm">{adjustError}</div>
+                  )}
+
+                  {/* Non-admin info banner */}
+                  {!isAdmin(role) && (
+                    <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 rounded-xl p-3 flex items-start gap-2">
+                      <Clock size={15} className="text-amber-500 mt-0.5 flex-shrink-0" />
+                      <p className="text-amber-700 dark:text-amber-300 text-xs">
+                        Your adjustment will be sent to an admin for approval before it is applied to stock.
+                      </p>
+                    </div>
                   )}
 
                   {/* Item Selection */}
@@ -392,13 +463,15 @@ export default function StockPage() {
                           onChange={(e) => setAdjustQty(Math.max(1, Number(e.target.value)))}
                           className="w-full bg-[#f1f3f8] dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-viton-navy dark:text-white focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
                         />
-                        <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-2">
-                          New balance will be: <span className={`font-semibold ${
-                            adjustMode === "in" ? "text-green-600" : "text-red-500"
-                          }`}>
-                            {adjustMode === "in" ? adjustItem.balance + adjustQty : adjustItem.balance - adjustQty}
-                          </span> {adjustItem.unit}
-                        </p>
+                        {isAdmin(role) && (
+                          <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-2">
+                            New balance will be: <span className={`font-semibold ${
+                              adjustMode === "in" ? "text-green-600" : "text-red-500"
+                            }`}>
+                              {adjustMode === "in" ? adjustItem.balance + adjustQty : adjustItem.balance - adjustQty}
+                            </span> {adjustItem.unit}
+                          </p>
+                        )}
                       </div>
 
                       {/* Reason */}
@@ -427,8 +500,12 @@ export default function StockPage() {
                               : "bg-red-500 hover:bg-red-600 text-white"
                           }`}
                         >
-                          <Save size={15} />
-                          {adjustSaving ? "Saving..." : adjustMode === "in" ? "Add to Stock" : "Remove from Stock"}
+                          {isAdmin(role) ? <Save size={15} /> : <Clock size={15} />}
+                          {adjustSaving
+                            ? "Saving..."
+                            : isAdmin(role)
+                              ? (adjustMode === "in" ? "Add to Stock" : "Remove from Stock")
+                              : "Submit for Approval"}
                         </button>
                       </div>
                     </>

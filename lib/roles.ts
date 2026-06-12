@@ -48,7 +48,11 @@ export const PERMISSIONS = {
   edit_grn: ["admin", "store_keeper"],
   inspect_grn: ["admin", "store_keeper", "purchase_manager"],
   approve_grn: ["admin", "purchase_manager"],
-  adjust_stock: ["admin", "store_keeper"],
+  // All non-viewer roles can submit a stock adjustment.
+  // Admins apply it directly; all others go through approval.
+  adjust_stock: ["admin", "purchase_manager", "accounts", "store_keeper", "engineer", "quality_assurance"],
+  // Only admins can approve/reject pending adjustment requests
+  approve_stock_adjustment: ["admin"],
 
   // Master data
   manage_catalog: ["admin", "purchase_manager", "store_keeper"],
