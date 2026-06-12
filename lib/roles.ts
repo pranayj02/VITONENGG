@@ -38,10 +38,10 @@ export const PERMISSIONS = {
   delete_invoice: ["admin"],
 
   // Requisition
-  create_requisition: ["admin", "engineer", "purchase_manager", "store_keeper"],
-  approve_requisition: ["admin", "purchase_manager"],
-  reject_requisition: ["admin", "purchase_manager"],
-  convert_requisition: ["admin", "purchase_manager"],
+  create_requisition: ["admin", "engineer", "purchase_manager", "store_keeper", "quality_assurance"],
+  approve_requisition: ["admin", "purchase_manager", "quality_assurance"],
+  reject_requisition: ["admin", "purchase_manager", "quality_assurance"],
+  convert_requisition: ["admin", "purchase_manager", "quality_assurance"],
 
   // GRN / Stock
   create_grn: ["quality_assurance"],
@@ -56,13 +56,13 @@ export const PERMISSIONS = {
   approve_stock_adjustment: ["admin"],
 
   // Master data
-  manage_catalog: ["admin", "purchase_manager", "store_keeper"],
+  manage_catalog: ["admin", "purchase_manager", "store_keeper", "quality_assurance"],
   manage_vendors: ["admin", "purchase_manager"],
   manage_buyers: ["admin", "accounts"],
 
   // Users
   manage_users: ["admin"],
-  view_activity: ["admin", "purchase_manager", "accounts"],
+  view_activity: ["admin", "purchase_manager", "accounts", "quality_assurance"],
 } as const;
 
 export function can(role: UserRole | undefined | null, action: keyof typeof PERMISSIONS): boolean {
