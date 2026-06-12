@@ -48,6 +48,9 @@ const ACTION_COLORS: Record<string, string> = {
   grn_rejected: "text-red-600 dark:text-red-400",
   stock_received: "text-emerald-600 dark:text-emerald-400",
   stock_issued: "text-orange-600 dark:text-orange-400",
+  stock_adjusted_in: "text-emerald-600 dark:text-emerald-400",
+  stock_adjusted_out: "text-orange-600 dark:text-orange-400",
+  stock_adjustment_requested: "text-amber-600 dark:text-amber-400",
   invoice_created: "text-blue-600 dark:text-blue-400",
   invoice_updated: "text-violet-600 dark:text-violet-400",
   invoice_deleted: "text-red-600 dark:text-red-400",
@@ -82,6 +85,14 @@ function getActionTone(action: string): string {
   }
 
   if (normalized.includes("issued") || normalized.includes("role")) {
+    return "bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400";
+  }
+
+  if (normalized.includes("adjusted_in")) {
+    return "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400";
+  }
+
+  if (normalized.includes("adjusted_out") || normalized.includes("adjustment_requested")) {
     return "bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400";
   }
 
