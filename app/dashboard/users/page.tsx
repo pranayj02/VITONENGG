@@ -114,7 +114,7 @@ export default function UsersPage() {
     if (!error) {
       const currentUserName = currentUser.full_name?.trim() || currentUser.email || "User";
       await audit({ action: "user_role_updated", entity_type: "user", entity_id: id, entity_code: currentUserName, details: { previous_role: currentUser.role, next_role: newRole } });
-      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, role: newRole } : u)));
+      await load();
     } else {
       setDeleteError(error.message);
     }
@@ -224,6 +224,11 @@ export default function UsersPage() {
       const result = await res.json();
       if (!res.ok) {
         setCreateError(result.error || "Failed to create user");
+        setCreating(false);
+        return;
+      }
+      if (result.profile_error) {
+        setCreateError(result.profile_error);
         setCreating(false);
         return;
       }
