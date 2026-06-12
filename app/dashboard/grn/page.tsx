@@ -483,6 +483,7 @@ export default function GRNPage() {
   }
 
   const canCreate = role && can(role, "create_grn");
+  const canSendForInspection = role && can(role, "send_for_inspection");
   const canInspect = role && can(role, "inspect_grn");
   const canApprove = role && can(role, "approve_grn");
   const canDelete = !!role && (can(role, "create_grn") || can(role, "inspect_grn") || can(role, "approve_grn"));
@@ -1126,13 +1127,13 @@ export default function GRNPage() {
                             </div>
 
                             <div className="mt-4 flex items-center gap-3 flex-wrap">
-                              {g.status === "pending" && canInspect && (
+                              {g.status === "pending" && canSendForInspection && (
                                 <>
-                                  <button onClick={() => updateStatus(g, "inspected")} className="bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 text-xs font-semibold px-3 py-1.5 rounded-md border border-blue-100 dark:border-blue-500/20">Mark Inspected</button>
+                                  <button onClick={() => updateStatus(g, "inspected")} className="bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 text-xs font-semibold px-3 py-1.5 rounded-md border border-blue-100 dark:border-blue-500/20">Send for Inspection</button>
                                   <button onClick={() => updateStatus(g, "rejected")} className="bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400 text-xs font-semibold px-3 py-1.5 rounded-md border border-red-100 dark:border-red-500/20">Reject</button>
                                 </>
                               )}
-                              {g.status === "inspected" && canApprove && (
+                              {g.status === "inspected" && canInspect && (
                                 <>
                                   <button onClick={() => updateStatus(g, "approved")} className="bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400 text-xs font-semibold px-3 py-1.5 rounded-md border border-green-100 dark:border-green-500/20">Approve</button>
                                   <button onClick={() => updateStatus(g, "rejected")} className="bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400 text-xs font-semibold px-3 py-1.5 rounded-md border border-red-100 dark:border-red-500/20">Reject</button>
