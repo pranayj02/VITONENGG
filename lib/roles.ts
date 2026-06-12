@@ -47,7 +47,7 @@ export const PERMISSIONS = {
   create_grn: ["admin", "store_keeper", "purchase_manager", "engineer"],
   edit_grn: ["admin", "store_keeper", "engineer"],
   inspect_grn: ["admin", "store_keeper", "purchase_manager", "engineer"],
-  approve_grn: ["admin", "purchase_manager"],
+  approve_grn: ["admin", "purchase_manager", "engineer", "quality_assurance"],
   // All non-viewer roles can submit a stock adjustment.
   // Admins apply it directly; all others go through approval.
   adjust_stock: ["admin", "purchase_manager", "accounts", "store_keeper", "engineer", "quality_assurance"],
