@@ -68,6 +68,7 @@ export default function GRNPage() {
   const [grnNumber, setGrnNumber] = useState("Auto");
   const [receivedByName, setReceivedByName] = useState("");
   const [removeReasonByPO, setRemoveReasonByPO] = useState<Record<string, string>>({});
+  const [removePanelPOId, setRemovePanelPOId] = useState<string | null>(null);
   const [removingPOId, setRemovingPOId] = useState<string | null>(null);
 
   const [itemSearch, setItemSearch] = useState("");
@@ -130,6 +131,7 @@ export default function GRNPage() {
     setCreateMode(null);
     setSelectedPO(null);
     setRemoveReasonByPO({});
+    setRemovePanelPOId(null);
     setRemovingPOId(null);
     setManualVendorId("");
     setManualVendorName("");
@@ -216,6 +218,7 @@ export default function GRNPage() {
       return next;
     });
     setPos((prev) => prev.map((row) => row.id === po.id ? { ...row, dispatch_meta: nextMeta } as POWithVendor : row));
+    setRemovePanelPOId((current) => current === po.id ? null : current);
     setRemovingPOId(null);
   }
 
@@ -763,20 +766,35 @@ export default function GRNPage() {
                         </p>
                       </button>
                       <div className="mt-4 pt-4 border-t border-[#dde1ea] dark:border-gray-800">
-                        <input
-                          value={removeReasonByPO[po.id] ?? ""}
-                          onChange={(e) => setRemoveReasonByPO((prev) => ({ ...prev, [po.id]: e.target.value }))}
-                          placeholder="Reason for removing this PO"
-                          className="w-full rounded-xl border border-[#dde1ea] dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-viton-navy dark:text-white outline-none focus:border-viton-red dark:focus:border-orange-500"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => hidePOFromGRN(po)}
-                          disabled={removingPOId === po.id || !(removeReasonByPO[po.id] ?? "").trim()}
-                          className="mt-2 w-full rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300 px-3 py-2 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {removingPOId === po.id ? "Removing..." : "Remove PO"}
-                        </button>
+                        <div className="flex items-center justify-end">
+                          <button
+                            type="button"
+                            onClick={() => setRemovePanelPOId((current) => current === po.id ? null : po.id)}
+                            className="text-lg leading-none hover:scale-110 transition-transform"
+                            aria-label="Remove PO"
+                            title="Remove PO"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                        {removePanelPOId === po.id && (
+                          <div className="mt-3">
+                            <input
+                              value={removeReasonByPO[po.id] ?? ""}
+                              onChange={(e) => setRemoveReasonByPO((prev) => ({ ...prev, [po.id]: e.target.value }))}
+                              placeholder="Reason for removing this PO"
+                              className="w-full rounded-xl border border-[#dde1ea] dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm text-viton-navy dark:text-white outline-none focus:border-viton-red dark:focus:border-orange-500"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => hidePOFromGRN(po)}
+                              disabled={removingPOId === po.id || !(removeReasonByPO[po.id] ?? "").trim()}
+                              className="mt-2 w-full rounded-xl border border-red-200 dark:border-red-500/30 bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-300 px-3 py-2 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {removingPOId === po.id ? "Removing..." : "Confirm delete"}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
