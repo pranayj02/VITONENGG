@@ -24,6 +24,7 @@ import {
   Activity,
   Shield,
   ClipboardList,
+  CheckCircle,
 } from "lucide-react";
 
 interface NavItem {
@@ -88,6 +89,7 @@ function buildNavSections(role: UserRole | null): NavSection[] {
       title: "System",
       items: [
         { href: "/dashboard/activity", label: "Activity Log", icon: Activity, permission: "view_activity" },
+        { href: "/dashboard/stock/adjustments", label: "Stock Approvals", icon: CheckCircle, permission: "approve_stock_adjustment" },
         { href: "/dashboard/users", label: "Team & Roles", icon: Shield, permission: "manage_users" },
       ],
     },
