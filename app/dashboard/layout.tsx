@@ -49,7 +49,9 @@ function buildNavSections(role: UserRole | null): NavSection[] {
       items: [
         { href: "/dashboard/catalog", label: "Item Catalog", icon: Package, permission: "manage_catalog" },
         { href: "/dashboard/vendors", label: "Vendors", icon: Users, permission: "manage_vendors" },
-        { href: "/dashboard/buyers", label: "Buyers", icon: Users, permission: "manage_buyers" },
+        // BUYERS SECTION — hidden from all users (e-invoicing handled externally)
+        // Uncomment to restore when needed.
+        // { href: "/dashboard/buyers", label: "Buyers", icon: Users, permission: "manage_buyers" },
       ],
     },
     {
