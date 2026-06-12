@@ -63,7 +63,7 @@ export default function StockAdjustmentsPage() {
     if (error) {
       setError(error.message);
     } else {
-      setRequests((data ?? []) as AdjustmentRequest[]);
+      setRequests(((data ?? []) as unknown) as AdjustmentRequest[]);
     }
     setLoading(false);
   }
