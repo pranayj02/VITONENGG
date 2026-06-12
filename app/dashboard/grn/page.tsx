@@ -67,6 +67,7 @@ export default function GRNPage() {
   const [grnDate, setGrnDate] = useState(new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "2-digit" }));
   const [grnNumber, setGrnNumber] = useState("Auto");
   const [receivedByName, setReceivedByName] = useState("");
+  const [poScope, setPoScope] = useState<"all" | "pending">("all");
 
   const [itemSearch, setItemSearch] = useState("");
   const [itemResults, setItemResults] = useState<Item[]>([]);
@@ -77,7 +78,7 @@ export default function GRNPage() {
     setLoading(true);
     const supabase = createClient();
     const [poRes, grnRes, vendorRes] = await Promise.all([
-      supabase.from("purchase_orders").select("*, vendors(*)").eq("status", "confirmed").order("created_at", { ascending: false }),
+      supabase.from("purchase_orders").select("*, vendors(*)").order("created_at", { ascending: false }),
       supabase.from("grn").select("*").order("created_at", { ascending: false }).limit(500),
       supabase.from("vendors").select("*").order("name"),
     ]);
@@ -126,6 +127,7 @@ export default function GRNPage() {
 
   function openCreate() {
     setCreateMode(null);
+    setPoScope("all");
     setSelectedPO(null);
     setManualVendorId("");
     setManualVendorName("");
@@ -683,7 +685,7 @@ export default function GRNPage() {
                     <FileText size={22} />
                   </div>
                   <p className="text-viton-navy dark:text-white font-semibold text-sm">Receive Against PO</p>
-                  <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-1">Select a pending PO and record what arrived.</p>
+                  <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-1">Select any PO and record what arrived.</p>
                 </button>
                 <button onClick={() => setCreateMode("without_po")} className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl p-6 hover:border-viton-red dark:hover:border-orange-500 hover:shadow-md transition-all text-left">
                   <div className="w-11 h-11 rounded-xl bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400 flex items-center justify-center mb-4">
@@ -697,20 +699,48 @@ export default function GRNPage() {
 
             {createMode === "against_po" && !selectedPO && (
               <div className="p-6">
-                <h3 className="text-[#8892a8] dark:text-gray-400 text-xs font-semibold uppercase tracking-widest mb-4">Select Pending PO</h3>
+                <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+                  <h3 className="text-[#8892a8] dark:text-gray-400 text-xs font-semibold uppercase tracking-widest">Select PO</h3>
+                  <div className="inline-flex rounded-xl border border-[#dde1ea] dark:border-gray-800 p-1 bg-[#f8f9fc] dark:bg-gray-950">
+                    <button
+                      onClick={() => setPoScope("all")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                        poScope === "all"
+                          ? "bg-viton-red dark:bg-orange-500 text-white"
+                          : "text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white"
+                      }`}
+                    >
+                      All
+                    </button>
+                    <button
+                      onClick={() => setPoScope("pending")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                        poScope === "pending"
+                          ? "bg-viton-red dark:bg-orange-500 text-white"
+                          : "text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white"
+                      }`}
+                    >
+                      Pending
+                    </button>
+                  </div>
+                </div>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {pos.filter((po) => !grns.some((g) => g.po_id === po.id)).map((po) => (
+                  {(poScope === "pending" ? pos.filter((po) => !grns.some((g) => g.po_id === po.id)) : pos).map((po) => (
                     <div key={po.id} className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl p-5 hover:border-viton-red dark:hover:border-orange-500 hover:shadow-md transition-all cursor-pointer" onClick={() => selectPO(po)}>
                       <div className="flex items-center justify-between gap-2 mb-2">
                         <p className="text-viton-navy dark:text-white font-semibold font-mono text-sm">{po.po_number}</p>
                         <Plus size={14} className="text-viton-red dark:text-orange-500" />
                       </div>
                       <p className="text-[#8892a8] dark:text-gray-500 text-xs">{po.vendors?.name ?? "—"}</p>
+                      <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-1">Status: {po.status ?? "—"}</p>
                       <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-1">{po.line_items?.length ?? 0} items</p>
+                      <p className="text-[#4a5578] dark:text-gray-300 text-xs mt-2 leading-5 line-clamp-3">
+                        Items: {po.line_items?.length ? po.line_items.map((line) => line.name || line.serial_id || "Item").join(", ") : "—"}
+                      </p>
                     </div>
                   ))}
-                  {pos.filter((po) => !grns.some((g) => g.po_id === po.id)).length === 0 && (
-                    <div className="text-sm text-[#8892a8] dark:text-gray-500 p-4">No pending POs available.</div>
+                  {(poScope === "pending" ? pos.filter((po) => !grns.some((g) => g.po_id === po.id)) : pos).length === 0 && (
+                    <div className="text-sm text-[#8892a8] dark:text-gray-500 p-4">No POs available for this filter.</div>
                   )}
                 </div>
               </div>
