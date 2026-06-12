@@ -323,9 +323,9 @@ export default function StockPage() {
 
       {/* Adjustment Modal */}
       {adjustOpen && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-start justify-center p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto my-8 shadow-2xl">
-            <div className="px-6 py-4 border-b border-[#dde1ea] dark:border-gray-800 flex items-center justify-between sticky top-0 bg-white dark:bg-gray-900">
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl w-full max-w-lg max-h-[85vh] shadow-2xl flex flex-col overflow-hidden">
+            <div className="px-6 py-4 border-b border-[#dde1ea] dark:border-gray-800 flex items-center justify-between bg-white dark:bg-gray-900 flex-shrink-0">
               <div>
                 <h2 className="text-viton-navy dark:text-white font-bold">Manual Stock Adjustment</h2>
                 <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-0.5">
@@ -337,7 +337,7 @@ export default function StockPage() {
               </button>
             </div>
 
-            <div className="p-6 space-y-5">
+            <div className="flex-1 overflow-y-auto p-6 space-y-5">
               {/* ── Success: Admin applied directly ── */}
               {adjustResult === "applied" && (
                 <div className="text-center py-4">
@@ -423,7 +423,7 @@ export default function StockPage() {
                         className="w-full bg-[#f1f3f8] dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-xl pl-10 pr-4 py-3 text-sm text-viton-navy dark:text-white placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
                       />
                       {showItemSearch && itemResults.length > 0 && (
-                        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-950 border border-[#dde1ea] dark:border-gray-800 rounded-2xl overflow-hidden shadow-2xl z-50 max-h-60 overflow-y-auto">
+                        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-950 border border-[#dde1ea] dark:border-gray-800 rounded-2xl overflow-hidden shadow-2xl z-[100] max-h-60 overflow-y-auto">
                           {itemResults.map((item) => (
                             <button
                               key={item.id}
