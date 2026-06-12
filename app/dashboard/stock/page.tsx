@@ -324,7 +324,7 @@ export default function StockPage() {
       {/* Adjustment Modal */}
       {adjustOpen && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl w-full max-w-lg max-h-[85vh] shadow-2xl flex flex-col overflow-hidden">
+          <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl w-full max-w-lg shadow-2xl flex flex-col">
             <div className="px-6 py-4 border-b border-[#dde1ea] dark:border-gray-800 flex items-center justify-between bg-white dark:bg-gray-900 flex-shrink-0">
               <div>
                 <h2 className="text-viton-navy dark:text-white font-bold">Manual Stock Adjustment</h2>
@@ -337,7 +337,7 @@ export default function StockPage() {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 space-y-5">
+            <div className="p-6 space-y-5">
               {/* ── Success: Admin applied directly ── */}
               {adjustResult === "applied" && (
                 <div className="text-center py-4">
@@ -413,7 +413,7 @@ export default function StockPage() {
 
                   {/* Item Selection */}
                   {!adjustItem && (
-                    <div className="relative" ref={itemSearchRef}>
+                    <div className="relative z-[100]" ref={itemSearchRef}>
                       <label className="block text-[#4a5578] dark:text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Search Item</label>
                       <Search size={16} className="absolute left-4 top-[46px] text-[#8892a8] dark:text-gray-500" />
                       <input
