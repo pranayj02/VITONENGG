@@ -40,7 +40,7 @@ interface NavSection {
   items: NavItem[];
 }
 
-function buildNavSections(role: UserRole | null, pendingReqs: number, pendingStock: number): NavSection[] {
+function buildNavSections(role: UserRole | null, pendingReqs: number, pendingGrns: number, pendingStock: number): NavSection[] {
   const sections: NavSection[] = [
     {
       title: "Overview",
@@ -82,7 +82,7 @@ function buildNavSections(role: UserRole | null, pendingReqs: number, pendingSto
     {
       title: "Store & Stock",
       items: [
-        { href: "/dashboard/grn", label: "Goods Receipt (GRN)", icon: PackageOpen, permission: "create_grn" },
+        { href: "/dashboard/grn", label: "Goods Receipt (GRN)", icon: PackageOpen, permission: "create_grn", badge: pendingGrns },
         { href: "/dashboard/stock", label: "Stock & Inventory", icon: BarChart3 },
       ],
     },
@@ -129,6 +129,7 @@ export default function DashboardLayout({
   const { role, loading: roleLoading } = useRole();
 
   const [pendingReqs, setPendingReqs] = useState(0);
+  const [pendingGrns, setPendingGrns] = useState(0);
   const [pendingStock, setPendingStock] = useState(0);
 
   useEffect(() => {
@@ -139,11 +140,16 @@ export default function DashboardLayout({
         .from("requisitions")
         .select("id", { count: "exact", head: true })
         .eq("status", "pending");
+      const { count: grnCount } = await supabase
+        .from("grn")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending");
       const { count: stockCount } = await supabase
         .from("stock_adjustment_requests")
         .select("id", { count: "exact", head: true })
         .eq("status", "pending");
       setPendingReqs(reqCount ?? 0);
+      setPendingGrns(grnCount ?? 0);
       setPendingStock(stockCount ?? 0);
     }
     loadBadges();
@@ -151,7 +157,7 @@ export default function DashboardLayout({
     return () => clearInterval(interval);
   }, [roleLoading, role]);
 
-  const navSections = useMemo(() => buildNavSections(role, pendingReqs, pendingStock), [role, pendingReqs, pendingStock]);
+  const navSections = useMemo(() => buildNavSections(role, pendingReqs, pendingGrns, pendingStock), [role, pendingReqs, pendingGrns, pendingStock]);
 
   useEffect(() => {
     const supabase = createClient();
