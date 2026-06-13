@@ -2,8 +2,33 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
 import { audit } from "@/lib/audit";
-import { Plus, Search, X, Save, Pencil, RefreshCw, Trash2 } from "lucide-react";
+import { Plus, Search, X, Save, Pencil, RefreshCw, Trash2, CheckCircle2, Clock3 } from "lucide-react";
 import type { Item } from "@/lib/types";
+import { useRole, can } from "@/lib/roles";
+
+
+type ItemRequestStatus = "pending" | "approved" | "rejected";
+
+interface ItemApprovalRequest {
+  id: string;
+  item_payload: {
+    serial_id: string;
+    name: string;
+    description?: string | null;
+    hsn_code?: string | null;
+    unit: string;
+    category: string | null;
+    specs: Record<string, unknown> | null;
+  };
+  status: ItemRequestStatus;
+  requested_by?: string | null;
+  requested_by_name?: string | null;
+  reviewed_by?: string | null;
+  reviewed_by_name?: string | null;
+  reviewed_at?: string | null;
+  review_notes?: string | null;
+  created_at: string;
+}
 
 const UNITS = ["NOS", "SET", "KG", "MTR", "MM", "PCS"];
 
@@ -146,16 +171,23 @@ const emptyFormMeta = {
 };
 
 export default function CatalogPage() {
+  const { role, loading: roleLoading } = useRole();
+  const canManageCatalog = can(role, "manage_catalog");
+  const isAdmin = role === "admin";
   const [items, setItems] = useState<Item[]>([]);
   const [filtered, setFiltered] = useState<Item[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [showApprovals, setShowApprovals] = useState(false);
   const [editing, setEditing] = useState<Item | null>(null);
   const [formMeta, setFormMeta] = useState(emptyFormMeta);
   const [codeFields, setCodeFields] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [approvalRequests, setApprovalRequests] = useState<ItemApprovalRequest[]>([]);
+  const [approvalsLoading, setApprovalsLoading] = useState(false);
+  const [processingApprovalId, setProcessingApprovalId] = useState<string | null>(null);
   const [deleteItem, setDeleteItem] = useState<Item | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -169,7 +201,29 @@ export default function CatalogPage() {
     setLoading(false);
   }
 
+  async function loadApprovalRequests() {
+    if (!isAdmin) return;
+    setApprovalsLoading(true);
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("item_creation_requests")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) {
+      setError(error.message);
+    } else {
+      setApprovalRequests((data ?? []) as ItemApprovalRequest[]);
+    }
+    setApprovalsLoading(false);
+  }
+
   useEffect(() => { loadItems(); }, []);
+
+  useEffect(() => {
+    if (!roleLoading && isAdmin) {
+      loadApprovalRequests();
+    }
+  }, [roleLoading, isAdmin]);
 
   useEffect(() => {
     if (!search.trim()) { setFiltered(items); return; }
@@ -201,6 +255,7 @@ export default function CatalogPage() {
   }
 
   function openEdit(item: Item) {
+    if (!canManageCatalog) return;
     setEditing(item);
     setFormMeta({
       serial_id: item.serial_id,
@@ -242,22 +297,53 @@ export default function CatalogPage() {
       category: formMeta.category,
       specs: codeFields,
     };
-    let saveError = null;
+
     if (editing) {
+      if (!canManageCatalog) {
+        setError("You do not have permission to edit catalog items.");
+        setSaving(false);
+        return;
+      }
       const { error } = await supabase.from("items").update(payload).eq("id", editing.id);
-      saveError = error;
-    } else {
-      const { error } = await supabase.from("items").insert(payload);
-      saveError = error;
+      if (error) { setError(error.message); setSaving(false); return; }
+      await audit({ action: "item_updated", entity_type: "item", entity_id: editing.id, entity_code: payload.serial_id, details: { name: payload.name, category: payload.category } });
+      await loadItems();
+      setShowForm(false);
+      setSaving(false);
+      return;
     }
-    if (saveError) { setError(saveError.message); setSaving(false); return; }
-    await loadItems();
+
+    const { data: authData } = await supabase.auth.getUser();
+    const user = authData.user;
+    const { data: profile } = user
+      ? await supabase.from("profiles").select("full_name").eq("id", user.id).single()
+      : { data: null };
+    const requesterName = (profile as any)?.full_name?.trim() || user?.email || "Unknown";
+
+    const { error } = await supabase.from("item_creation_requests").insert({
+      item_payload: payload,
+      status: "pending",
+      requested_by: user?.id ?? null,
+      requested_by_name: requesterName,
+    });
+    if (error) { setError(error.message); setSaving(false); return; }
+
+    await audit({ action: "item_creation_requested", entity_type: "item_request", entity_code: payload.serial_id, details: { name: payload.name, category: payload.category, requested_by_name: requesterName } });
+
+    if (isAdmin) {
+      await loadApprovalRequests();
+    }
     setShowForm(false);
     setSaving(false);
   }
 
   async function handleDelete() {
     if (!deleteItem) return;
+    if (!canManageCatalog) {
+      setError("You do not have permission to delete catalog items.");
+      setDeleteItem(null);
+      return;
+    }
     setDeleting(true);
     const supabase = createClient();
     const { error } = await supabase.from("items").delete().eq("id", deleteItem.id);
@@ -271,6 +357,44 @@ export default function CatalogPage() {
     setDeleteItem(null);
     setDeleting(false);
   }
+
+  async function handleApprovalAction(request: ItemApprovalRequest, nextStatus: "approved" | "rejected") {
+    setProcessingApprovalId(request.id);
+    setError("");
+    const supabase = createClient();
+    const { data: authData } = await supabase.auth.getUser();
+    const user = authData.user;
+    const { data: profile } = user
+      ? await supabase.from("profiles").select("full_name").eq("id", user.id).single()
+      : { data: null };
+    const reviewerName = (profile as any)?.full_name?.trim() || user?.email || "Unknown";
+
+    if (nextStatus === "approved") {
+      const { error: insertError } = await supabase.from("items").insert(request.item_payload);
+      if (insertError) {
+        setError(insertError.message);
+        setProcessingApprovalId(null);
+        return;
+      }
+    }
+
+    const { error: updateError } = await supabase
+      .from("item_creation_requests")
+      .update({ status: nextStatus, reviewed_by: user?.id ?? null, reviewed_by_name: reviewerName, reviewed_at: new Date().toISOString() })
+      .eq("id", request.id);
+    if (updateError) {
+      setError(updateError.message);
+      setProcessingApprovalId(null);
+      return;
+    }
+
+    await audit({ action: nextStatus === "approved" ? "item_creation_approved" : "item_creation_rejected", entity_type: "item_request", entity_id: request.id, entity_code: request.item_payload.serial_id, details: { name: request.item_payload.name, status: nextStatus, reviewer_name: reviewerName } });
+
+    await Promise.all([loadItems(), loadApprovalRequests()]);
+    setProcessingApprovalId(null);
+  }
+
+  const pendingApprovals = approvalRequests.filter((request) => request.status === "pending").length;
 
   const categoryColors: Record<string, string> = {
     Valves: "bg-orange-50 text-orange-700 dark:bg-orange-500/10 dark:text-orange-400",
@@ -291,9 +415,16 @@ export default function CatalogPage() {
           <h1 className="text-viton-navy dark:text-white text-2xl font-bold">Item Catalog</h1>
           <p className="text-[#8892a8] dark:text-gray-500 text-sm mt-1">{items.length} items registered</p>
         </div>
-        <button onClick={openAdd} className="flex items-center gap-2 bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-all">
-          <Plus size={16} /> Add Item
-        </button>
+        <div className="flex items-center gap-3">
+          {isAdmin && (
+            <button onClick={() => setShowApprovals(true)} className="flex items-center gap-2 bg-white hover:bg-[#f7f8fb] dark:bg-gray-900 dark:hover:bg-gray-800 border border-[#dde1ea] dark:border-gray-800 text-viton-navy dark:text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-all">
+              <Clock3 size={16} /> Item Approvals{pendingApprovals > 0 ? ` (${pendingApprovals})` : ""}
+            </button>
+          )}
+          <button onClick={openAdd} className="flex items-center gap-2 bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-all">
+            <Plus size={16} /> Add Item
+          </button>
+        </div>
       </div>
 
       <div className="relative mb-6">
@@ -306,7 +437,7 @@ export default function CatalogPage() {
       {loading ? (
         <div className="flex justify-center py-16"><div className="w-6 h-6 border-2 border-viton-red dark:border-orange-500 border-t-transparent rounded-full animate-spin" /></div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-16 text-[#8892a8] dark:text-gray-600">{search ? "No items match your search." : "No items yet. Add your first item."}</div>
+        <div className="text-center py-16 text-[#8892a8] dark:text-gray-600">{search ? "No items match your search." : "No items yet. Add your first item request."}</div>
       ) : (
         <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl overflow-hidden">
           <div className="overflow-x-auto">
@@ -318,7 +449,7 @@ export default function CatalogPage() {
                   <th className="text-left text-[#8892a8] dark:text-gray-500 font-semibold text-xs uppercase tracking-wider px-5 py-3">Category</th>
                   <th className="text-left text-[#8892a8] dark:text-gray-500 font-semibold text-xs uppercase tracking-wider px-5 py-3">Unit</th>
                   <th className="text-left text-[#8892a8] dark:text-gray-500 font-semibold text-xs uppercase tracking-wider px-5 py-3">HSN</th>
-                  <th className="px-5 py-3"></th>
+                  {canManageCatalog && <th className="px-5 py-3"></th>}
                 </tr>
               </thead>
               <tbody>
@@ -333,12 +464,14 @@ export default function CatalogPage() {
                     </td>
                     <td className="px-5 py-3.5 text-[#4a5578] dark:text-gray-400">{item.unit}</td>
                     <td className="px-5 py-3.5 text-[#8892a8] dark:text-gray-500 font-mono text-xs">{item.hsn_code ?? "—"}</td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-1">
-                        <button onClick={() => openEdit(item)} className="text-[#8892a8] dark:text-gray-500 hover:text-viton-red dark:hover:text-orange-400 transition-colors p-1" title="Edit item"><Pencil size={14} /></button>
-                        <button onClick={() => setDeleteItem(item)} className="text-[#8892a8] dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors p-1" title="Delete item"><Trash2 size={14} /></button>
-                      </div>
-                    </td>
+                    {canManageCatalog && (
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => openEdit(item)} className="text-[#8892a8] dark:text-gray-500 hover:text-viton-red dark:hover:text-orange-400 transition-colors p-1" title="Edit item"><Pencil size={14} /></button>
+                          <button onClick={() => setDeleteItem(item)} className="text-[#8892a8] dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors p-1" title="Delete item"><Trash2 size={14} /></button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -379,6 +512,81 @@ export default function CatalogPage() {
                   {deleting ? "Deleting..." : "Delete"}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showApprovals && isAdmin && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden">
+            <div className="px-6 py-4 border-b border-[#dde1ea] dark:border-gray-800 flex items-center justify-between">
+              <div>
+                <h2 className="text-viton-navy dark:text-white font-bold text-lg">Item Approvals</h2>
+                <p className="text-[#8892a8] dark:text-gray-500 text-sm mt-1">Review pending new item requests.</p>
+              </div>
+              <button onClick={() => setShowApprovals(false)} className="text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white transition-colors">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[calc(85vh-88px)] space-y-4">
+              {approvalsLoading ? (
+                <div className="flex justify-center py-10"><div className="w-6 h-6 border-2 border-viton-red dark:border-orange-500 border-t-transparent rounded-full animate-spin" /></div>
+              ) : approvalRequests.length === 0 ? (
+                <div className="text-center py-10 text-[#8892a8] dark:text-gray-600">No item requests yet.</div>
+              ) : (
+                approvalRequests.map((request) => {
+                  const payload = request.item_payload;
+                  const isPending = request.status === "pending";
+                  return (
+                    <div key={request.id} className="border border-[#dde1ea] dark:border-gray-800 rounded-2xl p-4">
+                      <div className="flex items-start justify-between gap-4 flex-wrap mb-3">
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-viton-navy dark:text-white font-semibold font-mono text-sm">{payload.serial_id}</p>
+                            <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${request.status === "pending" ? "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400" : request.status === "approved" ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400" : "bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400"}`}>
+                              {request.status}
+                            </span>
+                          </div>
+                          <p className="text-viton-navy dark:text-white mt-1">{payload.name}</p>
+                          <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-1">Requested by {request.requested_by_name ?? "Unknown"} · {new Date(request.created_at).toLocaleDateString("en-IN")}</p>
+                        </div>
+                        {isPending && (
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => handleApprovalAction(request, "approved")} disabled={processingApprovalId === request.id} className="flex items-center gap-2 bg-emerald-50 hover:bg-emerald-500 text-emerald-700 hover:text-white border border-emerald-200 hover:border-emerald-500 dark:bg-emerald-500/10 dark:hover:bg-emerald-500 dark:text-emerald-400 dark:border-emerald-500/30 font-semibold px-4 py-2 rounded-xl text-sm transition-all disabled:opacity-60">
+                              <CheckCircle2 size={14} /> Approve
+                            </button>
+                            <button onClick={() => handleApprovalAction(request, "rejected")} disabled={processingApprovalId === request.id} className="flex items-center gap-2 bg-red-50 hover:bg-red-500 text-red-700 hover:text-white border border-red-200 hover:border-red-500 dark:bg-red-500/10 dark:hover:bg-red-500 dark:text-red-400 dark:border-red-500/30 font-semibold px-4 py-2 rounded-xl text-sm transition-all disabled:opacity-60">
+                              <Trash2 size={14} /> Reject
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="grid md:grid-cols-4 gap-3 text-sm">
+                        <div className="bg-[#f7f8fb] dark:bg-gray-800/50 rounded-xl px-3 py-2">
+                          <p className="text-[#8892a8] dark:text-gray-500 text-xs mb-1">Category</p>
+                          <p className="text-viton-navy dark:text-white">{payload.category ?? "—"}</p>
+                        </div>
+                        <div className="bg-[#f7f8fb] dark:bg-gray-800/50 rounded-xl px-3 py-2">
+                          <p className="text-[#8892a8] dark:text-gray-500 text-xs mb-1">Unit</p>
+                          <p className="text-viton-navy dark:text-white">{payload.unit}</p>
+                        </div>
+                        <div className="bg-[#f7f8fb] dark:bg-gray-800/50 rounded-xl px-3 py-2">
+                          <p className="text-[#8892a8] dark:text-gray-500 text-xs mb-1">HSN</p>
+                          <p className="text-viton-navy dark:text-white">{payload.hsn_code || "—"}</p>
+                        </div>
+                        <div className="bg-[#f7f8fb] dark:bg-gray-800/50 rounded-xl px-3 py-2">
+                          <p className="text-[#8892a8] dark:text-gray-500 text-xs mb-1">Reviewed by</p>
+                          <p className="text-viton-navy dark:text-white">{request.reviewed_by_name || "—"}</p>
+                        </div>
+                      </div>
+                      {payload.description && (
+                        <div className="mt-3 text-sm text-[#4a5578] dark:text-gray-400">{payload.description}</div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
         </div>
@@ -499,7 +707,7 @@ export default function CatalogPage() {
             <div className="p-6 border-t border-[#dde1ea] dark:border-gray-800 flex gap-3">
               <button onClick={() => setShowForm(false)} className="flex-1 bg-[#f1f3f8] hover:bg-[#e7ebf3] dark:bg-gray-800 dark:hover:bg-gray-700 text-[#4a5578] dark:text-gray-300 font-semibold py-3 rounded-xl text-sm">Cancel</button>
               <button onClick={handleSave} disabled={saving} className="flex-1 bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 disabled:opacity-50 text-white font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">
-                <Save size={15} />{saving ? "Saving..." : "Save Item"}
+                <Save size={15} />{saving ? "Saving..." : editing ? "Save Item" : "Submit for Approval"}
               </button>
             </div>
           </div>
