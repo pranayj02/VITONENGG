@@ -516,7 +516,7 @@ export default function RequisitionsPage() {
                           )}
                           {showCreatePoAgain && (
                             <p className="text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                              <AlertCircle size={12} /> Approved but PO not created
+                              <AlertCircle size={12} /> {allInStock ? "Approved — stock available, but you can still raise a fresh PO" : "Approved but PO not created"}
                             </p>
                           )}
                           {isReadyToFulfil && (
@@ -565,12 +565,21 @@ export default function RequisitionsPage() {
                                 <CheckCircle size={14} /> {isPoRaised ? "Fulfil MR" : "Fulfil From Stock"}
                               </button>
 
-                              {anyShortage && (
+                              {showCreatePoAgain && (
                                 <button
                                   onClick={(e) => { e.stopPropagation(); setActionType("raise_po"); setActionId(req.id); }}
                                   className="flex items-center gap-2 bg-purple-50 hover:bg-purple-500 text-purple-700 hover:text-white border border-purple-200 hover:border-purple-500 dark:bg-purple-500/10 dark:hover:bg-purple-500 dark:text-purple-400 dark:border-purple-500/30 font-semibold px-4 py-2 rounded-xl text-sm transition-all"
                                 >
-                                  <ArrowRightLeft size={14} /> {isPoRaised ? "Raise Another PO" : "Raise PO for Shortage"}
+                                  <ArrowRightLeft size={14} /> {anyShortage ? "Raise PO for Shortage" : "Raise Fresh PO"}
+                                </button>
+                              )}
+
+                              {isPoRaised && anyShortage && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setActionType("raise_po"); setActionId(req.id); }}
+                                  className="flex items-center gap-2 bg-purple-50 hover:bg-purple-500 text-purple-700 hover:text-white border border-purple-200 hover:border-purple-500 dark:bg-purple-500/10 dark:hover:bg-purple-500 dark:text-purple-400 dark:border-purple-500/30 font-semibold px-4 py-2 rounded-xl text-sm transition-all"
+                                >
+                                  <ArrowRightLeft size={14} /> Raise Another PO
                                 </button>
                               )}
                             </>
