@@ -31,6 +31,10 @@ export default function NewRequisitionPage() {
   const [requiredBy, setRequiredBy] = useState("");
   const [woNumber, setWoNumber] = useState("");
   const [reqNumber, setReqNumber] = useState("");
+  const [revNumber, setRevNumber] = useState("00");
+  const [revDate, setRevDate] = useState(new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "2-digit" }));
+  const [manualReqNumber, setManualReqNumber] = useState(false);
+  const [autoFySerial, setAutoFySerial] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
@@ -52,10 +56,13 @@ export default function NewRequisitionPage() {
         .limit(1);
 
       const nextSerial = (Number((rows as any)?.[0]?.fy_serial) || 0) + 1;
-      setReqNumber(`MR/${String(nextSerial).padStart(3, "0")}/${fy}`);
+      setAutoFySerial(nextSerial);
+      if (!manualReqNumber) {
+        setReqNumber(`MR/${String(nextSerial).padStart(3, "0")}/${fy}`);
+      }
     }
     init();
-  }, []);
+  }, [manualReqNumber]);
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -104,6 +111,9 @@ export default function NewRequisitionPage() {
 
   async function handleSave() {
     if (lines.length === 0) { setError("Add at least one item."); return; }
+    if (!reqNumber.trim()) { setError("MR No. is required."); return; }
+    if (!revNumber.trim()) { setError("Rev No. is required."); return; }
+    if (!revDate.trim()) { setError("Rev Date is required."); return; }
     setSaving(true); setError("");
 
     const supabase = createClient();
@@ -120,11 +130,12 @@ export default function NewRequisitionPage() {
       woText ? `WO No.: ${woText}` : "",
     ].filter(Boolean).join("\n");
 
+    const cleanReqNumber = reqNumber.trim();
     const cleanLines = lines.map(({ tempId, ...rest }) => rest);
     const reqRows = cleanLines.map((line, index) => ({
-      req_number: cleanLines.length > 1 ? `${reqNumber}-${index + 1}` : reqNumber,
+      req_number: cleanLines.length > 1 ? `${cleanReqNumber}-${index + 1}` : cleanReqNumber,
       fy_label: getCurrentFY(),
-      fy_serial: Number(reqNumber.split("/")[1]),
+      fy_serial: autoFySerial,
       requested_by: user?.id ?? null,
       requested_by_name: profileData?.full_name?.trim() || "Yatish Jain",
       department: department.trim() || profileData?.department || null,
@@ -142,12 +153,15 @@ export default function NewRequisitionPage() {
     await audit({
       action: "mr_requested",
       entity_type: "requisition",
-      entity_code: reqNumber,
+      entity_code: cleanReqNumber,
       details: {
         department: department.trim() || profileData?.department || null,
         priority,
         required_by: requiredBy || null,
         wo_number: woText || null,
+        rev_number: revNumber.trim(),
+        rev_date: revDate.trim(),
+        manual_req_number: manualReqNumber,
         line_count: cleanLines.length,
         split_into_sub_mrs: cleanLines.length > 1,
         created_req_numbers: (insertedReqs ?? []).map((row: any) => row.req_number),
@@ -186,7 +200,6 @@ export default function NewRequisitionPage() {
   const MIN_ROWS = 8;
   const displayRows = [...lines, ...Array(Math.max(0, MIN_ROWS - lines.length)).fill(null)];
   const fy = getCurrentFY();
-  const revDate = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "2-digit" });
   const date = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" });
 
   return (
@@ -274,20 +287,46 @@ export default function NewRequisitionPage() {
                       <td style={{ padding: "3px 6px", fontSize: "7.5pt", fontWeight: "700", borderRight: "1px solid #000", whiteSpace: "nowrap" }}>
                         Rev No.
                       </td>
-                      <td style={{ padding: "3px 6px", fontSize: "7.5pt" }}>00</td>
+                      <td style={{ padding: "1px 4px", fontSize: "7.5pt" }}>
+                        <input
+                          value={revNumber}
+                          onChange={(e) => setRevNumber(e.target.value)}
+                          style={{ width: "100%", fontSize: "7.5pt", border: "none", background: "transparent", fontWeight: "700", outline: "none" }}
+                        />
+                      </td>
                     </tr>
                     <tr style={{ borderTop: "1px solid #000" }}>
                       <td style={{ padding: "3px 6px", fontSize: "7.5pt", fontWeight: "700", borderRight: "1px solid #000", whiteSpace: "nowrap" }}>
                         Rev Date
                       </td>
-                      <td style={{ padding: "3px 6px", fontSize: "7.5pt", borderRight: "1px solid #000" }}>
-                        {revDate}
+                      <td style={{ padding: "1px 4px", fontSize: "7.5pt", borderRight: "1px solid #000" }}>
+                        <input
+                          value={revDate}
+                          onChange={(e) => setRevDate(e.target.value)}
+                          style={{ width: "100%", fontSize: "7.5pt", border: "none", background: "transparent", outline: "none" }}
+                        />
                       </td>
                       <td style={{ padding: "3px 6px", fontSize: "7.5pt", fontWeight: "700", borderRight: "1px solid #000", whiteSpace: "nowrap" }}>
                         Req No.
                       </td>
-                      <td style={{ padding: "3px 6px", fontSize: "7.5pt", fontWeight: "700" }}>
-                        {reqNumber}
+                      <td style={{ padding: "1px 4px", fontSize: "7.5pt", fontWeight: "700" }}>
+                        <input
+                          value={reqNumber}
+                          onChange={(e) => {
+                            setReqNumber(e.target.value);
+                            setManualReqNumber(true);
+                          }}
+                          onBlur={() => {
+                            if (!reqNumber.trim()) {
+                              const fy = getCurrentFY();
+                              if (autoFySerial) {
+                                setReqNumber(`MR/${String(autoFySerial).padStart(3, "0")}/${fy}`);
+                              }
+                              setManualReqNumber(false);
+                            }
+                          }}
+                          style={{ width: "100%", fontSize: "7.5pt", border: "none", background: "transparent", fontWeight: "700", outline: "none" }}
+                        />
                       </td>
                     </tr>
                     <tr style={{ borderTop: "1px solid #000" }}>
