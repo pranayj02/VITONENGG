@@ -49,7 +49,7 @@ function buildNavSections(role: UserRole | null, pendingReqs: number, pendingGrn
     {
       title: "Master Data",
       items: [
-        { href: "/dashboard/catalog", label: "Item Catalog", icon: Package, permission: "manage_catalog" },
+        { href: "/dashboard/catalog", label: "Item Catalog", icon: Package },
         { href: "/dashboard/vendors", label: "Vendors", icon: Users, permission: "manage_vendors" },
         // BUYERS SECTION — hidden from all users (e-invoicing handled externally)
         // Uncomment to restore when needed.
