@@ -25,6 +25,7 @@ import {
   Shield,
   ClipboardList,
   CheckCircle,
+  BellDot,
 } from "lucide-react";
 
 interface NavItem {
@@ -40,7 +41,7 @@ interface NavSection {
   items: NavItem[];
 }
 
-function buildNavSections(role: UserRole | null, pendingReqs: number, pendingGrns: number, pendingStock: number): NavSection[] {
+function buildNavSections(role: UserRole | null, pendingReqs: number, pendingItemApprovals: number, pendingGrns: number, pendingStock: number): NavSection[] {
   const sections: NavSection[] = [
     {
       title: "Overview",
@@ -49,7 +50,7 @@ function buildNavSections(role: UserRole | null, pendingReqs: number, pendingGrn
     {
       title: "Master Data",
       items: [
-        { href: "/dashboard/catalog", label: "Item Catalog", icon: Package, permission: "manage_catalog" },
+        { href: "/dashboard/catalog", label: "Item Catalog", icon: Package, badge: pendingItemApprovals },
         { href: "/dashboard/vendors", label: "Vendors", icon: Users, permission: "manage_vendors" },
         // BUYERS SECTION — hidden from all users (e-invoicing handled externally)
         // Uncomment to restore when needed.
@@ -84,13 +85,13 @@ function buildNavSections(role: UserRole | null, pendingReqs: number, pendingGrn
       items: [
         { href: "/dashboard/grn", label: "Goods Receipt (GRN)", icon: PackageOpen, permission: "create_grn", badge: pendingGrns },
         { href: "/dashboard/stock", label: "Stock & Inventory", icon: BarChart3 },
+        { href: "/dashboard/stock/adjustments", label: "Stock Approvals", icon: CheckCircle, permission: "approve_stock_adjustment", badge: pendingStock },
       ],
     },
     {
       title: "System",
       items: [
         { href: "/dashboard/activity", label: "Activity Log", icon: Activity, permission: "view_activity" },
-        { href: "/dashboard/stock/adjustments", label: "Stock Approvals", icon: CheckCircle, permission: "approve_stock_adjustment", badge: pendingStock },
         { href: "/dashboard/users", label: "Team & Roles", icon: Shield, permission: "manage_users" },
       ],
     },
@@ -113,6 +114,12 @@ function isRouteActive(pathname: string, href: string) {
   if (href === "/dashboard/requisitions") {
     return pathname === "/dashboard/requisitions";
   }
+  if (href === "/dashboard/stock") {
+    return pathname === "/dashboard/stock";
+  }
+  if (href === "/dashboard/stock/adjustments") {
+    return pathname === "/dashboard/stock/adjustments";
+  }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
@@ -129,6 +136,7 @@ export default function DashboardLayout({
   const { role, loading: roleLoading } = useRole();
 
   const [pendingReqs, setPendingReqs] = useState(0);
+  const [pendingItemApprovals, setPendingItemApprovals] = useState(0);
   const [pendingGrns, setPendingGrns] = useState(0);
   const [pendingStock, setPendingStock] = useState(0);
 
@@ -140,6 +148,14 @@ export default function DashboardLayout({
         .from("requisitions")
         .select("id", { count: "exact", head: true })
         .eq("status", "pending");
+      let itemApprovalCount = 0;
+      const { count: itemApprovalRawCount, error: itemApprovalCountError } = await supabase
+        .from("item_creation_requests")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "pending");
+      if (!itemApprovalCountError) {
+        itemApprovalCount = itemApprovalRawCount ?? 0;
+      }
       const { count: grnCount } = await supabase
         .from("grn")
         .select("id", { count: "exact", head: true })
@@ -149,6 +165,7 @@ export default function DashboardLayout({
         .select("id", { count: "exact", head: true })
         .eq("status", "pending");
       setPendingReqs(reqCount ?? 0);
+      setPendingItemApprovals(itemApprovalCount ?? 0);
       setPendingGrns(grnCount ?? 0);
       setPendingStock(stockCount ?? 0);
     }
@@ -157,7 +174,7 @@ export default function DashboardLayout({
     return () => clearInterval(interval);
   }, [roleLoading, role]);
 
-  const navSections = useMemo(() => buildNavSections(role, pendingReqs, pendingGrns, pendingStock), [role, pendingReqs, pendingGrns, pendingStock]);
+  const navSections = useMemo(() => buildNavSections(role, pendingReqs, pendingItemApprovals, pendingGrns, pendingStock), [role, pendingReqs, pendingItemApprovals, pendingGrns, pendingStock]);
 
   useEffect(() => {
     const supabase = createClient();
