@@ -37,6 +37,16 @@ const statusColors: Record<string, string> = {
   partially_fulfilled: "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400",
 };
 
+function getReqGroupBase(reqNumber: string) {
+  const match = reqNumber.match(/^(MR\/\d+\/\d{2}-\d{2})(?:-(\d+))?$/);
+  return match?.[1] ?? reqNumber;
+}
+
+function getReqSubIndex(reqNumber: string) {
+  const match = reqNumber.match(/^(MR\/\d+\/\d{2}-\d{2})(?:-(\d+))?$/);
+  return match?.[2] ? Number(match[2]) : 1;
+}
+
 const priorityColors: Record<string, string> = {
   low: "text-gray-500",
   normal: "text-blue-500",
@@ -413,6 +423,10 @@ export default function RequisitionsPage() {
             const hasLinkedPo = !!req.po_id;
             const showCreatePoAgain = req.status === "approved" && !hasLinkedPo;
             const linkedPoLabel = req.po_id ? `PO linked · ${req.po_id.slice(0, 8)}` : null;
+            const groupBase = getReqGroupBase(req.req_number);
+            const groupCount = filtered.filter((row) => getReqGroupBase(row.req_number) === groupBase).length;
+            const subIndex = getReqSubIndex(req.req_number);
+            const isSubMr = groupCount > 1;
             const allInStock = lines.every((li) => (stockMap[li.item_id] ?? 0) >= Number(li.qty_requested));
             const anyShortage = lines.some((li) => (stockMap[li.item_id] ?? 0) < Number(li.qty_requested));
             const isPoRaised = req.status === "converted_to_po";
@@ -433,13 +447,18 @@ export default function RequisitionsPage() {
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-viton-navy dark:text-white font-semibold font-mono text-sm">{req.req_number}</p>
+                        <p className="text-viton-navy dark:text-white font-semibold font-mono text-sm">{isSubMr ? groupBase : req.req_number}</p>
+                        {isSubMr && (
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-viton-red dark:text-orange-400 bg-viton-red/10 dark:bg-orange-500/10 px-2 py-0.5 rounded-md">
+                            Sub-MR {subIndex}/{groupCount}
+                          </span>
+                        )}
                         <span className={`text-[10px] font-bold uppercase tracking-wider ${priorityColors[req.priority]}`}>
                           {req.priority}
                         </span>
                       </div>
                       <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-0.5">
-                        By {req.requested_by_name ?? "Unknown"} · {date}
+                        {isSubMr ? `Line item ${subIndex} of ${groupCount} · ` : ""}By {req.requested_by_name ?? "Unknown"} · {date}
                         {req.department ? ` · ${req.department}` : ""}
                         {req.required_by ? ` · Required by ${new Date(req.required_by).toLocaleDateString("en-IN")}` : ""}
                       </p>
