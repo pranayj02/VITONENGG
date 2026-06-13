@@ -120,8 +120,9 @@ export default function NewRequisitionPage() {
       woText ? `WO No.: ${woText}` : "",
     ].filter(Boolean).join("\n");
 
-    const payload = {
-      req_number: reqNumber,
+    const cleanLines = lines.map(({ tempId, ...rest }) => rest);
+    const reqRows = cleanLines.map((line, index) => ({
+      req_number: cleanLines.length > 1 ? `${reqNumber}-${index + 1}` : reqNumber,
       fy_label: getCurrentFY(),
       fy_serial: Number(reqNumber.split("/")[1]),
       requested_by: user?.id ?? null,
@@ -129,26 +130,27 @@ export default function NewRequisitionPage() {
       department: department.trim() || profileData?.department || null,
       priority,
       status: "pending",
-      line_items: lines.map(({ tempId, ...rest }) => rest),
+      line_items: [line],
       notes: finalNotes || null,
       required_by: requiredBy || null,
       po_id: null,
-    };
+    }));
 
-    const { data: insertedReq, error: saveErr } = await supabase.from("requisitions").insert(payload).select("id, req_number").single();
+    const { data: insertedReqs, error: saveErr } = await supabase.from("requisitions").insert(reqRows).select("id, req_number");
     if (saveErr) { setError(saveErr.message); setSaving(false); return; }
 
     await audit({
       action: "mr_requested",
       entity_type: "requisition",
-      entity_id: (insertedReq as any)?.id,
-      entity_code: (insertedReq as any)?.req_number ?? reqNumber,
+      entity_code: reqNumber,
       details: {
         department: department.trim() || profileData?.department || null,
         priority,
         required_by: requiredBy || null,
         wo_number: woText || null,
-        line_count: lines.length,
+        line_count: cleanLines.length,
+        split_into_sub_mrs: cleanLines.length > 1,
+        created_req_numbers: (insertedReqs ?? []).map((row: any) => row.req_number),
       },
     });
 
@@ -164,9 +166,9 @@ export default function NewRequisitionPage() {
             <CheckCircle size={32} className="text-green-500 dark:text-green-400" />
           </div>
           <h2 className="text-viton-navy dark:text-white text-xl font-bold mb-1">Requisition Raised!</h2>
-          <p className="text-viton-red dark:text-orange-400 text-sm font-mono mb-6">{reqNumber}</p>
+          <p className="text-viton-red dark:text-orange-400 text-sm font-mono mb-2">{reqNumber}</p>
           <p className="text-[#8892a8] dark:text-gray-500 text-sm mb-6">
-            Your manager will be notified for approval.
+            {lines.length > 1 ? `Created as ${lines.length} sub-MRs, one for each line item.` : "Your manager will be notified for approval."}
           </p>
           <div className="flex flex-wrap gap-3 justify-center">
             <a href="/dashboard/requisitions/new" className="bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 text-white font-semibold px-5 py-2.5 rounded-xl text-sm flex items-center gap-2">
