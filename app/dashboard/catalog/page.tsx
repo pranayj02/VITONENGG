@@ -210,7 +210,11 @@ export default function CatalogPage() {
       .select("*")
       .order("created_at", { ascending: false });
     if (error) {
-      setError(error.message);
+      if (error.message.includes("item_creation_requests")) {
+        setApprovalRequests([]);
+      } else {
+        setError(error.message);
+      }
     } else {
       setApprovalRequests(((data ?? []) as unknown) as ItemApprovalRequest[]);
     }
@@ -326,7 +330,15 @@ export default function CatalogPage() {
       requested_by: user?.id ?? null,
       requested_by_name: requesterName,
     });
-    if (error) { setError(error.message); setSaving(false); return; }
+    if (error) {
+      if (error.message.includes("item_creation_requests")) {
+        setError("Item approval table is not available on this environment yet. Please run the latest database migration for this branch.");
+      } else {
+        setError(error.message);
+      }
+      setSaving(false);
+      return;
+    }
 
     await audit({ action: "item_creation_requested", entity_type: "item_request", entity_code: payload.serial_id, details: { name: payload.name, category: payload.category, requested_by_name: requesterName } });
 
