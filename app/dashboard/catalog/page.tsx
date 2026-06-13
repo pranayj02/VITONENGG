@@ -390,17 +390,17 @@ export default function CatalogPage() {
       }
     }
 
-    const { error: updateError } = await supabase
+    await audit({ action: nextStatus === "approved" ? "item_creation_approved" : "item_creation_rejected", entity_type: "item_request", entity_id: request.id, entity_code: request.item_payload.serial_id, details: { name: request.item_payload.name, status: nextStatus, reviewer_name: reviewerName } });
+
+    const { error: deleteError } = await supabase
       .from("item_creation_requests")
-      .update({ status: nextStatus, reviewed_by: user?.id ?? null, reviewed_by_name: reviewerName, reviewed_at: new Date().toISOString() })
+      .delete()
       .eq("id", request.id);
-    if (updateError) {
-      setError(updateError.message);
+    if (deleteError) {
+      setError(deleteError.message);
       setProcessingApprovalId(null);
       return;
     }
-
-    await audit({ action: nextStatus === "approved" ? "item_creation_approved" : "item_creation_rejected", entity_type: "item_request", entity_id: request.id, entity_code: request.item_payload.serial_id, details: { name: request.item_payload.name, status: nextStatus, reviewer_name: reviewerName } });
 
     await Promise.all([loadItems(), loadApprovalRequests()]);
     setProcessingApprovalId(null);
@@ -546,10 +546,11 @@ export default function CatalogPage() {
                 <div className="flex justify-center py-10"><div className="w-6 h-6 border-2 border-viton-red dark:border-orange-500 border-t-transparent rounded-full animate-spin" /></div>
               ) : approvalRequests.length === 0 ? (
                 <div className="text-center py-10 text-[#8892a8] dark:text-gray-600">No item requests yet.</div>
+              ) : pendingApprovals === 0 ? (
+                <div className="text-center py-10 text-[#8892a8] dark:text-gray-600">No pending item requests.</div>
               ) : (
-                approvalRequests.map((request) => {
+                approvalRequests.filter((request) => request.status === "pending").map((request) => {
                   const payload = request.item_payload;
-                  const isPending = request.status === "pending";
                   return (
                     <div key={request.id} className="border border-[#dde1ea] dark:border-gray-800 rounded-2xl p-4">
                       <div className="flex items-start justify-between gap-4 flex-wrap mb-3">
@@ -563,16 +564,14 @@ export default function CatalogPage() {
                           <p className="text-viton-navy dark:text-white mt-1">{payload.name}</p>
                           <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-1">Requested by {request.requested_by_name ?? "Unknown"} · {new Date(request.created_at).toLocaleDateString("en-IN")}</p>
                         </div>
-                        {isPending && (
-                          <div className="flex items-center gap-2">
-                            <button onClick={() => handleApprovalAction(request, "approved")} disabled={processingApprovalId === request.id} className="flex items-center gap-2 bg-emerald-50 hover:bg-emerald-500 text-emerald-700 hover:text-white border border-emerald-200 hover:border-emerald-500 dark:bg-emerald-500/10 dark:hover:bg-emerald-500 dark:text-emerald-400 dark:border-emerald-500/30 font-semibold px-4 py-2 rounded-xl text-sm transition-all disabled:opacity-60">
-                              <CheckCircle2 size={14} /> Approve
-                            </button>
-                            <button onClick={() => handleApprovalAction(request, "rejected")} disabled={processingApprovalId === request.id} className="flex items-center gap-2 bg-red-50 hover:bg-red-500 text-red-700 hover:text-white border border-red-200 hover:border-red-500 dark:bg-red-500/10 dark:hover:bg-red-500 dark:text-red-400 dark:border-red-500/30 font-semibold px-4 py-2 rounded-xl text-sm transition-all disabled:opacity-60">
-                              <Trash2 size={14} /> Reject
-                            </button>
-                          </div>
-                        )}
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => handleApprovalAction(request, "approved")} disabled={processingApprovalId === request.id} className="flex items-center gap-2 bg-emerald-50 hover:bg-emerald-500 text-emerald-700 hover:text-white border border-emerald-200 hover:border-emerald-500 dark:bg-emerald-500/10 dark:hover:bg-emerald-500 dark:text-emerald-400 dark:border-emerald-500/30 font-semibold px-4 py-2 rounded-xl text-sm transition-all disabled:opacity-60">
+                            <CheckCircle2 size={14} /> Approve
+                          </button>
+                          <button onClick={() => handleApprovalAction(request, "rejected")} disabled={processingApprovalId === request.id} className="flex items-center gap-2 bg-red-50 hover:bg-red-500 text-red-700 hover:text-white border border-red-200 hover:border-red-500 dark:bg-red-500/10 dark:hover:bg-red-500 dark:text-red-400 dark:border-red-500/30 font-semibold px-4 py-2 rounded-xl text-sm transition-all disabled:opacity-60">
+                            <Trash2 size={14} /> Reject
+                          </button>
+                        </div>
                       </div>
                       <div className="grid md:grid-cols-4 gap-3 text-sm">
                         <div className="bg-[#f7f8fb] dark:bg-gray-800/50 rounded-xl px-3 py-2">
