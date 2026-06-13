@@ -32,6 +32,7 @@ export default function NewRequisitionPage() {
   const [woNumber, setWoNumber] = useState("");
   const [reqNumber, setReqNumber] = useState("");
   const [revNumber, setRevNumber] = useState("00");
+  const [revDate, setRevDate] = useState(new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "2-digit" }));
   const [manualReqNumber, setManualReqNumber] = useState(false);
   const [autoFySerial, setAutoFySerial] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
@@ -199,7 +200,6 @@ export default function NewRequisitionPage() {
   const MIN_ROWS = 8;
   const displayRows = [...lines, ...Array(Math.max(0, MIN_ROWS - lines.length)).fill(null)];
   const fy = getCurrentFY();
-  const revDate = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "2-digit" });
   const date = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" });
 
   return (
