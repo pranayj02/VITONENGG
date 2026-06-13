@@ -212,7 +212,7 @@ export default function CatalogPage() {
     if (error) {
       setError(error.message);
     } else {
-      setApprovalRequests((data ?? []) as ItemApprovalRequest[]);
+      setApprovalRequests(((data ?? []) as unknown) as ItemApprovalRequest[]);
     }
     setApprovalsLoading(false);
   }
