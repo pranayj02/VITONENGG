@@ -3,8 +3,8 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 
 export const metadata: Metadata = {
-  title: "VITONENGG Portal",
-  description: "Purchase Order & Invoice Management",
+  title: "Viton ERP",
+  description: "Viton ERP",
 };
 
 export default function RootLayout({
