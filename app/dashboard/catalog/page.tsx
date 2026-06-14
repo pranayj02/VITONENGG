@@ -324,6 +324,20 @@ export default function CatalogPage() {
       : { data: null };
     const requesterName = (profile as any)?.full_name?.trim() || user?.email || "Unknown";
 
+    if (isAdmin) {
+      const { data: insertedItems, error } = await supabase.from("items").insert(payload).select("id").limit(1);
+      if (error) {
+        setError(error.message);
+        setSaving(false);
+        return;
+      }
+      await audit({ action: "item_created", entity_type: "item", entity_id: (insertedItems as any)?.[0]?.id, entity_code: payload.serial_id, details: { name: payload.name, category: payload.category, created_by_name: requesterName } });
+      await loadItems();
+      setShowForm(false);
+      setSaving(false);
+      return;
+    }
+
     const { error } = await supabase.from("item_creation_requests").insert({
       item_payload: payload,
       status: "pending",
@@ -390,17 +404,22 @@ export default function CatalogPage() {
       }
     }
 
-    await audit({ action: nextStatus === "approved" ? "item_creation_approved" : "item_creation_rejected", entity_type: "item_request", entity_id: request.id, entity_code: request.item_payload.serial_id, details: { name: request.item_payload.name, status: nextStatus, reviewer_name: reviewerName } });
-
-    const { error: deleteError } = await supabase
+    const { error: reviewError } = await supabase
       .from("item_creation_requests")
-      .delete()
+      .update({
+        status: nextStatus,
+        reviewed_by: user?.id ?? null,
+        reviewed_by_name: reviewerName,
+        reviewed_at: new Date().toISOString(),
+      })
       .eq("id", request.id);
-    if (deleteError) {
-      setError(deleteError.message);
+    if (reviewError) {
+      setError(reviewError.message);
       setProcessingApprovalId(null);
       return;
     }
+
+    await audit({ action: nextStatus === "approved" ? "item_creation_approved" : "item_creation_rejected", entity_type: "item_request", entity_id: request.id, entity_code: request.item_payload.serial_id, details: { name: request.item_payload.name, status: nextStatus, reviewer_name: reviewerName } });
 
     await Promise.all([loadItems(), loadApprovalRequests()]);
     setProcessingApprovalId(null);
