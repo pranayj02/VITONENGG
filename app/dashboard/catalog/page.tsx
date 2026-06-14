@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase";
 import { audit } from "@/lib/audit";
 import { Plus, Search, X, Save, Pencil, RefreshCw, Trash2, CheckCircle2, Clock3 } from "lucide-react";
@@ -159,6 +159,28 @@ function generateName(category: string, fields: Record<string, string>): string 
 }
 
 const CATEGORIES = Object.keys(CATEGORY_FIELDS);
+const SPEC_OPTIONS_STORAGE_KEY = "catalog-spec-options-v1";
+
+function normalizeOption(value: string) {
+  return value.trim().toUpperCase();
+}
+
+function loadSavedSpecOptions(): Record<string, string[]> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = window.localStorage.getItem(SPEC_OPTIONS_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function persistSpecOptions(options: Record<string, string[]>) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(SPEC_OPTIONS_STORAGE_KEY, JSON.stringify(options));
+}
 
 const emptyFormMeta = {
   name: "",
@@ -183,6 +205,7 @@ export default function CatalogPage() {
   const [editing, setEditing] = useState<Item | null>(null);
   const [formMeta, setFormMeta] = useState(emptyFormMeta);
   const [codeFields, setCodeFields] = useState<Record<string, string>>({});
+  const [savedSpecOptions, setSavedSpecOptions] = useState<Record<string, string[]>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [approvalRequests, setApprovalRequests] = useState<ItemApprovalRequest[]>([]);
@@ -228,6 +251,10 @@ export default function CatalogPage() {
       loadApprovalRequests();
     }
   }, [roleLoading, isAdmin]);
+
+  useEffect(() => {
+    setSavedSpecOptions(loadSavedSpecOptions());
+  }, []);
 
   useEffect(() => {
     if (!search.trim()) { setFiltered(items); return; }
@@ -282,6 +309,34 @@ export default function CatalogPage() {
 
   function setCodeField(key: string, val: string) {
     setCodeFields(f => ({ ...f, [key]: val }));
+  }
+
+  function addSpecOption(category: string, fieldKey: string, value: string) {
+    const normalized = normalizeOption(value);
+    if (!normalized) return;
+    setSavedSpecOptions((prev) => {
+      const storageKey = `${category}::${fieldKey}`;
+      const current = prev[storageKey] ?? [];
+      if (current.includes(normalized)) return prev;
+      const next = { ...prev, [storageKey]: [...current, normalized].sort() };
+      persistSpecOptions(next);
+      return next;
+    });
+  }
+
+  function removeSpecOption(category: string, fieldKey: string, value: string) {
+    const normalized = normalizeOption(value);
+    const storageKey = `${category}::${fieldKey}`;
+    setSavedSpecOptions((prev) => {
+      const current = prev[storageKey] ?? [];
+      const nextValues = current.filter((option) => option !== normalized);
+      const next = { ...prev };
+      if (nextValues.length > 0) next[storageKey] = nextValues;
+      else delete next[storageKey];
+      persistSpecOptions(next);
+      return next;
+    });
+    setCodeFields((prev) => prev[fieldKey] === normalized ? { ...prev, [fieldKey]: "" } : prev);
   }
 
   async function handleSave() {
@@ -437,7 +492,15 @@ export default function CatalogPage() {
     Misc: "bg-gray-100 text-gray-600 dark:bg-gray-500/10 dark:text-gray-400",
   };
 
-  const currentFields = CATEGORY_FIELDS[formMeta.category] ?? [];
+  const currentFields = useMemo(() => (CATEGORY_FIELDS[formMeta.category] ?? []).map((field) => {
+    if (!field.options) return field;
+    const storageKey = `${formMeta.category}::${field.key}`;
+    const extraOptions = savedSpecOptions[storageKey] ?? [];
+    return {
+      ...field,
+      options: Array.from(new Set([...(field.options ?? []), ...extraOptions])),
+    };
+  }), [formMeta.category, savedSpecOptions]);
 
   return (
     <div className="p-6 lg:p-8 max-w-6xl mx-auto">
@@ -657,16 +720,41 @@ export default function CatalogPage() {
                       <div key={field.key}>
                         <label className="block text-[#8892a8] dark:text-gray-500 text-xs mb-1">{field.label}</label>
                         {field.options ? (
-                          <div className="relative">
-                            <select value={codeFields[field.key] ?? ""} onChange={e => setCodeField(field.key, e.target.value)}
-                              className="w-full appearance-none bg-white dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-lg px-3 py-2 pr-8 text-viton-navy dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500 cursor-pointer">
-                              <option value="">— select —</option>
-                              {field.options.map(o => <option key={o} value={o}>{o}</option>)}
-                            </select>
-                            <div className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center">
-                              <svg className="w-3.5 h-3.5 text-[#8892a8] dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                              </svg>
+                          <div className="space-y-2">
+                            <div className="relative">
+                              <input
+                                list={`${formMeta.category}-${field.key}-options`}
+                                value={codeFields[field.key] ?? ""}
+                                onChange={e => setCodeField(field.key, e.target.value.toUpperCase())}
+                                placeholder="Select or type a new option"
+                                className="w-full bg-white dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-lg px-3 py-2 pr-8 text-viton-navy dark:text-white text-xs font-mono placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
+                              />
+                              <datalist id={`${formMeta.category}-${field.key}-options`}>
+                                {field.options.map(o => <option key={o} value={o} />)}
+                              </datalist>
+                              <div className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center">
+                                <svg className="w-3.5 h-3.5 text-[#8892a8] dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => addSpecOption(formMeta.category, field.key, codeFields[field.key] ?? "")}
+                                className="text-[11px] font-semibold text-viton-red dark:text-orange-400 hover:underline"
+                              >
+                                Save option
+                              </button>
+                              {(savedSpecOptions[`${formMeta.category}::${field.key}`] ?? []).includes(normalizeOption(codeFields[field.key] ?? "")) && (
+                                <button
+                                  type="button"
+                                  onClick={() => removeSpecOption(formMeta.category, field.key, codeFields[field.key] ?? "")}
+                                  className="text-[11px] font-semibold text-red-600 dark:text-red-400 hover:underline"
+                                >
+                                  Remove option
+                                </button>
+                              )}
                             </div>
                           </div>
                         ) : (
