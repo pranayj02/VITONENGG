@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase";
 import { audit } from "@/lib/audit";
 import { Plus, Search, X, Save, Pencil, RefreshCw, Trash2, CheckCircle2, Clock3 } from "lucide-react";
@@ -160,6 +160,16 @@ function generateName(category: string, fields: Record<string, string>): string 
 
 const CATEGORIES = Object.keys(CATEGORY_FIELDS);
 
+interface CatalogSpecOption {
+  category: string;
+  field_key: string;
+  option_value: string;
+}
+
+function normalizeOption(value: string) {
+  return value.trim().toUpperCase();
+}
+
 const emptyFormMeta = {
   name: "",
   description: "",
@@ -183,6 +193,7 @@ export default function CatalogPage() {
   const [editing, setEditing] = useState<Item | null>(null);
   const [formMeta, setFormMeta] = useState(emptyFormMeta);
   const [codeFields, setCodeFields] = useState<Record<string, string>>({});
+  const [savedSpecOptions, setSavedSpecOptions] = useState<Record<string, string[]>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [approvalRequests, setApprovalRequests] = useState<ItemApprovalRequest[]>([]);
@@ -221,7 +232,33 @@ export default function CatalogPage() {
     setApprovalsLoading(false);
   }
 
-  useEffect(() => { loadItems(); }, []);
+  async function loadSpecOptions() {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("catalog_spec_options")
+      .select("category, field_key, option_value")
+      .order("category")
+      .order("field_key")
+      .order("option_value");
+    if (error) {
+      if (error.message.includes("catalog_spec_options")) {
+        setSavedSpecOptions({});
+      } else {
+        setError(error.message);
+      }
+      return;
+    }
+
+    const grouped = (((data ?? []) as unknown) as CatalogSpecOption[]).reduce<Record<string, string[]>>((acc, row) => {
+      const storageKey = `${row.category}::${row.field_key}`;
+      acc[storageKey] = [...(acc[storageKey] ?? []), row.option_value];
+      return acc;
+    }, {});
+
+    setSavedSpecOptions(grouped);
+  }
+
+  useEffect(() => { loadItems(); loadSpecOptions(); }, []);
 
   useEffect(() => {
     if (!roleLoading && isAdmin) {
@@ -284,6 +321,62 @@ export default function CatalogPage() {
     setCodeFields(f => ({ ...f, [key]: val }));
   }
 
+  async function addSpecOption(category: string, fieldKey: string, value: string) {
+    const normalized = normalizeOption(value);
+    if (!normalized) return;
+    setError("");
+    const supabase = createClient();
+    const { data: authData } = await supabase.auth.getUser();
+    const { error } = await supabase.from("catalog_spec_options").upsert({
+      category,
+      field_key: fieldKey,
+      option_value: normalized,
+      created_by: authData.user?.id ?? null,
+    }, { onConflict: "category,field_key,option_value", ignoreDuplicates: true });
+    if (error) {
+      setError(error.message.includes("catalog_spec_options") ? "Catalog spec option table is not available on this environment yet. Please run the latest database migration for this branch." : error.message);
+      return;
+    }
+    await loadSpecOptions();
+    setCodeFields((prev) => ({ ...prev, [fieldKey]: normalized }));
+  }
+
+  async function removeSpecOption(category: string, fieldKey: string, value: string) {
+    const normalized = normalizeOption(value);
+    if (!normalized) return;
+    setError("");
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("catalog_spec_options")
+      .delete()
+      .eq("category", category)
+      .eq("field_key", fieldKey)
+      .eq("option_value", normalized);
+    if (error) {
+      setError(error.message.includes("catalog_spec_options") ? "Catalog spec option table is not available on this environment yet. Please run the latest database migration for this branch." : error.message);
+      return;
+    }
+    await loadSpecOptions();
+    setCodeFields((prev) => prev[fieldKey] === normalized ? { ...prev, [fieldKey]: "" } : prev);
+  }
+
+  async function syncSpecOptions(category: string, fields: Record<string, string>) {
+    const dynamicFields = (CATEGORY_FIELDS[category] ?? []).filter((field) => field.options && normalizeOption(fields[field.key] ?? ""));
+    if (dynamicFields.length === 0) return;
+    const supabase = createClient();
+    const { data: authData } = await supabase.auth.getUser();
+    const rows = dynamicFields.map((field) => ({
+      category,
+      field_key: field.key,
+      option_value: normalizeOption(fields[field.key] ?? ""),
+      created_by: authData.user?.id ?? null,
+    }));
+    const { error } = await supabase.from("catalog_spec_options").upsert(rows, { onConflict: "category,field_key,option_value", ignoreDuplicates: true });
+    if (!error) {
+      await loadSpecOptions();
+    }
+  }
+
   async function handleSave() {
     if (!formMeta.serial_id.trim() || !formMeta.name.trim()) {
       setError("Serial ID and Name are required.");
@@ -311,6 +404,7 @@ export default function CatalogPage() {
       const { error } = await supabase.from("items").update(payload).eq("id", editing.id);
       if (error) { setError(error.message); setSaving(false); return; }
       await audit({ action: "item_updated", entity_type: "item", entity_id: editing.id, entity_code: payload.serial_id, details: { name: payload.name, category: payload.category } });
+      await syncSpecOptions(payload.category, codeFields);
       await loadItems();
       setShowForm(false);
       setSaving(false);
@@ -332,6 +426,7 @@ export default function CatalogPage() {
         return;
       }
       await audit({ action: "item_created", entity_type: "item", entity_id: (insertedItems as any)?.[0]?.id, entity_code: payload.serial_id, details: { name: payload.name, category: payload.category, created_by_name: requesterName } });
+      await syncSpecOptions(payload.category, codeFields);
       await loadItems();
       setShowForm(false);
       setSaving(false);
@@ -355,6 +450,7 @@ export default function CatalogPage() {
     }
 
     await audit({ action: "item_creation_requested", entity_type: "item_request", entity_code: payload.serial_id, details: { name: payload.name, category: payload.category, requested_by_name: requesterName } });
+    await syncSpecOptions(payload.category, codeFields);
 
     if (isAdmin) {
       await loadApprovalRequests();
@@ -437,7 +533,15 @@ export default function CatalogPage() {
     Misc: "bg-gray-100 text-gray-600 dark:bg-gray-500/10 dark:text-gray-400",
   };
 
-  const currentFields = CATEGORY_FIELDS[formMeta.category] ?? [];
+  const currentFields = useMemo(() => (CATEGORY_FIELDS[formMeta.category] ?? []).map((field) => {
+    if (!field.options) return field;
+    const storageKey = `${formMeta.category}::${field.key}`;
+    const extraOptions = savedSpecOptions[storageKey] ?? [];
+    return {
+      ...field,
+      options: Array.from(new Set([...(field.options ?? []), ...extraOptions])),
+    };
+  }), [formMeta.category, savedSpecOptions]);
 
   return (
     <div className="p-6 lg:p-8 max-w-6xl mx-auto">
@@ -657,16 +761,41 @@ export default function CatalogPage() {
                       <div key={field.key}>
                         <label className="block text-[#8892a8] dark:text-gray-500 text-xs mb-1">{field.label}</label>
                         {field.options ? (
-                          <div className="relative">
-                            <select value={codeFields[field.key] ?? ""} onChange={e => setCodeField(field.key, e.target.value)}
-                              className="w-full appearance-none bg-white dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-lg px-3 py-2 pr-8 text-viton-navy dark:text-white text-xs focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500 cursor-pointer">
-                              <option value="">— select —</option>
-                              {field.options.map(o => <option key={o} value={o}>{o}</option>)}
-                            </select>
-                            <div className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center">
-                              <svg className="w-3.5 h-3.5 text-[#8892a8] dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                              </svg>
+                          <div className="space-y-2">
+                            <div className="relative">
+                              <input
+                                list={`${formMeta.category}-${field.key}-options`}
+                                value={codeFields[field.key] ?? ""}
+                                onChange={e => setCodeField(field.key, e.target.value.toUpperCase())}
+                                placeholder="Select or type a new option"
+                                className="w-full bg-white dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-lg px-3 py-2 pr-8 text-viton-navy dark:text-white text-xs font-mono placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
+                              />
+                              <datalist id={`${formMeta.category}-${field.key}-options`}>
+                                {field.options.map(o => <option key={o} value={o} />)}
+                              </datalist>
+                              <div className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center">
+                                <svg className="w-3.5 h-3.5 text-[#8892a8] dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => addSpecOption(formMeta.category, field.key, codeFields[field.key] ?? "")}
+                                className="text-[11px] font-semibold text-viton-red dark:text-orange-400 hover:underline"
+                              >
+                                Save option
+                              </button>
+                              {isAdmin && (savedSpecOptions[`${formMeta.category}::${field.key}`] ?? []).includes(normalizeOption(codeFields[field.key] ?? "")) && (
+                                <button
+                                  type="button"
+                                  onClick={() => removeSpecOption(formMeta.category, field.key, codeFields[field.key] ?? "")}
+                                  className="text-[11px] font-semibold text-red-600 dark:text-red-400 hover:underline"
+                                >
+                                  Remove option
+                                </button>
+                              )}
                             </div>
                           </div>
                         ) : (
