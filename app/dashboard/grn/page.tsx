@@ -323,7 +323,7 @@ export default function GRNPage() {
       .eq("fy_label", fy)
       .order("fy_serial", { ascending: false })
       .limit(1);
-    const nextSerial = (Number((last as any)?.[0]?.fy_serial) || 0) + 1;
+    const nextSerial = Math.max((Number((last as any)?.[0]?.fy_serial) || 0) + 1, 22);
     const finalGrnNumber = grnNumber === "Auto" ? `GRN/${String(nextSerial).padStart(3, "0")}/${fy}` : grnNumber.trim();
     const selectedVendor = vendors.find((v) => v.id === manualVendorId);
 
@@ -335,9 +335,9 @@ export default function GRNPage() {
       vendor_id: selectedPO?.vendor_id ?? selectedVendor?.id ?? null,
       vendor_name: selectedPO?.vendors?.name ?? selectedVendor?.name ?? (manualVendorName.trim() || null),
       received_by: user?.id ?? null,
-      received_by_name: receivedByName.trim() || name,
+      received_by_name: FIXED_RECEIVED_BY_NAME,
       inspected_by: null,
-      inspected_by_name: inspectedBy.trim() || null,
+      inspected_by_name: null,
       line_items: normalizedLines,
       status: "pending" as const,
       inspection_notes: inspectionNotes.trim() || null,
@@ -960,14 +960,6 @@ export default function GRNPage() {
                         <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>PO Date</td>
                         <td colSpan={2} style={{ border:"1px solid #000", padding:"4px 6px", fontSize:"8pt" }}>
                           {selectedPO ? new Date(selectedPO.created_at).toLocaleDateString("en-IN", { day:"2-digit", month:"2-digit", year:"numeric" }) : "—"}
-                        </td>
-                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }} />
-                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontSize:"8pt" }} />
-                      </tr>
-                      <tr>
-                        <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Inspected By</td>
-                        <td colSpan={2} style={{ border:"1px solid #000", padding:"4px 6px" }}>
-                          <input value={inspectedBy} onChange={(e) => setInspectedBy(e.target.value)} style={{ width:"100%", fontSize:"8pt", border:"none", background:"transparent", outline:"none" }} placeholder="Name" />
                         </td>
                         <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }} />
                         <td style={{ border:"1px solid #000", padding:"4px 6px", fontSize:"8pt" }} />
