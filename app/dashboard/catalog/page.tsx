@@ -159,27 +159,15 @@ function generateName(category: string, fields: Record<string, string>): string 
 }
 
 const CATEGORIES = Object.keys(CATEGORY_FIELDS);
-const SPEC_OPTIONS_STORAGE_KEY = "catalog-spec-options-v1";
+
+interface CatalogSpecOption {
+  category: string;
+  field_key: string;
+  option_value: string;
+}
 
 function normalizeOption(value: string) {
   return value.trim().toUpperCase();
-}
-
-function loadSavedSpecOptions(): Record<string, string[]> {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = window.localStorage.getItem(SPEC_OPTIONS_STORAGE_KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === "object" ? parsed : {};
-  } catch {
-    return {};
-  }
-}
-
-function persistSpecOptions(options: Record<string, string[]>) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(SPEC_OPTIONS_STORAGE_KEY, JSON.stringify(options));
 }
 
 const emptyFormMeta = {
@@ -244,17 +232,39 @@ export default function CatalogPage() {
     setApprovalsLoading(false);
   }
 
-  useEffect(() => { loadItems(); }, []);
+  async function loadSpecOptions() {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("catalog_spec_options")
+      .select("category, field_key, option_value")
+      .order("category")
+      .order("field_key")
+      .order("option_value");
+    if (error) {
+      if (error.message.includes("catalog_spec_options")) {
+        setSavedSpecOptions({});
+      } else {
+        setError(error.message);
+      }
+      return;
+    }
+
+    const grouped = (((data ?? []) as unknown) as CatalogSpecOption[]).reduce<Record<string, string[]>>((acc, row) => {
+      const storageKey = `${row.category}::${row.field_key}`;
+      acc[storageKey] = [...(acc[storageKey] ?? []), row.option_value];
+      return acc;
+    }, {});
+
+    setSavedSpecOptions(grouped);
+  }
+
+  useEffect(() => { loadItems(); loadSpecOptions(); }, []);
 
   useEffect(() => {
     if (!roleLoading && isAdmin) {
       loadApprovalRequests();
     }
   }, [roleLoading, isAdmin]);
-
-  useEffect(() => {
-    setSavedSpecOptions(loadSavedSpecOptions());
-  }, []);
 
   useEffect(() => {
     if (!search.trim()) { setFiltered(items); return; }
@@ -311,32 +321,60 @@ export default function CatalogPage() {
     setCodeFields(f => ({ ...f, [key]: val }));
   }
 
-  function addSpecOption(category: string, fieldKey: string, value: string) {
+  async function addSpecOption(category: string, fieldKey: string, value: string) {
     const normalized = normalizeOption(value);
     if (!normalized) return;
-    setSavedSpecOptions((prev) => {
-      const storageKey = `${category}::${fieldKey}`;
-      const current = prev[storageKey] ?? [];
-      if (current.includes(normalized)) return prev;
-      const next = { ...prev, [storageKey]: [...current, normalized].sort() };
-      persistSpecOptions(next);
-      return next;
-    });
+    setError("");
+    const supabase = createClient();
+    const { data: authData } = await supabase.auth.getUser();
+    const { error } = await supabase.from("catalog_spec_options").upsert({
+      category,
+      field_key: fieldKey,
+      option_value: normalized,
+      created_by: authData.user?.id ?? null,
+    }, { onConflict: "category,field_key,option_value", ignoreDuplicates: true });
+    if (error) {
+      setError(error.message.includes("catalog_spec_options") ? "Catalog spec option table is not available on this environment yet. Please run the latest database migration for this branch." : error.message);
+      return;
+    }
+    await loadSpecOptions();
+    setCodeFields((prev) => ({ ...prev, [fieldKey]: normalized }));
   }
 
-  function removeSpecOption(category: string, fieldKey: string, value: string) {
+  async function removeSpecOption(category: string, fieldKey: string, value: string) {
     const normalized = normalizeOption(value);
-    const storageKey = `${category}::${fieldKey}`;
-    setSavedSpecOptions((prev) => {
-      const current = prev[storageKey] ?? [];
-      const nextValues = current.filter((option) => option !== normalized);
-      const next = { ...prev };
-      if (nextValues.length > 0) next[storageKey] = nextValues;
-      else delete next[storageKey];
-      persistSpecOptions(next);
-      return next;
-    });
+    if (!normalized) return;
+    setError("");
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("catalog_spec_options")
+      .delete()
+      .eq("category", category)
+      .eq("field_key", fieldKey)
+      .eq("option_value", normalized);
+    if (error) {
+      setError(error.message.includes("catalog_spec_options") ? "Catalog spec option table is not available on this environment yet. Please run the latest database migration for this branch." : error.message);
+      return;
+    }
+    await loadSpecOptions();
     setCodeFields((prev) => prev[fieldKey] === normalized ? { ...prev, [fieldKey]: "" } : prev);
+  }
+
+  async function syncSpecOptions(category: string, fields: Record<string, string>) {
+    const dynamicFields = (CATEGORY_FIELDS[category] ?? []).filter((field) => field.options && normalizeOption(fields[field.key] ?? ""));
+    if (dynamicFields.length === 0) return;
+    const supabase = createClient();
+    const { data: authData } = await supabase.auth.getUser();
+    const rows = dynamicFields.map((field) => ({
+      category,
+      field_key: field.key,
+      option_value: normalizeOption(fields[field.key] ?? ""),
+      created_by: authData.user?.id ?? null,
+    }));
+    const { error } = await supabase.from("catalog_spec_options").upsert(rows, { onConflict: "category,field_key,option_value", ignoreDuplicates: true });
+    if (!error) {
+      await loadSpecOptions();
+    }
   }
 
   async function handleSave() {
@@ -366,6 +404,7 @@ export default function CatalogPage() {
       const { error } = await supabase.from("items").update(payload).eq("id", editing.id);
       if (error) { setError(error.message); setSaving(false); return; }
       await audit({ action: "item_updated", entity_type: "item", entity_id: editing.id, entity_code: payload.serial_id, details: { name: payload.name, category: payload.category } });
+      await syncSpecOptions(payload.category, codeFields);
       await loadItems();
       setShowForm(false);
       setSaving(false);
@@ -387,6 +426,7 @@ export default function CatalogPage() {
         return;
       }
       await audit({ action: "item_created", entity_type: "item", entity_id: (insertedItems as any)?.[0]?.id, entity_code: payload.serial_id, details: { name: payload.name, category: payload.category, created_by_name: requesterName } });
+      await syncSpecOptions(payload.category, codeFields);
       await loadItems();
       setShowForm(false);
       setSaving(false);
@@ -410,6 +450,7 @@ export default function CatalogPage() {
     }
 
     await audit({ action: "item_creation_requested", entity_type: "item_request", entity_code: payload.serial_id, details: { name: payload.name, category: payload.category, requested_by_name: requesterName } });
+    await syncSpecOptions(payload.category, codeFields);
 
     if (isAdmin) {
       await loadApprovalRequests();
@@ -746,7 +787,7 @@ export default function CatalogPage() {
                               >
                                 Save option
                               </button>
-                              {(savedSpecOptions[`${formMeta.category}::${field.key}`] ?? []).includes(normalizeOption(codeFields[field.key] ?? "")) && (
+                              {isAdmin && (savedSpecOptions[`${formMeta.category}::${field.key}`] ?? []).includes(normalizeOption(codeFields[field.key] ?? "")) && (
                                 <button
                                   type="button"
                                   onClick={() => removeSpecOption(formMeta.category, field.key, codeFields[field.key] ?? "")}
