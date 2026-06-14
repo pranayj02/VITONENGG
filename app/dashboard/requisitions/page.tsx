@@ -254,8 +254,14 @@ export default function RequisitionsPage() {
   async function handleDelete() {
     if (!deleteId) return;
     setDeleting(true);
+    setActionError("");
     const supabase = createClient();
-    await supabase.from("requisitions").delete().eq("id", deleteId);
+    const { error } = await supabase.from("requisitions").delete().eq("id", deleteId);
+    if (error) {
+      setActionError(error.message);
+      setDeleting(false);
+      return;
+    }
     setDeleteId(null);
     setDeleting(false);
     await load();
