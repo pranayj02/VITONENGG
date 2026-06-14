@@ -252,11 +252,11 @@ export default function DashboardLayout({
         <div className="p-6 border-b border-[#dde1ea] dark:border-gray-800">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0 bg-white border border-[#dde1ea] dark:border-gray-700">
-              <img src="/Logo.JPG" alt="VITONENGG Logo" className="w-full h-full object-contain" />
+              <img src="/Logo.JPG" alt="Viton Engineering Logo" className="w-full h-full object-contain" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-viton-navy dark:text-white font-bold text-sm tracking-wide">VITONENGG</p>
-              <p className="text-[#8892a8] dark:text-gray-500 text-xs">ERP Portal</p>
+              <p className="text-viton-navy dark:text-white font-bold text-sm tracking-wide">Viton Engineering</p>
+              <p className="text-[#8892a8] dark:text-gray-500 text-xs">Viton ERP</p>
             </div>
             <button
               onClick={toggle}
@@ -292,9 +292,9 @@ export default function DashboardLayout({
       <div className="md:hidden fixed top-0 left-0 right-0 z-20 bg-white dark:bg-gray-900 border-b border-[#dde1ea] dark:border-gray-800 px-4 h-14 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg overflow-hidden bg-white border border-[#dde1ea] dark:border-gray-700">
-            <img src="/Logo.JPG" alt="VITONENGG Logo" className="w-full h-full object-contain" />
+            <img src="/Logo.JPG" alt="Viton Engineering Logo" className="w-full h-full object-contain" />
           </div>
-          <span className="text-viton-navy dark:text-white font-bold text-sm">VITONENGG</span>
+          <span className="text-viton-navy dark:text-white font-bold text-sm">Viton Engineering</span>
         </div>
 
         <div className="flex items-center gap-2">
@@ -327,11 +327,11 @@ export default function DashboardLayout({
             <div className="p-6 border-b border-[#dde1ea] dark:border-gray-800">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl overflow-hidden flex-shrink-0 bg-white border border-[#dde1ea] dark:border-gray-700">
-                  <img src="/Logo.JPG" alt="VITONENGG Logo" className="w-full h-full object-contain" />
+                  <img src="/Logo.JPG" alt="Viton Engineering Logo" className="w-full h-full object-contain" />
                 </div>
                 <div>
-                  <p className="text-viton-navy dark:text-white font-bold text-sm">VITONENGG</p>
-                  <p className="text-[#8892a8] dark:text-gray-500 text-xs">ERP Portal</p>
+                  <p className="text-viton-navy dark:text-white font-bold text-sm">Viton Engineering</p>
+                  <p className="text-[#8892a8] dark:text-gray-500 text-xs">Viton ERP</p>
                 </div>
               </div>
             </div>
