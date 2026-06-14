@@ -29,6 +29,8 @@ interface POWithVendor extends PurchaseOrder {
   vendors: Vendor | null;
 }
 
+const FIXED_RECEIVED_BY_NAME = "Yatish Jain";
+
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-50 text-yellow-700 dark:bg-yellow-500/10 dark:text-yellow-400",
   inspected: "bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400",
@@ -36,6 +38,15 @@ const statusColors: Record<string, string> = {
   rejected: "bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400",
   partial: "bg-orange-50 text-orange-700 dark:bg-orange-500/10 dark:text-orange-400",
 };
+
+function getNextGRNNumber(existingGrns: GRN[]) {
+  const fy = getCurrentFY();
+  const maxSerial = existingGrns.reduce((max, entry) => {
+    const match = entry.grn_number?.match(new RegExp(`^VE/GRN/${fy}/(\\d+)$`));
+    return match ? Math.max(max, Number(match[1])) : max;
+  }, 21);
+  return `VE/GRN/${fy}/${String(maxSerial + 1).padStart(3, "0")}`;
+}
 
 export default function GRNPage() {
   const router = useRouter();
@@ -66,7 +77,7 @@ export default function GRNPage() {
   const [revisionDate, setRevisionDate] = useState("01/10/2025");
   const [grnDate, setGrnDate] = useState(new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "2-digit" }));
   const [grnNumber, setGrnNumber] = useState("Auto");
-  const [receivedByName, setReceivedByName] = useState("");
+  const [receivedByName, setReceivedByName] = useState(FIXED_RECEIVED_BY_NAME);
   const [removeReasonByPO, setRemoveReasonByPO] = useState<Record<string, string>>({});
   const [removePanelPOId, setRemovePanelPOId] = useState<string | null>(null);
   const [removingPOId, setRemovingPOId] = useState<string | null>(null);
@@ -146,7 +157,7 @@ export default function GRNPage() {
     setRevisionDate("01/10/2025");
     setGrnDate(new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "2-digit" }));
     setGrnNumber("Auto");
-    setReceivedByName("");
+    setReceivedByName(FIXED_RECEIVED_BY_NAME);
     setError("");
     setItemSearch("");
     setItemResults([]);
