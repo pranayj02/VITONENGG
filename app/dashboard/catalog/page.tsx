@@ -737,7 +737,7 @@ export default function CatalogPage() {
             <div className="p-6 border-t border-[#dde1ea] dark:border-gray-800 flex gap-3">
               <button onClick={() => setShowForm(false)} className="flex-1 bg-[#f1f3f8] hover:bg-[#e7ebf3] dark:bg-gray-800 dark:hover:bg-gray-700 text-[#4a5578] dark:text-gray-300 font-semibold py-3 rounded-xl text-sm">Cancel</button>
               <button onClick={handleSave} disabled={saving} className="flex-1 bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 disabled:opacity-50 text-white font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">
-                <Save size={15} />{saving ? "Saving..." : editing ? "Save Item" : "Submit for Approval"}
+                <Save size={15} />{saving ? "Saving..." : editing ? "Save Item" : isAdmin ? "Add Item" : "Submit for Approval"}
               </button>
             </div>
           </div>
