@@ -3,11 +3,12 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { useTheme } from "@/components/ThemeProvider";
-import { Sun, Moon, ArrowRight } from "lucide-react";
+import { Sun, Moon, ArrowRight, Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
@@ -106,14 +107,24 @@ export default function LoginPage() {
                       <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.22em] text-[#5d6885] dark:text-gray-400">
                         Password
                       </label>
-                      <input
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="h-14 w-full rounded-2xl border border-[#d8deea] bg-[#f7f9fc] px-4 text-sm text-viton-navy outline-none transition-all placeholder:text-[#96a1b8] focus:border-viton-red focus:bg-white focus:ring-4 focus:ring-red-500/10 dark:border-white/10 dark:bg-[#0f141b] dark:text-white dark:placeholder:text-gray-600 dark:focus:border-orange-500 dark:focus:bg-[#121923] dark:focus:ring-orange-500/10"
-                        placeholder="••••••••••"
-                        required
-                      />
+                      <div className="relative">
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          className="h-14 w-full rounded-2xl border border-[#d8deea] bg-[#f7f9fc] px-4 pr-12 text-sm text-viton-navy outline-none transition-all placeholder:text-[#96a1b8] focus:border-viton-red focus:bg-white focus:ring-4 focus:ring-red-500/10 dark:border-white/10 dark:bg-[#0f141b] dark:text-white dark:placeholder:text-gray-600 dark:focus:border-orange-500 dark:focus:bg-[#121923] dark:focus:ring-orange-500/10"
+                          placeholder="••••••••••"
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((prev) => !prev)}
+                          aria-label={showPassword ? "Hide password" : "Show password"}
+                          className="absolute inset-y-0 right-4 flex items-center text-[#8892a8] transition-colors hover:text-viton-navy dark:text-gray-500 dark:hover:text-white"
+                        >
+                          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
+                      </div>
                     </div>
 
                     <button
