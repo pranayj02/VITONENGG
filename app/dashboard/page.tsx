@@ -154,7 +154,7 @@ function buildPOYearInsights(rows: PurchaseOrderRow[]) {
 }
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState({ items: 0, vendors: 0, pos: 0, invoices: 0 });
+  const [stats, setStats] = useState({ items: 0, vendors: 0, pos: 0, grns: 0 });
   const [statsLoading, setStatsLoading] = useState(true);
   const [poYearInsights, setPoYearInsights] = useState({
     fyLabel: getCurrentFY().label,
@@ -196,14 +196,14 @@ export default function DashboardPage() {
           supabase.from("items").select("id", { count: "exact", head: true }),
           supabase.from("vendors").select("id", { count: "exact", head: true }),
           supabase.from("purchase_orders").select("id", { count: "exact", head: true }),
-          supabase.from("invoices").select("id", { count: "exact", head: true }),
+          supabase.from("grn").select("id", { count: "exact", head: true }),
           supabase.from("purchase_orders").select("*"),
           supabase.from("requisitions").select("*").in("status", ["pending", "under_review"]).order("created_at", { ascending: false }).limit(5),
           supabase.from("activity_logs").select("*").order("created_at", { ascending: false }).limit(6),
           supabase.rpc("get_stock_summary"),
         ]);
 
-        setStats({ items: a.count ?? 0, vendors: b.count ?? 0, pos: c.count ?? 0, invoices: d.count ?? 0 });
+        setStats({ items: a.count ?? 0, vendors: b.count ?? 0, pos: c.count ?? 0, grns: d.count ?? 0 });
         setStatsLoading(false);
 
         const poRows = poRowsResponse.data ?? [];
@@ -272,7 +272,7 @@ export default function DashboardPage() {
     { label: "Items in Catalog", value: stats.items, icon: Package, href: "/dashboard/catalog", accent: "orange" },
     { label: "Vendors", value: stats.vendors, icon: Users, href: "/dashboard/vendors", accent: "blue" },
     ...(canAccessPO ? [{ label: "Purchase Orders", value: stats.pos, icon: FileText, href: "/dashboard/history", accent: "green" }] : []),
-    { label: "Invoices Raised", value: stats.invoices, icon: Receipt, href: "/dashboard/invoices/history", accent: "purple" },
+    { label: "GRNs Received", value: stats.grns, icon: Receipt, href: "/dashboard/grn", accent: "purple" },
   ];
 
   // Light mode icon bg/text, dark mode icon bg/text
