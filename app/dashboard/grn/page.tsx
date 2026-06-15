@@ -61,6 +61,7 @@ export default function GRNPage() {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createMode, setCreateMode] = useState<"against_po" | "without_po" | null>(null);
+  const [poSelectionConfirmed, setPoSelectionConfirmed] = useState(false);
   const [selectedPOs, setSelectedPOs] = useState<POWithVendor[]>([]);
   const lockedVendorId = selectedPOs[0]?.vendor_id ?? null;
   const [manualVendorId, setManualVendorId] = useState("");
@@ -140,6 +141,7 @@ export default function GRNPage() {
 
   function openCreate() {
     setCreateMode(null);
+    setPoSelectionConfirmed(false);
     setSelectedPOs([]);
     setRemoveReasonByPO({});
     setRemovePanelPOId(null);
@@ -195,9 +197,20 @@ export default function GRNPage() {
       setManualVendorName(first?.vendors?.name ?? "");
       setManualVendorAddress(first?.vendors?.address ?? "");
       setManualVendorGstin(first?.vendors?.gstin ?? "");
-      if (next.length > 0) setCreateMode("against_po");
+      if (next.length === 0) setPoSelectionConfirmed(false);
       return next;
     });
+  }
+
+  function clearPOSelection() {
+    setSelectedPOs([]);
+    setPoSelectionConfirmed(false);
+    setGrnLines([]);
+    setManualVendorId("");
+    setManualVendorName("");
+    setManualVendorAddress("");
+    setManualVendorGstin("");
+    setError("");
   }
 
   async function hidePOFromGRN(po: POWithVendor) {
@@ -738,8 +751,14 @@ export default function GRNPage() {
               </div>
               <div className="flex items-center gap-2">
                 {createMode && (
-                  <button onClick={() => setCreateMode(null)} className="text-sm text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white flex items-center gap-1">
-                    <ArrowLeft size={14} /> Back
+                  <button
+                    onClick={() => {
+                      if (createMode === "against_po" && poSelectionConfirmed) setPoSelectionConfirmed(false);
+                      else setCreateMode(null);
+                    }}
+                    className="text-sm text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white flex items-center gap-1"
+                  >
+                    <ArrowLeft size={14} /> {createMode === "against_po" && poSelectionConfirmed ? "Back to PO selection" : "Back"}
                   </button>
                 )}
                 <button onClick={() => setCreateOpen(false)} className="text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white">
@@ -767,10 +786,42 @@ export default function GRNPage() {
               </div>
             )}
 
-            {createMode === "against_po" && (
+            {createMode === "against_po" && !poSelectionConfirmed && (
               <div className="p-6">
-                <h3 className="text-[#8892a8] dark:text-gray-400 text-xs font-semibold uppercase tracking-widest mb-2">Select Pending PO</h3>
-                <p className="text-[#8892a8] dark:text-gray-500 text-xs mb-4">Select one PO first; other vendors will be disabled. You can add more POs from the same vendor only.</p>
+                <div className="mb-4 rounded-2xl border border-[#dde1ea] dark:border-gray-800 bg-[#f8f9fc] dark:bg-gray-950 p-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <h3 className="text-[#8892a8] dark:text-gray-400 text-xs font-semibold uppercase tracking-widest mb-1">Select Pending PO</h3>
+                    <p className="text-[#8892a8] dark:text-gray-500 text-xs">Select one PO first; other vendors will be disabled. You can add more POs from the same vendor only.</p>
+                    {selectedPOs.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        {selectedPOs.map((po) => (
+                          <span key={po.id} className="inline-flex items-center rounded-full bg-viton-red/10 text-viton-red dark:bg-orange-500/10 dark:text-orange-400 px-3 py-1 text-[11px] font-semibold">
+                            {po.po_number}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {selectedPOs.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={clearPOSelection}
+                        className="rounded-xl border border-[#dde1ea] dark:border-gray-800 px-4 py-2 text-sm font-semibold text-[#4a5578] dark:text-gray-300"
+                      >
+                        Clear selection
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      disabled={selectedPOs.length === 0}
+                      onClick={() => setPoSelectionConfirmed(true)}
+                      className="rounded-xl bg-viton-red hover:bg-red-700 dark:bg-orange-500 dark:hover:bg-orange-600 text-white px-4 py-2 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {selectedPOs.length > 0 ? `Create GRN from ${selectedPOs.length} selected PO${selectedPOs.length > 1 ? "s" : ""}` : "Select at least one PO"}
+                    </button>
+                  </div>
+                </div>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {pos
                     .filter((po) => !grns.some((g) => g.po_id === po.id))
@@ -838,7 +889,7 @@ export default function GRNPage() {
               </div>
             )}
 
-            {(createMode === "against_po" && selectedPOs.length > 0) || createMode === "without_po" ? (
+            {(createMode === "against_po" && poSelectionConfirmed && selectedPOs.length > 0) || createMode === "without_po" ? (
               <div className="p-0 overflow-x-auto">
                 {/* ── GRN FORM ── */}
                 <div style={{ background:"#fff", fontFamily:"Arial, Helvetica, sans-serif", fontSize:"10pt", color:"#000", padding:"8mm 10mm", boxSizing:"border-box", borderRadius:"4px", border:"1px solid #ddd", minWidth:"800px" }}>
