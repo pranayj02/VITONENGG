@@ -79,7 +79,7 @@ export default function GRNPage() {
   const [challanNo, setChallanNo] = useState("");
   const [challanDate, setChallanDate] = useState("");
   const [revisionNo, setRevisionNo] = useState("01");
-  const [revisionDate, setRevisionDate] = useState(getTodayDisplayDate());
+  const [revisionDate, setRevisionDate] = useState("01/06/2026");
   const [grnDate, setGrnDate] = useState(getTodayDisplayDate());
   const [grnNumber, setGrnNumber] = useState("Auto");
   const [receivedByName, setReceivedByName] = useState(FIXED_RECEIVED_BY_NAME);
@@ -159,7 +159,7 @@ export default function GRNPage() {
     setChallanNo("");
     setChallanDate("");
     setRevisionNo("01");
-    setRevisionDate(getTodayDisplayDate());
+    setRevisionDate("01/06/2026");
     setGrnDate(getTodayDisplayDate());
     setGrnNumber("Auto");
     setReceivedByName(FIXED_RECEIVED_BY_NAME);
