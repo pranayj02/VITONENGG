@@ -915,7 +915,7 @@ export default function GRNPage() {
                               />
                             </div>
                           ) : (
-                            <input value={selectedPO?.vendors?.name ?? ""} readOnly style={{ width:"100%", fontSize:"8pt", border:"none", background:"transparent", outline:"none" }} />
+                            <input value={selectedPOs[0]?.vendors?.name ?? ""} readOnly style={{ width:"100%", fontSize:"8pt", border:"none", background:"transparent", outline:"none" }} />
                           )}
                         </td>
                         <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb", width:"22%" }}>Company</td>
@@ -971,7 +971,7 @@ export default function GRNPage() {
                       </tr>
                       <tr>
                         <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>PO No.</td>
-                        <td colSpan={2} style={{ border:"1px solid #000", padding:"4px 6px", fontFamily:"monospace", color:"#1a1a6e", fontWeight:"700" }}>{selectedPO?.po_number ?? "Direct Receipt"}</td>
+                        <td colSpan={2} style={{ border:"1px solid #000", padding:"4px 6px", fontFamily:"monospace", color:"#1a1a6e", fontWeight:"700" }}>{selectedPOs[0]?.po_number ?? "Direct Receipt"}</td>
                         <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }} />
                         <td style={{ border:"1px solid #000", padding:"4px 6px", fontSize:"8pt" }} />
                       </tr>
@@ -1040,7 +1040,7 @@ export default function GRNPage() {
                             ) : ""}
                           </td>
                           <td style={{ border:"1px solid #ccc", padding:"4px 5px", textAlign:"center", fontSize:"7.5pt", fontFamily:"monospace", color:"#1a1a6e" }}>
-                            {line ? (selectedPO?.po_number ?? "—") : ""}
+                            {line ? (selectedPOs[0]?.po_number ?? "—") : ""}
                           </td>
                           <td style={{ border:"1px solid #ccc", padding:"4px 5px", textAlign:"center", fontSize:"7.5pt" }}>
                             {line ? (selectedPO ? new Date(selectedPO.created_at).toLocaleDateString("en-IN", { day:"2-digit", month:"2-digit", year:"numeric" }) : "—") : ""}
