@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase";
 import { audit } from "@/lib/audit";
-import { Plus, Search, X, Save, Pencil } from "lucide-react";
+import { Plus, Search, X, Save, Pencil, Trash2, AlertTriangle } from "lucide-react";
 import type { Vendor } from "@/lib/types";
 
 const emptyVendor = {
@@ -26,6 +26,8 @@ export default function VendorsPage() {
   const [editing, setEditing] = useState<Vendor | null>(null);
   const [form, setForm] = useState(emptyVendor);
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Vendor | null>(null);
   const [error, setError] = useState("");
 
   async function loadVendors() {
@@ -69,6 +71,58 @@ export default function VendorsPage() {
     else { const { error } = await supabase.from("vendors").insert(payload); saveError = error; }
     if (saveError) { setError(saveError.message); setSaving(false); return; }
     await loadVendors(); setShowForm(false); setSaving(false);
+  }
+
+  function openDelete(v: Vendor) {
+    setDeleteTarget(v);
+    setError("");
+  }
+
+  async function handleDeleteVendor() {
+    if (!deleteTarget) return;
+    setDeletingId(deleteTarget.id);
+    setError("");
+    const supabase = createClient();
+
+    const [poRes, grnRes] = await Promise.all([
+      supabase.from("purchase_orders").select("id", { count: "exact", head: true }).eq("vendor_id", deleteTarget.id),
+      supabase.from("grn").select("id", { count: "exact", head: true }).eq("vendor_id", deleteTarget.id),
+    ]);
+
+    const poCount = poRes.count ?? 0;
+    const grnCount = grnRes.count ?? 0;
+
+    if (poRes.error || grnRes.error) {
+      setError(poRes.error?.message || grnRes.error?.message || "Could not verify vendor usage.");
+      setDeletingId(null);
+      return;
+    }
+
+    if (poCount > 0 || grnCount > 0) {
+      setError(`Cannot delete ${deleteTarget.name}. This vendor is already used in ${poCount} PO(s) and ${grnCount} GRN(s).`);
+      setDeleteTarget(null);
+      setDeletingId(null);
+      return;
+    }
+
+    const { error: deleteError } = await supabase.from("vendors").delete().eq("id", deleteTarget.id);
+    if (deleteError) {
+      setError(deleteError.message);
+      setDeletingId(null);
+      return;
+    }
+
+    await audit({
+      action: "vendor_deleted",
+      entity_type: "vendor",
+      entity_id: deleteTarget.id,
+      entity_code: deleteTarget.name,
+      details: { vendor_name: deleteTarget.name },
+    });
+
+    setDeleteTarget(null);
+    setDeletingId(null);
+    await loadVendors();
   }
 
   return (
@@ -129,11 +183,47 @@ export default function VendorsPage() {
                   {v.payment_terms && <p className="text-[#8892a8] dark:text-gray-500 text-xs">Payment: {v.payment_terms}</p>}
                 </div>
               </div>
-              <button onClick={() => openEdit(v)} className="text-[#8892a8] dark:text-gray-500 hover:text-viton-red dark:hover:text-orange-400 transition-colors p-1 ml-4">
-                <Pencil size={15} />
-              </button>
+              <div className="flex items-center gap-2 ml-4">
+                <button onClick={() => openEdit(v)} className="text-[#8892a8] dark:text-gray-500 hover:text-viton-red dark:hover:text-orange-400 transition-colors p-1" title="Edit vendor">
+                  <Pencil size={15} />
+                </button>
+                <button onClick={() => openDelete(v)} className="text-[#8892a8] dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors p-1" title="Delete vendor">
+                  <Trash2 size={15} />
+                </button>
+              </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl w-full max-w-md p-6">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
+                <AlertTriangle size={18} />
+              </div>
+              <div>
+                <h3 className="text-viton-navy dark:text-white font-bold text-lg">Delete Vendor</h3>
+                <p className="text-[#8892a8] dark:text-gray-500 text-sm mt-1">This will permanently remove <span className="font-semibold text-viton-navy dark:text-white">{deleteTarget.name}</span> only if it has no linked PO or GRN records.</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="flex-1 bg-[#f1f3f8] hover:bg-[#e7ebf3] dark:bg-gray-800 dark:hover:bg-gray-700 text-[#4a5578] dark:text-gray-300 font-semibold py-3 rounded-xl text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteVendor}
+                disabled={deletingId === deleteTarget.id}
+                className="flex-1 bg-red-50 hover:bg-red-500 text-red-700 hover:text-white border border-red-200 dark:bg-red-500/10 dark:hover:bg-red-500 dark:text-red-400 dark:border-red-500/30 font-semibold py-3 rounded-xl text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {deletingId === deleteTarget.id ? "Deleting..." : "Delete Vendor"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
