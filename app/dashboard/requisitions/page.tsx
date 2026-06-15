@@ -361,8 +361,8 @@ export default function RequisitionsPage() {
       {actionId && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl w-full max-w-md p-6">
-            <h3 className="text-viton-navy dark:text-white font-bold text-lg mb-1 capitalize">
-              {actionType} Requisition
+            <h3 className="text-viton-navy dark:text-white font-bold text-lg mb-1">
+              {actionType === "raise_po" ? "Raise PO for Shortage" : actionType === "convert" ? "Convert Requisition" : `${actionType.charAt(0).toUpperCase()}${actionType.slice(1)} Requisition`}
             </h3>
             <p className="text-[#8892a8] dark:text-gray-500 text-sm mb-4">
               {actionType === "approve" && "This will mark the requisition as approved. A purchase officer can then convert it to a PO."}
