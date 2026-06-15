@@ -309,7 +309,7 @@ export function GRNPdfDocument({
           </View>
           <View style={S.headerRowLast}>
             <Text style={S.headerLabel}>Revision Date</Text>
-            <Text style={S.headerValue}>{grn.revision_date ?? "01/10/2025"}</Text>
+            <Text style={S.headerValue}>{grn.revision_date ?? "01/06/2026"}</Text>
             <View style={{ width: "40%" }} />
             <Text style={S.headerLabel}>Status</Text>
             <Text style={[S.headerValue, { fontFamily: "Helvetica-Bold" }]}>
