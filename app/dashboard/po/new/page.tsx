@@ -448,7 +448,6 @@ export default function NewPOPage() {
       // Handle conversion from requisition
       const fromReq = searchParams.get("from_req");
       const reqItems = searchParams.get("items");
-      const reqNotes = searchParams.get("notes");
       if (fromReq && reqItems) {
         try {
           const parsedItems = JSON.parse(reqItems);
@@ -464,7 +463,7 @@ export default function NewPOPage() {
             custom_note: li.custom_note || "",
           }));
           setLineItems(mappedLines);
-          if (reqNotes) setNotes(reqNotes);
+          setNotes("");
         } catch {
           // ignore parse error
         }
