@@ -978,7 +978,7 @@ export default function GRNPage() {
                       <tr>
                         <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>PO Date</td>
                         <td colSpan={2} style={{ border:"1px solid #000", padding:"4px 6px", fontSize:"8pt" }}>
-                          {selectedPO ? new Date(selectedPO.created_at).toLocaleDateString("en-IN", { day:"2-digit", month:"2-digit", year:"numeric" }) : "—"}
+                          {selectedPOs[0] ? new Date(selectedPOs[0].created_at).toLocaleDateString("en-IN", { day:"2-digit", month:"2-digit", year:"numeric" }) : "—"}
                         </td>
                         <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }} />
                         <td style={{ border:"1px solid #000", padding:"4px 6px", fontSize:"8pt" }} />
@@ -1043,7 +1043,7 @@ export default function GRNPage() {
                             {line ? (selectedPOs[0]?.po_number ?? "—") : ""}
                           </td>
                           <td style={{ border:"1px solid #ccc", padding:"4px 5px", textAlign:"center", fontSize:"7.5pt" }}>
-                            {line ? (selectedPO ? new Date(selectedPO.created_at).toLocaleDateString("en-IN", { day:"2-digit", month:"2-digit", year:"numeric" }) : "—") : ""}
+                            {line ? (selectedPOs[0] ? new Date(selectedPOs[0].created_at).toLocaleDateString("en-IN", { day:"2-digit", month:"2-digit", year:"numeric" }) : "—") : ""}
                           </td>
                           <td style={{ border:"1px solid #ccc", padding:"4px 5px", textAlign:"center", fontSize:"8pt" }}>
                             {line ? (
