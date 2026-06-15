@@ -931,7 +931,7 @@ export default function GRNPage() {
                               placeholder="Address"
                               style={{ width:"100%", fontSize:"8pt", border:"none", background:"transparent", outline:"none" }}
                             />
-                          ) : (selectedPO?.vendors?.address ?? "—")}
+                          ) : (selectedPOs[0]?.vendors?.address ?? "—")}
                         </td>
                         <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Address</td>
                         <td style={{ border:"1px solid #000", padding:"4px 6px", fontSize:"7.5pt", lineHeight:1.5 }}>Plot No. B-40/1, Addl. Ambernath MIDC,<br />Anand Nagar, Ambernath E, Dist. Thane - 421506</td>
@@ -946,7 +946,7 @@ export default function GRNPage() {
                               placeholder="GSTIN"
                               style={{ width:"100%", fontSize:"8pt", border:"none", background:"transparent", outline:"none" }}
                             />
-                          ) : (selectedPO?.vendors?.gstin ?? "—")}
+                          ) : (selectedPOs[0]?.vendors?.gstin ?? "—")}
                         </td>
                         <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>Email</td>
                         <td style={{ border:"1px solid #000", padding:"4px 6px", fontSize:"8pt" }}>viton.engg@gmail.com</td>
