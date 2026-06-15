@@ -61,7 +61,8 @@ export default function GRNPage() {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createMode, setCreateMode] = useState<"against_po" | "without_po" | null>(null);
-  const [selectedPO, setSelectedPO] = useState<POWithVendor | null>(null);
+  const [selectedPOs, setSelectedPOs] = useState<POWithVendor[]>([]);
+  const lockedVendorId = selectedPOs[0]?.vendor_id ?? null;
   const [manualVendorId, setManualVendorId] = useState("");
   const [manualVendorName, setManualVendorName] = useState("");
   const [manualVendorAddress, setManualVendorAddress] = useState("");
@@ -139,7 +140,7 @@ export default function GRNPage() {
 
   function openCreate() {
     setCreateMode(null);
-    setSelectedPO(null);
+    setSelectedPOs([]);
     setRemoveReasonByPO({});
     setRemovePanelPOId(null);
     setRemovingPOId(null);
@@ -163,9 +164,8 @@ export default function GRNPage() {
     setCreateOpen(true);
   }
 
-  function selectPO(po: POWithVendor) {
-    setSelectedPO(po);
-    const lines: GRNLineItem[] = (po.line_items ?? []).map((l: LineItem) => normalizeGRNLine({
+  function buildLinesFromPOs(selected: POWithVendor[]) {
+    return selected.flatMap((po) => (po.line_items ?? []).map((l: LineItem) => normalizeGRNLine({
       item_id: l.item_id,
       serial_id: l.serial_id,
       name: l.name,
@@ -178,14 +178,26 @@ export default function GRNPage() {
       challan_weight: 0,
       challan_nos: l.quantity,
       counted_nos: l.quantity,
-    }));
-    setGrnLines(lines);
-    setManualVendorName(po.vendors?.name ?? "");
-    setManualVendorAddress(po.vendors?.address ?? "");
-    setManualVendorGstin(po.vendors?.gstin ?? "");
-    setInspectionNotes("");
+      source_po_id: po.id,
+      source_po_number: po.po_number,
+    } as GRNLineItem & { source_po_id?: string; source_po_number?: string })));
+  }
+
+  function togglePOSelection(po: POWithVendor) {
     setError("");
-    setCreateMode("against_po");
+    setInspectionNotes("");
+    setSelectedPOs((prev) => {
+      const exists = prev.some((row) => row.id === po.id);
+      const next = exists ? prev.filter((row) => row.id !== po.id) : [...prev, po];
+      const first = next[0];
+      setGrnLines(buildLinesFromPOs(next));
+      setManualVendorId(first?.vendor_id ?? "");
+      setManualVendorName(first?.vendors?.name ?? "");
+      setManualVendorAddress(first?.vendors?.address ?? "");
+      setManualVendorGstin(first?.vendors?.gstin ?? "");
+      if (next.length > 0) setCreateMode("against_po");
+      return next;
+    });
   }
 
   async function hidePOFromGRN(po: POWithVendor) {
@@ -329,9 +341,9 @@ export default function GRNPage() {
       grn_number: finalGrnNumber,
       fy_label: fy,
       fy_serial: nextSerial,
-      po_id: selectedPO?.id ?? null,
-      vendor_id: selectedPO?.vendor_id ?? selectedVendor?.id ?? null,
-      vendor_name: selectedPO?.vendors?.name ?? selectedVendor?.name ?? (manualVendorName.trim() || null),
+      po_id: selectedPOs[0]?.id ?? null,
+      vendor_id: selectedPOs[0]?.vendor_id ?? selectedVendor?.id ?? null,
+      vendor_name: selectedPOs[0]?.vendors?.name ?? selectedVendor?.name ?? (manualVendorName.trim() || null),
       received_by: user?.id ?? null,
       received_by_name: FIXED_RECEIVED_BY_NAME,
       inspected_by: null,
@@ -358,6 +370,8 @@ export default function GRNPage() {
         status: "pending",
         vendor_name: payload.vendor_name,
         po_id: payload.po_id,
+        po_ids: selectedPOs.map((po) => po.id),
+        po_numbers: selectedPOs.map((po) => po.po_number),
         line_count: normalizedLines.length,
       },
     });
@@ -718,7 +732,7 @@ export default function GRNPage() {
                 </h2>
                 {createMode && (
                   <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-0.5">
-                    {createMode === "against_po" && selectedPO ? `PO: ${selectedPO.po_number}` : "Manual entry — no purchase order"}
+                    {createMode === "against_po" && selectedPOs.length ? `POs: ${selectedPOs.map((po) => po.po_number).join(", ")}` : "Manual entry — no purchase order"}
                   </p>
                 )}
               </div>
@@ -753,16 +767,21 @@ export default function GRNPage() {
               </div>
             )}
 
-            {createMode === "against_po" && !selectedPO && (
+            {createMode === "against_po" && (
               <div className="p-6">
-                <h3 className="text-[#8892a8] dark:text-gray-400 text-xs font-semibold uppercase tracking-widest mb-4">Select Pending PO</h3>
+                <h3 className="text-[#8892a8] dark:text-gray-400 text-xs font-semibold uppercase tracking-widest mb-2">Select Pending PO</h3>
+                <p className="text-[#8892a8] dark:text-gray-500 text-xs mb-4">Select one PO first; other vendors will be disabled. You can add more POs from the same vendor only.</p>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {pos
                     .filter((po) => !grns.some((g) => g.po_id === po.id))
                     .filter((po) => !(po.dispatch_meta as any)?.grn_hidden_from_modal)
-                    .map((po) => (
-                    <div key={po.id} className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl p-5 hover:border-viton-red dark:hover:border-orange-500 hover:shadow-md transition-all">
-                      <button type="button" className="w-full text-left" onClick={() => selectPO(po)}>
+                    .map((po) => {
+                      const isSelected = selectedPOs.some((row) => row.id === po.id);
+                      const vendorLocked = !!lockedVendorId;
+                      const vendorMismatch = vendorLocked && po.vendor_id !== lockedVendorId;
+                      return (
+                    <div key={po.id} className={`bg-white dark:bg-gray-900 border rounded-2xl p-5 transition-all ${isSelected ? "border-viton-red dark:border-orange-500 shadow-md" : vendorMismatch ? "border-[#eceff5] dark:border-gray-800 opacity-50" : "border-[#dde1ea] dark:border-gray-800 hover:border-viton-red dark:hover:border-orange-500 hover:shadow-md"}`}>
+                      <button type="button" disabled={vendorMismatch} className="w-full text-left disabled:cursor-not-allowed" onClick={() => togglePOSelection(po)}>
                         <div className="flex items-start justify-between gap-2 mb-2">
                           <p className="text-viton-navy dark:text-white font-semibold font-mono text-sm">{po.po_number}</p>
                           <div className="flex items-center gap-2 shrink-0">
@@ -778,7 +797,7 @@ export default function GRNPage() {
                             >
                               <Trash2 size={14} />
                             </button>
-                            <Plus size={14} className="text-viton-red dark:text-orange-500" />
+                            <Plus size={14} className={isSelected ? "text-viton-red dark:text-orange-500" : "text-[#a8afbf] dark:text-gray-500"} />
                           </div>
                         </div>
                         <p className="text-[#8892a8] dark:text-gray-500 text-xs">{po.vendors?.name ?? "—"}</p>
@@ -787,6 +806,8 @@ export default function GRNPage() {
                         <p className="text-[#4a5578] dark:text-gray-300 text-xs mt-2 leading-5 line-clamp-3">
                           Items: {po.line_items?.length ? po.line_items.map((line) => line.name || line.serial_id || "Item").join(", ") : "—"}
                         </p>
+                        {vendorMismatch && <p className="text-[11px] text-red-500 dark:text-red-400 mt-2">Disabled: different vendor than selected PO(s).</p>}
+                        {isSelected && <p className="text-[11px] text-viton-red dark:text-orange-400 mt-2 font-semibold">Selected for this GRN</p>}
                       </button>
                       {removePanelPOId === po.id && (
                         <div className="mt-4 pt-4 border-t border-[#dde1ea] dark:border-gray-800">
@@ -807,7 +828,7 @@ export default function GRNPage() {
                         </div>
                       )}
                     </div>
-                  ))}
+                  )})}
                   {pos
                     .filter((po) => !grns.some((g) => g.po_id === po.id))
                     .filter((po) => !(po.dispatch_meta as any)?.grn_hidden_from_modal).length === 0 && (
@@ -817,7 +838,7 @@ export default function GRNPage() {
               </div>
             )}
 
-            {(createMode === "against_po" && selectedPO) || createMode === "without_po" ? (
+            {(createMode === "against_po" && selectedPOs.length > 0) || createMode === "without_po" ? (
               <div className="p-0 overflow-x-auto">
                 {/* ── GRN FORM ── */}
                 <div style={{ background:"#fff", fontFamily:"Arial, Helvetica, sans-serif", fontSize:"10pt", color:"#000", padding:"8mm 10mm", boxSizing:"border-box", borderRadius:"4px", border:"1px solid #ddd", minWidth:"800px" }}>
