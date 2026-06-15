@@ -70,7 +70,6 @@ export default function GRNPage() {
   const [inspectionNotes, setInspectionNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [inspectedBy, setInspectedBy] = useState("");
   const [challanNo, setChallanNo] = useState("");
   const [challanDate, setChallanDate] = useState("");
   const [revisionNo, setRevisionNo] = useState("00");
@@ -150,7 +149,6 @@ export default function GRNPage() {
     setManualVendorGstin("");
     setGrnLines([]);
     setInspectionNotes("");
-    setInspectedBy("");
     setChallanNo("");
     setChallanDate("");
     setRevisionNo("00");
