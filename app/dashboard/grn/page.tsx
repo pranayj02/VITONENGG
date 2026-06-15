@@ -31,6 +31,10 @@ interface POWithVendor extends PurchaseOrder {
 
 const FIXED_RECEIVED_BY_NAME = "Yatish Jain";
 
+function getTodayDisplayDate() {
+  return new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "2-digit" });
+}
+
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-50 text-yellow-700 dark:bg-yellow-500/10 dark:text-yellow-400",
   inspected: "bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400",
@@ -74,9 +78,9 @@ export default function GRNPage() {
   const [error, setError] = useState("");
   const [challanNo, setChallanNo] = useState("");
   const [challanDate, setChallanDate] = useState("");
-  const [revisionNo, setRevisionNo] = useState("00");
-  const [revisionDate, setRevisionDate] = useState("01/10/2025");
-  const [grnDate, setGrnDate] = useState(new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "2-digit" }));
+  const [revisionNo, setRevisionNo] = useState("01");
+  const [revisionDate, setRevisionDate] = useState(getTodayDisplayDate());
+  const [grnDate, setGrnDate] = useState(getTodayDisplayDate());
   const [grnNumber, setGrnNumber] = useState("Auto");
   const [receivedByName, setReceivedByName] = useState(FIXED_RECEIVED_BY_NAME);
   const [removeReasonByPO, setRemoveReasonByPO] = useState<Record<string, string>>({});
@@ -154,9 +158,9 @@ export default function GRNPage() {
     setInspectionNotes("");
     setChallanNo("");
     setChallanDate("");
-    setRevisionNo("00");
-    setRevisionDate("01/10/2025");
-    setGrnDate(new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "2-digit" }));
+    setRevisionNo("01");
+    setRevisionDate(getTodayDisplayDate());
+    setGrnDate(getTodayDisplayDate());
     setGrnNumber("Auto");
     setReceivedByName(FIXED_RECEIVED_BY_NAME);
     setError("");
