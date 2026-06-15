@@ -278,6 +278,9 @@ export default function DashboardLayout({
         </nav>
 
         <div className="p-4 border-t border-[#dde1ea] dark:border-gray-800">
+          <p className="px-4 pb-3 text-[11px] text-[#8892a8] dark:text-gray-500">
+            Made with <span className="text-red-500">❤</span> by Pranay Jain
+          </p>
           <button
             onClick={handleSignOut}
             className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-[#4a5578] dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-[#e8eaf2] dark:hover:bg-gray-800 transition-all w-full"
@@ -341,6 +344,9 @@ export default function DashboardLayout({
             </nav>
 
             <div className="p-4 border-t border-[#dde1ea] dark:border-gray-800">
+              <p className="px-4 pb-3 text-[11px] text-[#8892a8] dark:text-gray-500">
+                Made with <span className="text-red-500">❤</span> by Pranay Jain
+              </p>
               <button
                 onClick={handleSignOut}
                 className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-[#4a5578] dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-[#e8eaf2] dark:hover:bg-gray-800 transition-all w-full"
