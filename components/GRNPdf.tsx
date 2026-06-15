@@ -388,10 +388,10 @@ export function GRNPdfDocument({
           </View>
 
           <View style={S.sectionRowLast}>
-            <Text style={S.sectionLabel}>Inspected By</Text>
-            <Text style={S.sectionValue}>{grn.inspected_by_name ?? "—"}</Text>
-            <Text style={S.sectionLabel}>Approved By</Text>
-            <Text style={[S.sectionValueRight, { fontFamily: "Helvetica-Bold" }]}>Yatish Jain</Text>
+            <Text style={S.sectionLabel} />
+            <Text style={S.sectionValue} />
+            <Text style={S.sectionLabel} />
+            <Text style={S.sectionValueRight} />
           </View>
         </View>
 
