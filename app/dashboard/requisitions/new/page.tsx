@@ -215,6 +215,7 @@ export default function NewRequisitionPage() {
       )}
 
       {/* ── A4 FORM ── */}
+      <div className="sm:overflow-visible overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
       <div
         style={{
           background: "#fff",
@@ -225,6 +226,7 @@ export default function NewRequisitionPage() {
           boxSizing: "border-box",
           border: "1px solid #ddd",
           borderRadius: "4px",
+          minWidth: "640px",
         }}
       >
         {/* Header */}
@@ -588,6 +590,7 @@ export default function NewRequisitionPage() {
             </button>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

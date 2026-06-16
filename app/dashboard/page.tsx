@@ -269,10 +269,10 @@ export default function DashboardPage() {
   }
 
   const statCards = [
-    { label: "Items in Catalog", value: stats.items, icon: Package, href: "/dashboard/catalog", accent: "orange" },
+    { label: "Items", value: stats.items, icon: Package, href: "/dashboard/catalog", accent: "orange" },
     { label: "Vendors", value: stats.vendors, icon: Users, href: "/dashboard/vendors", accent: "blue" },
-    ...(canAccessPO ? [{ label: "Purchase Orders", value: stats.pos, icon: FileText, href: "/dashboard/history", accent: "green" }] : []),
-    { label: "GRNs Received", value: stats.grns, icon: Receipt, href: "/dashboard/grn", accent: "purple" },
+    ...(canAccessPO ? [{ label: "POs", value: stats.pos, icon: FileText, href: "/dashboard/history", accent: "green" }] : []),
+    { label: "GRNs", value: stats.grns, icon: Receipt, href: "/dashboard/grn", accent: "purple" },
   ];
 
   // Light mode icon bg/text, dark mode icon bg/text
@@ -350,23 +350,23 @@ export default function DashboardPage() {
             Core ERP snapshot
           </h2>
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-4 gap-3">
         {statCards.map((card) => {
           const Icon = card.icon;
           return (
             <Link href={card.href} key={card.label}>
-              <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl p-5 hover:border-[#c0c8db] dark:hover:border-gray-700 hover:shadow-md dark:hover:shadow-none transition-all group">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${iconColors[card.accent]}`}>
-                  <Icon size={20} />
+              <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-xl p-3 sm:p-5 hover:border-[#c0c8db] dark:hover:border-gray-700 hover:shadow-md dark:hover:shadow-none transition-all group">
+                <div className={`w-7 h-7 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl flex items-center justify-center mb-2 sm:mb-3 ${iconColors[card.accent]}`}>
+                  <Icon size={14} className="sm:w-5 sm:h-5" />
                 </div>
-                <p className="text-viton-navy dark:text-white text-2xl font-bold tabular-nums">
+                <p className="text-viton-navy dark:text-white text-lg sm:text-2xl font-bold tabular-nums">
                   {statsLoading ? (
-                    <span className="inline-block w-8 h-6 bg-[#e8eaf2] dark:bg-gray-800 rounded animate-pulse" />
+                    <span className="inline-block w-6 h-4 sm:w-8 sm:h-6 bg-[#e8eaf2] dark:bg-gray-800 rounded animate-pulse" />
                   ) : (
                     card.value
                   )}
                 </p>
-                <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-1">{card.label}</p>
+                <p className="text-[#8892a8] dark:text-gray-500 text-[10px] sm:text-xs mt-0.5 sm:mt-1">{card.label}</p>
               </div>
             </Link>
           );

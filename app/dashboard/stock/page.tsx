@@ -737,7 +737,7 @@ export default function StockPage() {
           </div>
 
           {/* ── Mobile Cards ───────────────────────────────────────────── */}
-          <div className="sm:hidden space-y-3">
+          <div className="sm:hidden space-y-2">
             {filtered.map((item) => {
               const low = item.balance > 0 && item.balance < 5;
               const zero = item.balance <= 0;
@@ -747,54 +747,55 @@ export default function StockPage() {
                   className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-xl overflow-hidden"
                 >
                   <div
-                    className="p-4 flex items-center justify-between"
+                    className="px-3 py-2.5 flex items-center justify-between"
                     onClick={() => {
                       if (expanded === item.item_id) { setExpanded(null); }
                       else { setExpanded(item.item_id); loadLedger(item.item_id); }
                     }}
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-mono text-viton-red dark:text-orange-400 text-xs font-semibold">{item.serial_id}</span>
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="font-mono text-viton-red dark:text-orange-400 text-[10px] font-semibold">{item.serial_id}</span>
+                        <span className={`inline-flex items-center px-1.5 py-0 rounded text-[9px] font-bold ${
                           zero ? "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400"
                             : low ? "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400"
                             : "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400"
                         }`}>
                           {item.balance} {item.unit}
                         </span>
+                        <span className="text-[9px] text-[#8892a8] dark:text-gray-500">{item.category ?? "—"}</span>
                       </div>
-                      <p className="text-viton-navy dark:text-white text-sm font-medium truncate">{item.name}</p>
-                      <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-0.5">{item.category ?? "—"} · In: {item.total_in} · Out: {item.total_out}</p>
+                      <p className="text-viton-navy dark:text-white text-xs font-medium truncate">{item.name}</p>
+                      <p className="text-[#8892a8] dark:text-gray-500 text-[9px]">In: {item.total_in} · Out: {item.total_out}</p>
                     </div>
-                    <div className="flex items-center gap-2 ml-3">
+                    <div className="flex items-center gap-1.5 ml-2">
                       {canAdjust && (
                         <button
                           onClick={(e) => { e.stopPropagation(); openAdjust(item); }}
-                          className="w-10 h-10 flex items-center justify-center rounded-xl bg-[#f1f3f8] dark:bg-gray-800 text-[#4a5578] dark:text-gray-400"
+                          className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#f1f3f8] dark:bg-gray-800 text-[#4a5578] dark:text-gray-400"
                         >
-                          <Plus size={16} />
+                          <Plus size={14} />
                         </button>
                       )}
-                      <ChevronDown size={18} className={`text-[#8892a8] dark:text-gray-500 transition-transform ${expanded === item.item_id ? "rotate-180" : ""}`} />
+                      <ChevronDown size={16} className={`text-[#8892a8] dark:text-gray-500 transition-transform ${expanded === item.item_id ? "rotate-180" : ""}`} />
                     </div>
                   </div>
                   {expanded === item.item_id && (
-                    <div className="px-4 pb-4 border-t border-[#eef1f6] dark:border-gray-800/50 pt-3">
-                      <p className="text-[#8892a8] dark:text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2">Recent Transactions</p>
+                    <div className="px-3 pb-3 border-t border-[#eef1f6] dark:border-gray-800/50 pt-2">
+                      <p className="text-[#8892a8] dark:text-gray-500 text-[9px] font-semibold uppercase tracking-wider mb-1.5">Recent Transactions</p>
                       {ledger.length === 0 ? (
-                        <p className="text-[#8892a8] dark:text-gray-600 text-sm">No transactions yet.</p>
+                        <p className="text-[#8892a8] dark:text-gray-600 text-xs">No transactions yet.</p>
                       ) : (
-                        <div className="space-y-2">
+                        <div className="space-y-1.5">
                           {ledger.map((l) => (
-                            <div key={l.id} className="flex items-center justify-between text-sm">
-                              <div className="flex items-center gap-2">
-                                <span className={`w-1.5 h-1.5 rounded-full ${
+                            <div key={l.id} className="flex items-center justify-between text-xs">
+                              <div className="flex items-center gap-1.5">
+                                <span className={`w-1 h-1 rounded-full ${
                                   l.qty_in > 0 ? "bg-green-500" : l.qty_out > 0 ? "bg-red-500" : "bg-gray-400"
                                 }`} />
-                                <span className="text-[#4a5578] dark:text-gray-400 text-xs capitalize">{l.transaction_type.replace(/_/g, " ")}</span>
+                                <span className="text-[#4a5578] dark:text-gray-400 capitalize">{l.transaction_type.replace(/_/g, " ")}</span>
                               </div>
-                              <span className={`font-mono text-xs ${l.qty_in > 0 ? "text-green-600" : l.qty_out > 0 ? "text-red-500" : ""}`}>
+                              <span className={`font-mono text-[10px] ${l.qty_in > 0 ? "text-green-600" : l.qty_out > 0 ? "text-red-500" : ""}`}>
                                 {l.qty_in > 0 ? `+${l.qty_in}` : l.qty_out > 0 ? `-${l.qty_out}` : "0"}
                               </span>
                             </div>
