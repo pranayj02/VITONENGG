@@ -27,6 +27,7 @@ export default function StockPage() {
   const [stock, setStock] = useState<StockSummary[]>([]);
   const [filtered, setFiltered] = useState<StockSummary[]>([]);
   const [search, setSearch] = useState("");
+  const [stockFilter, setStockFilter] = useState<"all" | "in-stock">("all");
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [ledger, setLedger] = useState<StockLedgerEntry[]>([]);
@@ -135,21 +136,26 @@ export default function StockPage() {
   }, [showItemSearch, itemResults]);
 
   useEffect(() => {
-    if (!search.trim()) {
-      setFiltered(sortStockRows(stock));
-      return;
+    let rows = stock;
+
+    // Apply in-stock filter first
+    if (stockFilter === "in-stock") {
+      rows = rows.filter((s) => s.balance > 0);
     }
-    const q = search.toLowerCase();
-    setFiltered(
-      sortStockRows(
-        stock.filter((s) =>
+
+    // Then apply search
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      rows = rows.filter(
+        (s) =>
           s.serial_id.toLowerCase().includes(q) ||
           s.name.toLowerCase().includes(q) ||
           (s.category ?? "").toLowerCase().includes(q)
-        )
-      )
-    );
-  }, [search, stock]);
+      );
+    }
+
+    setFiltered(sortStockRows(rows));
+  }, [search, stock, stockFilter]);
 
   // Item search for adjustment modal
   useEffect(() => {
@@ -580,20 +586,44 @@ export default function StockPage() {
         </div>
       )}
 
-      {/* Search */}
-      <div className="relative mb-6">
-        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8892a8] dark:text-gray-500" />
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by serial ID, name, or category..."
-          className="w-full bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-xl pl-10 pr-10 py-3 text-sm text-viton-navy dark:text-white placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
-        />
-        {search && (
-          <button onClick={() => setSearch("")} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white">
-            <ChevronUp size={14} />
+      {/* Search + Stock Filter */}
+      <div className="mb-6 flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8892a8] dark:text-gray-500" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by serial ID, name, or category..."
+            className="w-full bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-xl pl-10 pr-10 py-3 text-sm text-viton-navy dark:text-white placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
+          />
+          {search && (
+            <button onClick={() => setSearch("")} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white">
+              <ChevronUp size={14} />
+            </button>
+          )}
+        </div>
+        <div className="flex bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-xl overflow-hidden flex-shrink-0">
+          <button
+            onClick={() => setStockFilter("all")}
+            className={`px-4 py-3 text-sm font-semibold transition-all ${
+              stockFilter === "all"
+                ? "bg-viton-red text-white dark:bg-orange-500"
+                : "text-[#4a5578] dark:text-gray-400 hover:bg-[#f1f3f8] dark:hover:bg-gray-800"
+            }`}
+          >
+            All Items
           </button>
-        )}
+          <button
+            onClick={() => setStockFilter("in-stock")}
+            className={`px-4 py-3 text-sm font-semibold transition-all ${
+              stockFilter === "in-stock"
+                ? "bg-green-500 text-white"
+                : "text-[#4a5578] dark:text-gray-400 hover:bg-[#f1f3f8] dark:hover:bg-gray-800"
+            }`}
+          >
+            In Stock Only
+          </button>
+        </div>
       </div>
 
       {/* Stock Table */}
@@ -603,7 +633,9 @@ export default function StockPage() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 text-[#8892a8] dark:text-gray-600">
-          {search ? "No items match your search." : "No stock records yet. Create a GRN or make a manual adjustment to start."}
+          {stockFilter === "in-stock"
+            ? (search ? "No in-stock items match your search." : "No items are currently in stock.")
+            : (search ? "No items match your search." : "No stock records yet. Create a GRN or make a manual adjustment to start.")}
         </div>
       ) : (
         <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl overflow-hidden">
