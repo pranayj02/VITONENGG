@@ -737,63 +737,57 @@ export default function StockPage() {
           </div>
 
           {/* ── Mobile Cards ───────────────────────────────────────────── */}
-          <div className="sm:hidden space-y-1.5">
+          <div className="sm:hidden space-y-3">
             {filtered.map((item) => {
               const low = item.balance > 0 && item.balance < 5;
               const zero = item.balance <= 0;
               return (
                 <div
                   key={item.item_id}
-                  className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-xl overflow-hidden"
+                  className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-[#dde1ea] dark:border-gray-800 overflow-hidden"
                 >
                   <div
-                    className="px-3 py-2 flex items-start justify-between gap-2"
+                    className="p-4 flex items-center justify-between gap-4"
                     onClick={() => {
                       if (expanded === item.item_id) { setExpanded(null); }
                       else { setExpanded(item.item_id); loadLedger(item.item_id); }
                     }}
                   >
                     <div className="flex-1 min-w-0">
-                      <span className="font-mono text-viton-red dark:text-orange-400 text-[10px] font-semibold">{item.serial_id}</span>
-                      <p className="text-viton-navy dark:text-white text-xs font-medium truncate mt-0.5">{item.name}</p>
-                      <p className="text-[#8892a8] dark:text-gray-500 text-[9px] mt-0.5">{item.category ?? "—"} · In: {item.total_in} · Out: {item.total_out}</p>
+                      <span className="font-mono text-viton-red dark:text-orange-400 text-xs font-semibold">{item.serial_id}</span>
+                      <p className="text-viton-navy dark:text-white text-sm font-bold mt-1 leading-tight">{item.name}</p>
+                      <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-1">
+                        {item.category ?? "—"} · {item.balance} {item.unit}
+                      </p>
                     </div>
-                    <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
-                      <span className={`text-xs font-bold tabular-nums ${
-                        zero ? "text-red-500" : low ? "text-orange-500" : "text-green-600 dark:text-green-400"
-                      }`}>
-                        {item.balance}
-                      </span>
-                      <span className="text-[9px] text-[#8892a8] dark:text-gray-500">{item.unit}</span>
-                      <div className="flex items-center gap-1 mt-0.5">
-                        {canAdjust && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); openAdjust(item); }}
-                            className="w-7 h-7 flex items-center justify-center rounded-lg bg-[#f1f3f8] dark:bg-gray-800 text-[#4a5578] dark:text-gray-400"
-                          >
-                            <Plus size={14} />
-                          </button>
-                        )}
-                        <ChevronDown size={14} className={`text-[#8892a8] dark:text-gray-500 transition-transform ${expanded === item.item_id ? "rotate-180" : ""}`} />
-                      </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {canAdjust && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); openAdjust(item); }}
+                          className="w-10 h-10 flex items-center justify-center rounded-xl bg-[#f1f3f8] dark:bg-gray-800 text-[#4a5578] dark:text-gray-400"
+                        >
+                          <Plus size={18} />
+                        </button>
+                      )}
+                      <ChevronDown size={20} className={`text-[#8892a8] dark:text-gray-500 transition-transform ${expanded === item.item_id ? "rotate-180" : ""}`} />
                     </div>
                   </div>
                   {expanded === item.item_id && (
-                    <div className="px-3 pb-2.5 border-t border-[#eef1f6] dark:border-gray-800/50 pt-2">
-                      <p className="text-[#8892a8] dark:text-gray-500 text-[9px] font-semibold uppercase tracking-wider mb-1.5">Recent Transactions</p>
+                    <div className="px-4 pb-4 border-t border-[#eef1f6] dark:border-gray-800/50 pt-3">
+                      <p className="text-[#8892a8] dark:text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2">Recent Transactions</p>
                       {ledger.length === 0 ? (
-                        <p className="text-[#8892a8] dark:text-gray-600 text-xs">No transactions yet.</p>
+                        <p className="text-[#8892a8] dark:text-gray-600 text-sm">No transactions yet.</p>
                       ) : (
-                        <div className="space-y-1.5">
+                        <div className="space-y-2">
                           {ledger.map((l) => (
-                            <div key={l.id} className="flex items-center justify-between text-xs">
-                              <div className="flex items-center gap-1.5">
-                                <span className={`w-1 h-1 rounded-full ${
+                            <div key={l.id} className="flex items-center justify-between text-sm">
+                              <div className="flex items-center gap-2">
+                                <span className={`w-2 h-2 rounded-full ${
                                   l.qty_in > 0 ? "bg-green-500" : l.qty_out > 0 ? "bg-red-500" : "bg-gray-400"
                                 }`} />
                                 <span className="text-[#4a5578] dark:text-gray-400 capitalize">{l.transaction_type.replace(/_/g, " ")}</span>
                               </div>
-                              <span className={`font-mono text-[10px] ${l.qty_in > 0 ? "text-green-600" : l.qty_out > 0 ? "text-red-500" : ""}`}>
+                              <span className={`font-mono text-xs font-semibold ${l.qty_in > 0 ? "text-green-600" : l.qty_out > 0 ? "text-red-500" : ""}`}>
                                 {l.qty_in > 0 ? `+${l.qty_in}` : l.qty_out > 0 ? `-${l.qty_out}` : "0"}
                               </span>
                             </div>

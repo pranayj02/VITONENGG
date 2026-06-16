@@ -1334,43 +1334,43 @@ export default function GRNPage() {
             </div>
 
             {/* Mobile Cards */}
-            <div className="sm:hidden space-y-1.5">
+            <div className="sm:hidden space-y-3">
               {filteredGRN.map((g) => {
                 const lines = (g.line_items ?? []) as GRNLineItem[];
                 const isOpen = expanded === g.id;
                 return (
-                  <div key={g.id} className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-xl overflow-hidden">
-                    <div className="px-3 py-2" onClick={() => setExpanded(isOpen ? null : g.id)}>
-                      <div className="flex items-start justify-between gap-2">
+                  <div key={g.id} className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-[#dde1ea] dark:border-gray-800 overflow-hidden">
+                    <div className="p-4" onClick={() => setExpanded(isOpen ? null : g.id)}>
+                      <div className="flex items-center justify-between gap-4">
                         <div className="flex-1 min-w-0">
-                          <span className="font-mono text-viton-red dark:text-orange-400 text-[10px] font-semibold">{g.grn_number}</span>
-                          <p className="text-viton-navy dark:text-white text-xs font-medium truncate mt-0.5">{g.vendor_name ?? "—"}</p>
-                          <p className="text-[#8892a8] dark:text-gray-500 text-[9px] mt-0.5">{lines.length} item{lines.length !== 1 ? "s" : ""} · {new Date(g.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</p>
+                          <span className="font-mono text-viton-red dark:text-orange-400 text-xs font-semibold">{g.grn_number}</span>
+                          <p className="text-viton-navy dark:text-white text-sm font-bold mt-1 leading-tight">{g.vendor_name ?? "—"}</p>
+                          <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-1">{lines.length} item{lines.length !== 1 ? "s" : ""} · {new Date(g.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</p>
                         </div>
-                        <div className="flex items-center gap-1 flex-shrink-0">
-                          <span className={`text-[9px] font-bold px-1.5 py-0 rounded ${statusColors[g.status] ?? "bg-gray-50 text-gray-600 dark:bg-gray-500/10 dark:text-gray-400"}`}>{g.status.toUpperCase()}</span>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <span className={`text-xs font-bold px-2 py-1 rounded-lg ${statusColors[g.status] ?? "bg-gray-50 text-gray-600 dark:bg-gray-500/10 dark:text-gray-400"}`}>{g.status.toUpperCase()}</span>
                           <PDFDownloadLink
                             document={<GRNPdfDocument grn={g} po={pos.find(p => p.id === g.po_id) ? { po_number: (pos.find(p => p.id === g.po_id) as POWithVendor).po_number, created_at: (pos.find(p => p.id === g.po_id) as POWithVendor).created_at } : null} vendor={vendors.find(v => v.id === g.vendor_id) ?? null} />}
                             fileName={`${g.grn_number.replace(/\//g, "-")}.pdf`}
-                            className="w-7 h-7 flex items-center justify-center rounded-lg text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white"
+                            className="w-10 h-10 flex items-center justify-center rounded-xl bg-[#f1f3f8] dark:bg-gray-800 text-[#4a5578] dark:text-gray-400"
                           >
-                            <Download size={14} />
+                            <Download size={18} />
                           </PDFDownloadLink>
-                          <ChevronDown size={14} className={`text-[#8892a8] dark:text-gray-500 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                          <ChevronDown size={20} className={`text-[#8892a8] dark:text-gray-500 transition-transform ${isOpen ? "rotate-180" : ""}`} />
                         </div>
                       </div>
                     </div>
                     {isOpen && (
-                      <div className="px-3 pb-3 border-t border-[#eef1f6] dark:border-gray-800/50 pt-2">
-                        <div className="space-y-1.5 mb-2">
+                      <div className="px-4 pb-4 border-t border-[#eef1f6] dark:border-gray-800/50 pt-3">
+                        <div className="space-y-2 mb-3">
                           {lines.map((l, i) => (
-                            <div key={i} className="flex items-center justify-between text-xs">
-                              <span className="text-viton-navy dark:text-white truncate flex-1">{l.name}</span>
+                            <div key={i} className="flex items-center justify-between text-sm">
+                              <span className="text-viton-navy dark:text-white font-medium truncate flex-1 mr-2">{l.name}</span>
                               <span className="text-[#4a5578] dark:text-gray-400 tabular-nums">{l.accepted_qty} / {l.received_qty}</span>
                             </div>
                           ))}
                         </div>
-                        <div className="flex flex-wrap gap-1.5 pt-2 border-t border-[#eef1f6] dark:border-gray-800/50">
+                        <div className="flex flex-wrap gap-2 pt-2 border-t border-[#eef1f6] dark:border-gray-800/50">
                           {g.status === "pending" && canSendForInspection && (
                             <>
                               <button onClick={() => updateStatus(g, "inspected")} className="bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 text-[10px] font-semibold px-2 py-1 rounded border border-blue-100 dark:border-blue-500/20">Inspect</button>
