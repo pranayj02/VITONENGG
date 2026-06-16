@@ -1,47 +1,55 @@
 // Server-side API route: sends web push notifications via the Web Push Protocol
 // Requires: npm install web-push
-// Deploy on Vercel — works with serverless functions
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
-// Dynamically import web-push to avoid build-time issues
-let webPush: typeof import("web-push") | null = null;
+let webPush: any = null;
 
 function getWebPush() {
   if (!webPush) {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    webPush = require("web-push");
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      webPush = require("web-push");
+    } catch {
+      return null;
+    }
   }
   return webPush;
 }
 
-// Set VAPID keys (from env or generate once)
 const vapidPublicKey = process.env.VAPID_PUBLIC_KEY || "";
 const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY || "";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 export async function POST(req: NextRequest) {
   if (!vapidPublicKey || !vapidPrivateKey) {
     return NextResponse.json(
-      { error: "VAPID keys not configured. Set VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY env vars." },
+      { error: "VAPID keys not configured" },
       { status: 500 }
     );
   }
 
   const wp = getWebPush();
-  wp.setVapidDetails(
-    "mailto:admin@vitonengg.com",
-    vapidPublicKey,
-    vapidPrivateKey
-  );
+  if (!wp) {
+    return NextResponse.json(
+      { error: "web-push package not available on server" },
+      { status: 500 }
+    );
+  }
+
+  wp.setVapidDetails("mailto:admin@vitonengg.com", vapidPublicKey, vapidPrivateKey);
 
   const body = await req.json();
-  const { userIds, title, body: msgBody, url = "/dashboard", tag = "viton-notification", type = "general", requireInteraction = false } = body;
+  const { userIds, title, body: msgBody, url = "/dashboard", tag = "viton-notification" } = body;
+
+  const supabase = getSupabase();
 
   // Fetch subscriptions from DB
   let query = supabase.from("push_subscriptions").select("*");
@@ -77,8 +85,8 @@ export async function POST(req: NextRequest) {
     body: msgBody,
     url,
     tag,
-    type,
-    requireInteraction,
+    type: "approval",
+    requireInteraction: true,
     actions: [
       { action: "view", title: "View" },
       { action: "dismiss", title: "Dismiss" },
@@ -88,22 +96,15 @@ export async function POST(req: NextRequest) {
   const sendPromises = subscriptions.map(async (sub: any) => {
     const subscription = {
       endpoint: sub.endpoint,
-      keys: {
-        p256dh: sub.keys_p256dh,
-        auth: sub.keys_auth,
-      },
+      keys: { p256dh: sub.keys_p256dh, auth: sub.keys_auth },
     };
 
     try {
       await wp.sendNotification(subscription, payload);
       return { endpoint: sub.endpoint, status: "sent" };
     } catch (err: any) {
-      // Subscription may have expired — clean it up
       if (err.statusCode === 410 || err.statusCode === 404) {
-        await supabase
-          .from("push_subscriptions")
-          .delete()
-          .eq("endpoint", sub.endpoint);
+        await supabase.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
         return { endpoint: sub.endpoint, status: "expired-removed" };
       }
       console.error("[Push] Send failed for", sub.endpoint, err.message);
