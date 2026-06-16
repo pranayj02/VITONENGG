@@ -574,43 +574,70 @@ export default function CatalogPage() {
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 text-[#8892a8] dark:text-gray-600">{search ? "No items match your search." : "No items yet. Add your first item request."}</div>
       ) : (
-        <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[#dde1ea] dark:border-gray-800">
-                  <th className="text-left text-[#8892a8] dark:text-gray-500 font-semibold text-xs uppercase tracking-wider px-5 py-3">Serial ID</th>
-                  <th className="text-left text-[#8892a8] dark:text-gray-500 font-semibold text-xs uppercase tracking-wider px-5 py-3">Name</th>
-                  <th className="text-left text-[#8892a8] dark:text-gray-500 font-semibold text-xs uppercase tracking-wider px-5 py-3">Category</th>
-                  <th className="text-left text-[#8892a8] dark:text-gray-500 font-semibold text-xs uppercase tracking-wider px-5 py-3">Unit</th>
-                  <th className="text-left text-[#8892a8] dark:text-gray-500 font-semibold text-xs uppercase tracking-wider px-5 py-3">HSN</th>
-                  {canManageCatalog && <th className="px-5 py-3"></th>}
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((item, i) => (
-                  <tr key={item.id} className={`border-b border-[#eef1f6] dark:border-gray-800/50 hover:bg-[#f7f8fb] dark:hover:bg-gray-800/40 transition-colors ${i === filtered.length - 1 ? "border-0" : ""}`}>
-                    <td className="px-5 py-3.5 font-mono text-viton-red dark:text-orange-400 text-xs font-semibold">{item.serial_id}</td>
-                    <td className="px-5 py-3.5 text-viton-navy dark:text-white">{item.name}</td>
-                    <td className="px-5 py-3.5">
-                      <span className={`text-xs font-medium px-2.5 py-1 rounded-lg ${categoryColors[item.category ?? "Misc"] ?? "bg-gray-100 text-gray-600 dark:bg-gray-500/10 dark:text-gray-400"}`}>
-                        {item.category}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5 text-[#4a5578] dark:text-gray-400">{item.unit}</td>
-                    <td className="px-5 py-3.5 text-[#8892a8] dark:text-gray-500 font-mono text-xs">{item.hsn_code ?? "—"}</td>
-                    {canManageCatalog && (
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-1">
-                          <button onClick={() => openEdit(item)} className="text-[#8892a8] dark:text-gray-500 hover:text-viton-red dark:hover:text-orange-400 transition-colors p-1" title="Edit item"><Pencil size={14} /></button>
-                          <button onClick={() => setDeleteItem(item)} className="text-[#8892a8] dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors p-1" title="Delete item"><Trash2 size={14} /></button>
-                        </div>
-                      </td>
-                    )}
+        <div>
+          {/* Desktop Table */}
+          <div className="hidden sm:block bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[#dde1ea] dark:border-gray-800">
+                    <th className="text-left text-[#8892a8] dark:text-gray-500 font-semibold text-xs uppercase tracking-wider px-5 py-3">Serial ID</th>
+                    <th className="text-left text-[#8892a8] dark:text-gray-500 font-semibold text-xs uppercase tracking-wider px-5 py-3">Name</th>
+                    <th className="text-left text-[#8892a8] dark:text-gray-500 font-semibold text-xs uppercase tracking-wider px-5 py-3">Category</th>
+                    <th className="text-left text-[#8892a8] dark:text-gray-500 font-semibold text-xs uppercase tracking-wider px-5 py-3">Unit</th>
+                    <th className="text-left text-[#8892a8] dark:text-gray-500 font-semibold text-xs uppercase tracking-wider px-5 py-3">HSN</th>
+                    {canManageCatalog && <th className="px-5 py-3"></th>}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {filtered.map((item, i) => (
+                    <tr key={item.id} className={`border-b border-[#eef1f6] dark:border-gray-800/50 hover:bg-[#f7f8fb] dark:hover:bg-gray-800/40 transition-colors ${i === filtered.length - 1 ? "border-0" : ""}`}>
+                      <td className="px-5 py-3.5 font-mono text-viton-red dark:text-orange-400 text-xs font-semibold">{item.serial_id}</td>
+                      <td className="px-5 py-3.5 text-viton-navy dark:text-white">{item.name}</td>
+                      <td className="px-5 py-3.5">
+                        <span className={`text-xs font-medium px-2.5 py-1 rounded-lg ${categoryColors[item.category ?? "Misc"] ?? "bg-gray-100 text-gray-600 dark:bg-gray-500/10 dark:text-gray-400"}`}>
+                          {item.category}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 text-[#4a5578] dark:text-gray-400">{item.unit}</td>
+                      <td className="px-5 py-3.5 text-[#8892a8] dark:text-gray-500 font-mono text-xs">{item.hsn_code ?? "—"}</td>
+                      {canManageCatalog && (
+                        <td className="px-5 py-3.5">
+                          <div className="flex items-center gap-1">
+                            <button onClick={() => openEdit(item)} className="text-[#8892a8] dark:text-gray-500 hover:text-viton-red dark:hover:text-orange-400 transition-colors p-1" title="Edit item"><Pencil size={14} /></button>
+                            <button onClick={() => setDeleteItem(item)} className="text-[#8892a8] dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors p-1" title="Delete item"><Trash2 size={14} /></button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Mobile Cards */}
+          <div className="sm:hidden space-y-2">
+            {filtered.map((item) => (
+              <div key={item.id} className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-xl overflow-hidden">
+                <div className="px-3 py-2.5 flex items-center justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="font-mono text-viton-red dark:text-orange-400 text-[10px] font-semibold">{item.serial_id}</span>
+                      <span className={`text-[9px] font-bold px-1.5 py-0 rounded ${categoryColors[item.category ?? "Misc"] ?? "bg-gray-100 text-gray-600 dark:bg-gray-500/10 dark:text-gray-400"}`}>{item.category}</span>
+                    </div>
+                    <p className="text-viton-navy dark:text-white text-xs font-medium truncate">{item.name}</p>
+                    <p className="text-[#8892a8] dark:text-gray-500 text-[9px]">{item.unit} · HSN: {item.hsn_code ?? "—"}</p>
+                  </div>
+                  {canManageCatalog && (
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => openEdit(item)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#f1f3f8] dark:bg-gray-800 text-[#4a5578] dark:text-gray-400"><Pencil size={14} /></button>
+                      <button onClick={() => setDeleteItem(item)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#f1f3f8] dark:bg-gray-800 text-[#4a5578] dark:text-gray-400"><Trash2 size={14} /></button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

@@ -322,17 +322,17 @@ export default function DashboardPage() {
             Start a new workflow
           </h2>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-3">
           {quickActions.map((action) => {
             const Icon = action.icon;
             return (
               <Link href={action.href} key={action.label}>
-                <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl p-6 hover:border-[#c0c8db] dark:hover:border-orange-500/40 hover:shadow-md dark:hover:shadow-none transition-all cursor-pointer h-full">
-                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center mb-4 ${action.bg}`}>
-                    <Icon size={22} className="text-white" />
+                <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-xl sm:rounded-2xl p-3 sm:p-6 hover:border-[#c0c8db] dark:hover:border-orange-500/40 hover:shadow-md dark:hover:shadow-none transition-all cursor-pointer h-full">
+                  <div className={`w-7 h-7 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl flex items-center justify-center mb-2 sm:mb-4 ${action.bg}`}>
+                    <Icon size={14} className="sm:w-5 sm:h-5 text-white" />
                   </div>
-                  <p className="text-viton-navy dark:text-white font-semibold text-sm">{action.label}</p>
-                  <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-1">{action.desc}</p>
+                  <p className="text-viton-navy dark:text-white font-semibold text-xs sm:text-sm">{action.label}</p>
+                  <p className="text-[#8892a8] dark:text-gray-500 text-[10px] sm:text-xs mt-0.5 sm:mt-1">{action.desc}</p>
                 </div>
               </Link>
             );
