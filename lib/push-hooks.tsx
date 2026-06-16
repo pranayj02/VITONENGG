@@ -1,12 +1,11 @@
 "use client";
 
-// React hook that wires up Web Push + Supabase Realtime for approval alerts
+// React hook that wires up Web Push + in-app browser notifications
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase";
 import {
   subscribeToPush,
   saveSubscription,
-  sendPushNotification,
   requestNotificationPermission,
   isPushSupported,
 } from "@/lib/push";
@@ -28,10 +27,8 @@ export function usePushNotifications() {
         return;
       }
 
-      // Auto-request permission
       const granted = await requestNotificationPermission();
       setPermission(Notification.permission);
-
       if (!granted) return;
 
       const subscription = await subscribeToPush();
@@ -48,27 +45,46 @@ export function usePushNotifications() {
   return { subscribed, permission, isSupported: isPushSupported() };
 }
 
-// ── Realtime watcher for pending approvals ──────────────────────────────────
-// Place this in DashboardLayout or a dedicated provider component.
-// It watches Supabase tables for new pending items and shows browser notifications.
+// ── Approval watcher ───────────────────────────────────────────────────────
+// Polls for pending approvals and shows a ONE-TIME browser notification per item.
+// Uses localStorage so it survives page navigation / remounts.
+// Once notified, the same item will NOT trigger again until it disappears
+// (approved/rejected) and reappears later.
+
+const LS_PREFIX = "viton_notified_";
+
+interface WatcherState {
+  stock: string[];
+  grn: string[];
+  requisitions: string[];
+  items: string[];
+}
+
+function loadState(): WatcherState {
+  try {
+    const raw = localStorage.getItem(LS_PREFIX + "ids");
+    if (raw) return JSON.parse(raw);
+  } catch { /* ignore */ }
+  return { stock: [], grn: [], requisitions: [], items: [] };
+}
+
+function saveState(s: WatcherState) {
+  try {
+    localStorage.setItem(LS_PREFIX + "ids", JSON.stringify(s));
+  } catch { /* ignore */ }
+}
 
 export function useApprovalWatcher() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const countsRef = useRef({
-    stock: 0,
-    grn: 0,
-    requisitions: 0,
-    items: 0,
-  });
 
   useEffect(() => {
+    // We need to check if user is an admin/approver before polling.
+    // But we don't want to re-run the effect when role loads,
+    // so we check inside the poll function.
     const supabase = createClient();
 
     async function checkAndNotify() {
-      // Get current user & role
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
       const { data: profile } = await supabase
@@ -77,125 +93,108 @@ export function useApprovalWatcher() {
         .eq("id", user.id)
         .single();
       const role = (profile as any)?.role;
-      const isAdmin = role === "admin";
 
-      // Only admins / managers need these alerts
-      if (!isAdmin && role !== "purchase_manager" && role !== "quality_assurance")
+      // Only admins / purchase_manager / QA need alerts
+      if (!role || (role !== "admin" && role !== "purchase_manager" && role !== "quality_assurance")) {
         return;
+      }
 
-      // Fetch counts
+      // ── Fetch current pending items with their IDs ────────────────────
       const [stockRes, grnRes, reqRes, itemRes] = await Promise.all([
-        supabase
-          .from("stock_adjustment_requests")
-          .select("id", { count: "exact", head: true })
-          .eq("status", "pending"),
-        supabase
-          .from("grn")
-          .select("id", { count: "exact", head: true })
-          .in("status", ["pending", "inspected"]),
-        supabase
-          .from("requisitions")
-          .select("id", { count: "exact", head: true })
-          .eq("status", "pending"),
-        supabase
-          .from("item_creation_requests")
-          .select("id", { count: "exact", head: true })
-          .eq("status", "pending"),
+        supabase.from("stock_adjustment_requests").select("id").eq("status", "pending"),
+        supabase.from("grn").select("id").in("status", ["pending", "inspected"]),
+        supabase.from("requisitions").select("id").eq("status", "pending"),
+        supabase.from("item_creation_requests").select("id").eq("status", "pending"),
       ]);
 
-      const newCounts = {
-        stock: stockRes.count ?? 0,
-        grn: grnRes.count ?? 0,
-        requisitions: reqRes.count ?? 0,
-        items: itemRes.count ?? 0,
+      const current = {
+        stock: (stockRes.data ?? []).map((r: any) => r.id),
+        grn: (grnRes.data ?? []).map((r: any) => r.id),
+        requisitions: (reqRes.data ?? []).map((r: any) => r.id),
+        items: (itemRes.data ?? []).map((r: any) => r.id),
       };
 
-      const prev = countsRef.current;
+      const prev = loadState();
 
-      // Detect new pending items
-      if (newCounts.stock > prev.stock) {
-        const diff = newCounts.stock - prev.stock;
+      // Helper: find new IDs (in current but not in prev) and notify
+      function findNew(prevIds: string[], currIds: string[]): string[] {
+        const prevSet = new Set(prevIds);
+        return currIds.filter((id) => !prevSet.has(id));
+      }
+
+      const newStock = findNew(prev.stock, current.stock);
+      const newGrn = findNew(prev.grn, current.grn);
+      const newReqs = findNew(prev.requisitions, current.requisitions);
+      const newItems = findNew(prev.items, current.items);
+
+      // ── Show browser notifications for genuinely new items ────────────
+      if (newStock.length > 0) {
         showBrowserNotification(
           "Stock Adjustment Request",
-          `${diff} new stock adjustment${diff > 1 ? "s" : ""} awaiting approval`,
+          `${newStock.length} new stock adjustment${newStock.length > 1 ? "s" : ""} awaiting approval`,
           "/dashboard/stock/adjustments",
           "stock-adjustment"
         );
-        // Also try web push for specific users
-        if (isAdmin) {
-          sendPushNotification({
-            title: "Stock Adjustment Request",
-            body: `${diff} new stock adjustment${diff > 1 ? "s" : ""} awaiting approval`,
-            url: "/dashboard/stock/adjustments",
-            tag: "stock-adjustment",
-          });
-        }
       }
 
-      if (newCounts.grn > prev.grn) {
-        const diff = newCounts.grn - prev.grn;
+      if (newGrn.length > 0) {
         showBrowserNotification(
           "New GRN Pending",
-          `${diff} GRN${diff > 1 ? "s" : ""} awaiting inspection/approval`,
+          `${newGrn.length} new GRN${newGrn.length > 1 ? "s" : ""} awaiting inspection/approval`,
           "/dashboard/grn",
           "grn-pending"
         );
-        sendPushNotification({
-          title: "New GRN Pending",
-          body: `${diff} GRN${diff > 1 ? "s" : ""} awaiting inspection/approval`,
-          url: "/dashboard/grn",
-          tag: "grn-pending",
-        });
       }
 
-      if (newCounts.requisitions > prev.requisitions) {
-        const diff = newCounts.requisitions - prev.requisitions;
+      if (newReqs.length > 0) {
         showBrowserNotification(
           "New Requisition",
-          `${diff} requisition${diff > 1 ? "s" : ""} awaiting approval`,
+          `${newReqs.length} new requisition${newReqs.length > 1 ? "s" : ""} awaiting approval`,
           "/dashboard/requisitions",
           "requisition-pending"
         );
-        sendPushNotification({
-          title: "New Requisition",
-          body: `${diff} requisition${diff > 1 ? "s" : ""} awaiting approval`,
-          url: "/dashboard/requisitions",
-          tag: "requisition-pending",
-        });
       }
 
-      if (newCounts.items > prev.items) {
-        const diff = newCounts.items - prev.items;
+      if (newItems.length > 0) {
         showBrowserNotification(
           "New Item Request",
-          `${diff} item creation request${diff > 1 ? "s" : ""} awaiting approval`,
+          `${newItems.length} new item creation request${newItems.length > 1 ? "s" : ""} awaiting approval`,
           "/dashboard/catalog",
           "item-request"
         );
-        sendPushNotification({
-          title: "New Item Request",
-          body: `${diff} item creation request${diff > 1 ? "s" : ""} awaiting approval`,
-          url: "/dashboard/catalog",
-          tag: "item-request",
-        });
       }
 
-      countsRef.current = newCounts;
+      // ── Save the current state so we don't re-notify ──────────────────
+      // Keep previously-notified IDs that are still pending,
+      // drop ones that have been resolved, add new ones
+      function mergeForward(prevIds: string[], currIds: string[], newIds: string[]): string[] {
+        const currSet = new Set(currIds);
+        const kept = prevIds.filter((id) => currSet.has(id));
+        return Array.from(new Set([...kept, ...newIds]));
+      }
+
+      saveState({
+        stock: mergeForward(prev.stock, current.stock, newStock),
+        grn: mergeForward(prev.grn, current.grn, newGrn),
+        requisitions: mergeForward(prev.requisitions, current.requisitions, newReqs),
+        items: mergeForward(prev.items, current.items, newItems),
+      });
     }
 
-    // Initial check
-    checkAndNotify();
+    // Kick off immediately (with a small delay to let the layout settle)
+    const initTimeout = setTimeout(checkAndNotify, 2000);
 
-    // Poll every 30 seconds (simple and reliable for Vercel serverless)
-    intervalRef.current = setInterval(checkAndNotify, 30000);
+    // Then poll every 60 seconds (less aggressive)
+    intervalRef.current = setInterval(checkAndNotify, 60000);
 
     return () => {
+      clearTimeout(initTimeout);
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, []);
 }
 
-// ── Helper: show browser notification (works even without web push) ─────────
+// ── Browser notification helper ────────────────────────────────────────────
 
 function showBrowserNotification(
   title: string,
@@ -205,6 +204,8 @@ function showBrowserNotification(
 ) {
   if (typeof Notification === "undefined") return;
   if (Notification.permission !== "granted") return;
+  // Skip if a notification with the same tag is already shown
+  if (document.hasFocus?.()) return; // don't notify if user is on the page
 
   try {
     const notification = new Notification(title, {
@@ -222,6 +223,6 @@ function showBrowserNotification(
       notification.close();
     };
   } catch {
-    // Notifications may be blocked by browser policy
+    // Notifications may be blocked
   }
 }
