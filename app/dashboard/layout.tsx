@@ -391,7 +391,9 @@ function BottomNav() {
       <div className="flex items-stretch justify-around px-1 pt-1 pb-1 max-w-lg mx-auto">
         {tabs.map((tab) => {
           const Icon = tab.Icon;
-          const isActive = pathname === tab.href || pathname.startsWith(`${tab.href}/`);
+          const isActive = tab.href === "/dashboard"
+            ? pathname === "/dashboard"
+            : pathname === tab.href || pathname.startsWith(`${tab.href}/`);
           return (
             <Link
               key={tab.href}
