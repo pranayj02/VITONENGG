@@ -1,0 +1,24 @@
+{
+  "name": "Viton Engineering ERP",
+  "short_name": "Viton ERP",
+  "description": "Inventory, purchase orders, GRN, and stock management for Viton Engineers",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#f1f3f8",
+  "theme_color": "#e53935",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icon-192.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}
