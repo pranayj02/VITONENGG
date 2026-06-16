@@ -6,6 +6,7 @@ import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { useTheme } from "@/components/ThemeProvider";
 import { useRole, can, type UserRole, type PermissionAction } from "@/lib/roles";
+import { usePushNotifications, useApprovalWatcher } from "@/lib/push-hooks";
 import {
   LayoutDashboard,
   Package,
@@ -134,6 +135,10 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const { theme, toggle } = useTheme();
   const { role, loading: roleLoading } = useRole();
+
+  // ── Web Push Notifications ────────────────────────────────────────────
+  const { subscribed } = usePushNotifications();
+  useApprovalWatcher();
 
   const [pendingReqs, setPendingReqs] = useState(0);
   const [pendingItemApprovals, setPendingItemApprovals] = useState(0);
