@@ -369,9 +369,11 @@ export default function StockAdjustmentsPage() {
           {activeTab === "pending" ? "No pending adjustment requests." : "No requests found."}
         </div>
       ) : (
-        <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+        <div className="space-y-4">
+          {/* ── Desktop Table ──────────────────────────────────────── */}
+          <div className="hidden sm:block bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[#dde1ea] dark:border-gray-800">
                   <th className="text-left text-[#8892a8] dark:text-gray-500 font-semibold text-xs uppercase tracking-wider px-5 py-3">Serial ID</th>
@@ -510,6 +512,70 @@ export default function StockAdjustmentsPage() {
                 })}
               </tbody>
             </table>
+          </div>
+          </div>
+
+          {/* ── Mobile Cards ────────────────────────────────────────── */}
+          <div className="sm:hidden space-y-3">
+            {filtered.map((req) => {
+              const isRejecting = rejectingId === req.id;
+              return (
+                <div key={req.id} className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-xl overflow-hidden">
+                  <div className="p-4">
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <span className="font-mono text-viton-red dark:text-orange-400 text-xs font-semibold">{req.item_serial_id}</span>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            req.status === "pending" ? "bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400"
+                              : req.status === "approved" ? "bg-green-500/10 text-green-600 dark:bg-green-500/20 dark:text-green-400"
+                              : "bg-red-500/10 text-red-500 dark:bg-red-500/20 dark:text-red-400"
+                          }`}>{req.status}</span>
+                          <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                            req.adjustment_type === "adjustment_in" ? "bg-green-500/10 text-green-600 dark:bg-green-500/20 dark:text-green-400" : "bg-red-500/10 text-red-500 dark:bg-red-500/20 dark:text-red-400"
+                          }`}>
+                            {req.adjustment_type === "adjustment_in" ? <ArrowDown size={10} /> : <ArrowUp size={10} />}
+                            {req.adjustment_type === "adjustment_in" ? "Add" : "Remove"}
+                          </span>
+                        </div>
+                        <p className="text-viton-navy dark:text-white text-sm font-medium">{req.item_name}</p>
+                        <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-0.5">
+                          {req.item_unit} · By {req.requested_by_name ?? "Unknown"} · {new Date(req.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "2-digit" })}
+                        </p>
+                        {req.notes && <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-1 line-clamp-2">{req.notes}</p>}
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <p className="text-viton-navy dark:text-white text-xl font-bold">{req.qty}</p>
+                        <p className="text-[#8892a8] dark:text-gray-500 text-xs">Stock: {req.balance_at_request}</p>
+                      </div>
+                    </div>
+                    {req.status === "approved" && req.reviewed_by_name && (
+                      <p className="text-xs text-green-600 dark:text-green-400 mb-2">✓ By {req.reviewed_by_name}</p>
+                    )}
+                    {req.status === "rejected" && req.reviewed_by_name && (
+                      <div className="mb-2">
+                        <p className="text-xs text-red-500">✗ By {req.reviewed_by_name}</p>
+                        {req.review_note && <p className="text-xs text-red-500 mt-0.5">"{req.review_note}"</p>}
+                      </div>
+                    )}
+                    {req.status === "pending" && (
+                      <div className="flex gap-2 pt-3 border-t border-[#eef1f6] dark:border-gray-800/50">
+                        <button onClick={() => handleApprove(req)} disabled={processingId === req.id}
+                          className="flex-1 min-h-[44px] flex items-center justify-center gap-2 bg-green-500 hover:bg-green-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-all">
+                          {processingId === req.id ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />} Approve
+                        </button>
+                        <button onClick={() => { setRejectingId(isRejecting ? null : req.id); setRejectNote(""); }} disabled={processingId === req.id}
+                          className={`flex-1 min-h-[44px] flex items-center justify-center gap-2 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-all ${
+                            isRejecting ? "bg-[#f1f3f8] dark:bg-gray-800 text-[#4a5578] dark:text-gray-300" : "bg-red-500 hover:bg-red-600"
+                          }`}>
+                          {isRejecting ? <ChevronUp size={16} /> : <XCircle size={16} />} {isRejecting ? "Cancel" : "Reject"}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

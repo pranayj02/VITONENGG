@@ -27,6 +27,8 @@ import {
   ClipboardList,
   CheckCircle,
   BellDot,
+  Search,
+  Settings,
 } from "lucide-react";
 
 interface NavItem {
@@ -362,9 +364,56 @@ export default function DashboardLayout({
       )}
 
       {/* Page Content */}
-      <main className="flex-1 md:ml-72 pt-14 md:pt-0 min-h-screen">
+      <main className="flex-1 md:ml-72 pt-14 md:pt-0 min-h-screen pb-20 sm:pb-6">
         {children}
       </main>
+
+      {/* ── Mobile Bottom Navigation ────────────────────────────────────── */}
+      <BottomNav />
     </div>
+  );
+}
+
+function BottomNav() {
+  const pathname = usePathname();
+  const { role } = useRole();
+
+  const tabs = [
+    { href: "/dashboard", label: "Home", Icon: LayoutDashboard },
+    { href: "/dashboard/stock", label: "Stock", Icon: BarChart3 },
+    { href: "/dashboard/grn", label: "GRN", Icon: PackageOpen, permission: "create_grn" as PermissionAction },
+    { href: "/dashboard/requisitions", label: "MR", Icon: ArrowRightLeft },
+    { href: "/dashboard/catalog", label: "Catalog", Icon: Package },
+  ].filter((t) => !t.permission || can(role, t.permission));
+
+  return (
+    <nav className="fixed bottom-0 left-0 right-0 z-40 sm:hidden bg-white/95 dark:bg-gray-900/95 backdrop-blur border-t border-[#dde1ea] dark:border-gray-800 safe-area-bottom">
+      <div className="flex items-stretch justify-around px-1 pt-1 pb-1 max-w-lg mx-auto">
+        {tabs.map((tab) => {
+          const Icon = tab.Icon;
+          const isActive = pathname === tab.href || pathname.startsWith(`${tab.href}/`);
+          return (
+            <Link
+              key={tab.href}
+              href={tab.href}
+              className={`flex flex-col items-center justify-center flex-1 min-w-0 py-1.5 rounded-xl transition-all active:scale-95 ${
+                isActive
+                  ? "text-viton-red dark:text-orange-500"
+                  : "text-[#8892a8] dark:text-gray-500"
+              }`}
+            >
+              <div className={`w-7 h-7 flex items-center justify-center rounded-lg mb-0.5 transition-all ${
+                isActive ? "bg-viton-red/10 dark:bg-orange-500/15" : ""
+              }`}>
+                <Icon size={18} strokeWidth={isActive ? 2.5 : 1.5} />
+              </div>
+              <span className="text-[10px] font-medium leading-tight truncate max-w-[60px]">
+                {tab.label}
+              </span>
+            </Link>
+          );
+        })}
+      </div>
+    </nav>
   );
 }

@@ -9,6 +9,8 @@
 body {
   margin: 0;
   background-color: #f1f3f8;
+  /* Safe area padding for modern mobile phones */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .dark body {
@@ -25,4 +27,24 @@ body {
   --viton-text: #1a2744;
   --viton-text-muted: #4a5578;
   --viton-text-faint: #8892a8;
+}
+
+/* ── Mobile UX improvements ────────────────────────────────────────────── */
+@media (max-width: 639px) {
+  /* Prevent iOS zoom on input focus */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+
+  /* Minimum touch targets (Apple HIG: 44px) */
+  button, [role="button"], a.btn-mobile-lg {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Increase tap targets for table row clicks */
+  table tr[role="row"],
+  tbody tr {
+    min-height: 52px;
+  }
 }

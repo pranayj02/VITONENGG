@@ -638,99 +638,174 @@ export default function StockPage() {
             : (search ? "No items match your search." : "No stock records yet. Create a GRN or make a manual adjustment to start.")}
         </div>
       ) : (
-        <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[#dde1ea] dark:border-gray-800">
-                  <th className="text-left text-[#8892a8] dark:text-gray-500 font-semibold text-xs uppercase tracking-wider px-5 py-3">Serial ID</th>
-                  <th className="text-left text-[#8892a8] dark:text-gray-500 font-semibold text-xs uppercase tracking-wider px-5 py-3">Name</th>
-                  <th className="text-left text-[#8892a8] dark:text-gray-500 font-semibold text-xs uppercase tracking-wider px-5 py-3">Category</th>
-                  <th className="text-right text-[#8892a8] dark:text-gray-500 font-semibold text-xs uppercase tracking-wider px-5 py-3">In</th>
-                  <th className="text-right text-[#8892a8] dark:text-gray-500 font-semibold text-xs uppercase tracking-wider px-5 py-3">Out</th>
-                  <th className="text-right text-[#8892a8] dark:text-gray-500 font-semibold text-xs uppercase tracking-wider px-5 py-3">Balance</th>
-                  <th className="px-5 py-3"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((item) => {
-                  const isOpen = expanded === item.item_id;
-                  const low = item.balance > 0 && item.balance < 5;
-                  const zero = item.balance <= 0;
-                  return (
-                    <>
-                      <tr
-                        key={item.item_id}
-                        className={`border-b border-[#eef1f6] dark:border-gray-800/50 hover:bg-[#f7f8fb] dark:hover:bg-gray-800/40 transition-colors cursor-pointer ${isOpen ? "bg-[#f7f8fb] dark:bg-gray-800/60" : ""}`}
-                        onClick={() => {
-                          if (isOpen) { setExpanded(null); }
-                          else { setExpanded(item.item_id); loadLedger(item.item_id); }
-                        }}
-                      >
-                        <td className="px-5 py-3.5 font-mono text-viton-red dark:text-orange-400 text-xs font-semibold">{item.serial_id}</td>
-                        <td className="px-5 py-3.5 text-viton-navy dark:text-white">{item.name}</td>
-                        <td className="px-5 py-3.5">
-                          <span className="text-xs text-[#4a5578] dark:text-gray-400 bg-[#f1f3f8] dark:bg-gray-800 px-2 py-1 rounded-lg">{item.category ?? "—"}</span>
-                        </td>
-                        <td className="px-5 py-3.5 text-right text-[#4a5578] dark:text-gray-400 tabular-nums">{item.total_in}</td>
-                        <td className="px-5 py-3.5 text-right text-[#4a5578] dark:text-gray-400 tabular-nums">{item.total_out}</td>
-                        <td className="px-5 py-3.5 text-right">
-                          <span className={`font-bold tabular-nums ${
-                            zero ? "text-red-500" : low ? "text-orange-500" : "text-green-600 dark:text-green-400"
-                          }`}>
-                            {item.balance}
-                          </span>
-                        </td>
-                        <td className="px-5 py-3.5">
-                          <div className="flex items-center gap-1">
-                            {canAdjust && (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); openAdjust(item); }}
-                                className="text-[#8892a8] dark:text-gray-500 hover:text-viton-red dark:hover:text-orange-400 transition-colors p-1"
-                                title="Adjust stock"
-                              >
-                                <Plus size={14} />
-                              </button>
-                            )}
-                            {isOpen ? <ChevronUp size={14} className="text-[#8892a8] dark:text-gray-500" /> : <ChevronDown size={14} className="text-[#8892a8] dark:text-gray-500" />}
-                          </div>
-                        </td>
-                      </tr>
-                      {isOpen && (
-                        <tr className="bg-[#f7f8fb] dark:bg-gray-800/30">
-                          <td colSpan={7} className="px-5 py-4">
-                            <p className="text-[#8892a8] dark:text-gray-500 text-xs font-semibold uppercase tracking-wider mb-3">Recent Transactions</p>
-                            {ledger.length === 0 ? (
-                              <p className="text-[#8892a8] dark:text-gray-600 text-sm">No transactions yet.</p>
-                            ) : (
-                              <div className="space-y-2">
-                                {ledger.map((l) => (
-                                  <div key={l.id} className="flex items-center justify-between text-sm">
-                                    <div className="flex items-center gap-3">
-                                      <span className={`w-2 h-2 rounded-full ${
-                                        l.qty_in > 0 ? "bg-green-500" : l.qty_out > 0 ? "bg-red-500" : "bg-gray-400"
-                                      }`} />
-                                      <span className="text-[#4a5578] dark:text-gray-400 capitalize">{l.transaction_type.replace(/_/g, " ")}</span>
-                                      <span className="text-[#8892a8] dark:text-gray-500 text-xs">{l.reference_code ?? l.reference_type ?? "—"}</span>
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                      <span className={`font-mono text-xs ${l.qty_in > 0 ? "text-green-600" : l.qty_out > 0 ? "text-red-500" : ""}`}>
-                                        {l.qty_in > 0 ? `+${l.qty_in}` : l.qty_out > 0 ? `-${l.qty_out}` : "0"}
-                                      </span>
-                                      <span className="text-[#8892a8] dark:text-gray-500 text-xs">{new Date(l.created_at).toLocaleDateString("en-IN")}</span>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
+        <div className="space-y-4">
+          {/* ── Desktop Table ──────────────────────────────────────────── */}
+          <div className="hidden sm:block bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-[#dde1ea] dark:border-gray-800">
+                    <th className="text-left text-[#8892a8] dark:text-gray-500 font-semibold text-xs uppercase tracking-wider px-5 py-3">Serial ID</th>
+                    <th className="text-left text-[#8892a8] dark:text-gray-500 font-semibold text-xs uppercase tracking-wider px-5 py-3">Name</th>
+                    <th className="text-left text-[#8892a8] dark:text-gray-500 font-semibold text-xs uppercase tracking-wider px-5 py-3">Category</th>
+                    <th className="text-right text-[#8892a8] dark:text-gray-500 font-semibold text-xs uppercase tracking-wider px-5 py-3">In</th>
+                    <th className="text-right text-[#8892a8] dark:text-gray-500 font-semibold text-xs uppercase tracking-wider px-5 py-3">Out</th>
+                    <th className="text-right text-[#8892a8] dark:text-gray-500 font-semibold text-xs uppercase tracking-wider px-5 py-3">Balance</th>
+                    <th className="px-5 py-3"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((item) => {
+                    const isOpen = expanded === item.item_id;
+                    const low = item.balance > 0 && item.balance < 5;
+                    const zero = item.balance <= 0;
+                    return (
+                      <>
+                        <tr
+                          key={item.item_id}
+                          className={`border-b border-[#eef1f6] dark:border-gray-800/50 hover:bg-[#f7f8fb] dark:hover:bg-gray-800/40 transition-colors cursor-pointer ${isOpen ? "bg-[#f7f8fb] dark:bg-gray-800/60" : ""}`}
+                          onClick={() => {
+                            if (isOpen) { setExpanded(null); }
+                            else { setExpanded(item.item_id); loadLedger(item.item_id); }
+                          }}
+                        >
+                          <td className="px-5 py-3.5 font-mono text-viton-red dark:text-orange-400 text-xs font-semibold">{item.serial_id}</td>
+                          <td className="px-5 py-3.5 text-viton-navy dark:text-white">{item.name}</td>
+                          <td className="px-5 py-3.5">
+                            <span className="text-xs text-[#4a5578] dark:text-gray-400 bg-[#f1f3f8] dark:bg-gray-800 px-2 py-1 rounded-lg">{item.category ?? "—"}</span>
+                          </td>
+                          <td className="px-5 py-3.5 text-right text-[#4a5578] dark:text-gray-400 tabular-nums">{item.total_in}</td>
+                          <td className="px-5 py-3.5 text-right text-[#4a5578] dark:text-gray-400 tabular-nums">{item.total_out}</td>
+                          <td className="px-5 py-3.5 text-right">
+                            <span className={`font-bold tabular-nums ${
+                              zero ? "text-red-500" : low ? "text-orange-500" : "text-green-600 dark:text-green-400"
+                            }`}>
+                              {item.balance}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <div className="flex items-center gap-1">
+                              {canAdjust && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); openAdjust(item); }}
+                                  className="text-[#8892a8] dark:text-gray-500 hover:text-viton-red dark:hover:text-orange-400 transition-colors p-1"
+                                  title="Adjust stock"
+                                >
+                                  <Plus size={14} />
+                                </button>
+                              )}
+                              {isOpen ? <ChevronUp size={14} className="text-[#8892a8] dark:text-gray-500" /> : <ChevronDown size={14} className="text-[#8892a8] dark:text-gray-500" />}
+                            </div>
                           </td>
                         </tr>
+                        {isOpen && (
+                          <tr className="bg-[#f7f8fb] dark:bg-gray-800/30">
+                            <td colSpan={7} className="px-5 py-4">
+                              <p className="text-[#8892a8] dark:text-gray-500 text-xs font-semibold uppercase tracking-wider mb-3">Recent Transactions</p>
+                              {ledger.length === 0 ? (
+                                <p className="text-[#8892a8] dark:text-gray-600 text-sm">No transactions yet.</p>
+                              ) : (
+                                <div className="space-y-2">
+                                  {ledger.map((l) => (
+                                    <div key={l.id} className="flex items-center justify-between text-sm">
+                                      <div className="flex items-center gap-3">
+                                        <span className={`w-2 h-2 rounded-full ${
+                                          l.qty_in > 0 ? "bg-green-500" : l.qty_out > 0 ? "bg-red-500" : "bg-gray-400"
+                                        }`} />
+                                        <span className="text-[#4a5578] dark:text-gray-400 capitalize">{l.transaction_type.replace(/_/g, " ")}</span>
+                                        <span className="text-[#8892a8] dark:text-gray-500 text-xs">{l.reference_code ?? l.reference_type ?? "—"}</span>
+                                      </div>
+                                      <div className="flex items-center gap-4">
+                                        <span className={`font-mono text-xs ${l.qty_in > 0 ? "text-green-600" : l.qty_out > 0 ? "text-red-500" : ""}`}>
+                                          {l.qty_in > 0 ? `+${l.qty_in}` : l.qty_out > 0 ? `-${l.qty_out}` : "0"}
+                                        </span>
+                                        <span className="text-[#8892a8] dark:text-gray-500 text-xs">{new Date(l.created_at).toLocaleDateString("en-IN")}</span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        )}
+                      </>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* ── Mobile Cards ───────────────────────────────────────────── */}
+          <div className="sm:hidden space-y-3">
+            {filtered.map((item) => {
+              const low = item.balance > 0 && item.balance < 5;
+              const zero = item.balance <= 0;
+              return (
+                <div
+                  key={item.item_id}
+                  className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-xl overflow-hidden"
+                >
+                  <div
+                    className="p-4 flex items-center justify-between"
+                    onClick={() => {
+                      if (expanded === item.item_id) { setExpanded(null); }
+                      else { setExpanded(item.item_id); loadLedger(item.item_id); }
+                    }}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-mono text-viton-red dark:text-orange-400 text-xs font-semibold">{item.serial_id}</span>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                          zero ? "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400"
+                            : low ? "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400"
+                            : "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400"
+                        }`}>
+                          {item.balance} {item.unit}
+                        </span>
+                      </div>
+                      <p className="text-viton-navy dark:text-white text-sm font-medium truncate">{item.name}</p>
+                      <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-0.5">{item.category ?? "—"} · In: {item.total_in} · Out: {item.total_out}</p>
+                    </div>
+                    <div className="flex items-center gap-2 ml-3">
+                      {canAdjust && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); openAdjust(item); }}
+                          className="w-10 h-10 flex items-center justify-center rounded-xl bg-[#f1f3f8] dark:bg-gray-800 text-[#4a5578] dark:text-gray-400"
+                        >
+                          <Plus size={16} />
+                        </button>
                       )}
-                    </>
-                  );
-                })}
-              </tbody>
-            </table>
+                      <ChevronDown size={18} className={`text-[#8892a8] dark:text-gray-500 transition-transform ${expanded === item.item_id ? "rotate-180" : ""}`} />
+                    </div>
+                  </div>
+                  {expanded === item.item_id && (
+                    <div className="px-4 pb-4 border-t border-[#eef1f6] dark:border-gray-800/50 pt-3">
+                      <p className="text-[#8892a8] dark:text-gray-500 text-xs font-semibold uppercase tracking-wider mb-2">Recent Transactions</p>
+                      {ledger.length === 0 ? (
+                        <p className="text-[#8892a8] dark:text-gray-600 text-sm">No transactions yet.</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {ledger.map((l) => (
+                            <div key={l.id} className="flex items-center justify-between text-sm">
+                              <div className="flex items-center gap-2">
+                                <span className={`w-1.5 h-1.5 rounded-full ${
+                                  l.qty_in > 0 ? "bg-green-500" : l.qty_out > 0 ? "bg-red-500" : "bg-gray-400"
+                                }`} />
+                                <span className="text-[#4a5578] dark:text-gray-400 text-xs capitalize">{l.transaction_type.replace(/_/g, " ")}</span>
+                              </div>
+                              <span className={`font-mono text-xs ${l.qty_in > 0 ? "text-green-600" : l.qty_out > 0 ? "text-red-500" : ""}`}>
+                                {l.qty_in > 0 ? `+${l.qty_in}` : l.qty_out > 0 ? `-${l.qty_out}` : "0"}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
