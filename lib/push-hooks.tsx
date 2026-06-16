@@ -8,6 +8,7 @@ import {
   saveSubscription,
   requestNotificationPermission,
   isPushSupported,
+  isNotificationSupported,
 } from "@/lib/push";
 
 export function usePushNotifications() {
@@ -22,27 +23,29 @@ export function usePushNotifications() {
     initRef.current = true;
 
     async function init() {
-      if (!isPushSupported()) {
-        console.log("[Push] Not supported in this browser");
-        return;
+      // Step 1: Try to get notification permission (for local browser notifications)
+      // This works on Safari iOS even without PushManager
+      let granted = false;
+      if (isNotificationSupported()) {
+        granted = await requestNotificationPermission();
+        setPermission(Notification.permission);
       }
 
-      const granted = await requestNotificationPermission();
-      setPermission(Notification.permission);
-      if (!granted) return;
-
-      const subscription = await subscribeToPush();
-      if (subscription) {
-        const supabase = createClient();
-        await saveSubscription(supabase, subscription);
-        setSubscribed(true);
+      // Step 2: If push is also supported (not Safari iOS), subscribe to push
+      if (granted && isPushSupported()) {
+        const subscription = await subscribeToPush();
+        if (subscription) {
+          const supabase = createClient();
+          await saveSubscription(supabase, subscription);
+          setSubscribed(true);
+        }
       }
     }
 
     init();
   }, []);
 
-  return { subscribed, permission, isSupported: isPushSupported() };
+  return { subscribed, permission, isSupported: isPushSupported() || isNotificationSupported() };
 }
 
 // ── Approval watcher ───────────────────────────────────────────────────────

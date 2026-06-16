@@ -148,6 +148,13 @@ export function isPushSupported(): boolean {
   );
 }
 
+/** Notifications API available (local browser notifications, no push needed) */
+export function isNotificationSupported(): boolean {
+  return typeof Notification !== "undefined" &&
+    "Notification" in window &&
+    typeof Notification.requestPermission === "function";
+}
+
 export async function requestNotificationPermission(): Promise<boolean> {
   if (!("Notification" in window)) return false;
   if (Notification.permission === "granted") return true;
