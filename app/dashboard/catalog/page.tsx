@@ -617,22 +617,19 @@ export default function CatalogPage() {
           </div>
 
           {/* Mobile Cards */}
-          <div className="sm:hidden space-y-2">
+          <div className="sm:hidden space-y-1.5">
             {filtered.map((item) => (
               <div key={item.id} className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-xl overflow-hidden">
-                <div className="px-3 py-2.5 flex items-center justify-between gap-2">
+                <div className="px-3 py-2 flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="font-mono text-viton-red dark:text-orange-400 text-[10px] font-semibold">{item.serial_id}</span>
-                      <span className={`text-[9px] font-bold px-1.5 py-0 rounded ${categoryColors[item.category ?? "Misc"] ?? "bg-gray-100 text-gray-600 dark:bg-gray-500/10 dark:text-gray-400"}`}>{item.category}</span>
-                    </div>
-                    <p className="text-viton-navy dark:text-white text-xs font-medium truncate">{item.name}</p>
-                    <p className="text-[#8892a8] dark:text-gray-500 text-[9px]">{item.unit} · HSN: {item.hsn_code ?? "—"}</p>
+                    <span className="font-mono text-viton-red dark:text-orange-400 text-[10px] font-semibold">{item.serial_id}</span>
+                    <p className="text-viton-navy dark:text-white text-xs font-medium truncate mt-0.5">{item.name}</p>
+                    <p className="text-[#8892a8] dark:text-gray-500 text-[9px] mt-0.5">{item.category} · {item.unit} · HSN: {item.hsn_code ?? "—"}</p>
                   </div>
                   {canManageCatalog && (
-                    <div className="flex items-center gap-1">
-                      <button onClick={() => openEdit(item)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#f1f3f8] dark:bg-gray-800 text-[#4a5578] dark:text-gray-400"><Pencil size={14} /></button>
-                      <button onClick={() => setDeleteItem(item)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#f1f3f8] dark:bg-gray-800 text-[#4a5578] dark:text-gray-400"><Trash2 size={14} /></button>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button onClick={() => openEdit(item)} className="w-7 h-7 flex items-center justify-center rounded-lg bg-[#f1f3f8] dark:bg-gray-800 text-[#4a5578] dark:text-gray-400"><Pencil size={14} /></button>
+                      <button onClick={() => setDeleteItem(item)} className="w-7 h-7 flex items-center justify-center rounded-lg bg-[#f1f3f8] dark:bg-gray-800 text-[#4a5578] dark:text-gray-400"><Trash2 size={14} /></button>
                     </div>
                   )}
                 </div>

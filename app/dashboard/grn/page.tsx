@@ -1334,31 +1334,29 @@ export default function GRNPage() {
             </div>
 
             {/* Mobile Cards */}
-            <div className="sm:hidden space-y-2">
+            <div className="sm:hidden space-y-1.5">
               {filteredGRN.map((g) => {
                 const lines = (g.line_items ?? []) as GRNLineItem[];
                 const isOpen = expanded === g.id;
                 return (
                   <div key={g.id} className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-xl overflow-hidden">
-                    <div className="px-3 py-2.5" onClick={() => setExpanded(isOpen ? null : g.id)}>
-                      <div className="flex items-center justify-between gap-2">
+                    <div className="px-3 py-2" onClick={() => setExpanded(isOpen ? null : g.id)}>
+                      <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-0.5">
-                            <span className="font-mono text-viton-red dark:text-orange-400 text-[10px] font-semibold">{g.grn_number}</span>
-                            <span className={`text-[9px] font-bold px-1.5 py-0 rounded ${statusColors[g.status] ?? "bg-gray-50 text-gray-600 dark:bg-gray-500/10 dark:text-gray-400"}`}>{g.status.toUpperCase()}</span>
-                          </div>
-                          <p className="text-viton-navy dark:text-white text-xs font-medium truncate">{g.vendor_name ?? "—"}</p>
-                          <p className="text-[#8892a8] dark:text-gray-500 text-[9px]">{lines.length} item{lines.length !== 1 ? "s" : ""} · {new Date(g.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</p>
+                          <span className="font-mono text-viton-red dark:text-orange-400 text-[10px] font-semibold">{g.grn_number}</span>
+                          <p className="text-viton-navy dark:text-white text-xs font-medium truncate mt-0.5">{g.vendor_name ?? "—"}</p>
+                          <p className="text-[#8892a8] dark:text-gray-500 text-[9px] mt-0.5">{lines.length} item{lines.length !== 1 ? "s" : ""} · {new Date(g.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</p>
                         </div>
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <span className={`text-[9px] font-bold px-1.5 py-0 rounded ${statusColors[g.status] ?? "bg-gray-50 text-gray-600 dark:bg-gray-500/10 dark:text-gray-400"}`}>{g.status.toUpperCase()}</span>
                           <PDFDownloadLink
                             document={<GRNPdfDocument grn={g} po={pos.find(p => p.id === g.po_id) ? { po_number: (pos.find(p => p.id === g.po_id) as POWithVendor).po_number, created_at: (pos.find(p => p.id === g.po_id) as POWithVendor).created_at } : null} vendor={vendors.find(v => v.id === g.vendor_id) ?? null} />}
                             fileName={`${g.grn_number.replace(/\//g, "-")}.pdf`}
-                            className="w-8 h-8 flex items-center justify-center rounded-lg text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white"
+                            className="w-7 h-7 flex items-center justify-center rounded-lg text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white"
                           >
                             <Download size={14} />
                           </PDFDownloadLink>
-                          <ChevronDown size={16} className={`text-[#8892a8] dark:text-gray-500 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                          <ChevronDown size={14} className={`text-[#8892a8] dark:text-gray-500 transition-transform ${isOpen ? "rotate-180" : ""}`} />
                         </div>
                       </div>
                     </div>

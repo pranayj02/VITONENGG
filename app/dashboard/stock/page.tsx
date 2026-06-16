@@ -737,7 +737,7 @@ export default function StockPage() {
           </div>
 
           {/* ── Mobile Cards ───────────────────────────────────────────── */}
-          <div className="sm:hidden space-y-2">
+          <div className="sm:hidden space-y-1.5">
             {filtered.map((item) => {
               const low = item.balance > 0 && item.balance < 5;
               const zero = item.balance <= 0;
@@ -747,41 +747,39 @@ export default function StockPage() {
                   className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-xl overflow-hidden"
                 >
                   <div
-                    className="px-3 py-2.5 flex items-center justify-between"
+                    className="px-3 py-2 flex items-start justify-between gap-2"
                     onClick={() => {
                       if (expanded === item.item_id) { setExpanded(null); }
                       else { setExpanded(item.item_id); loadLedger(item.item_id); }
                     }}
                   >
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="font-mono text-viton-red dark:text-orange-400 text-[10px] font-semibold">{item.serial_id}</span>
-                        <span className={`inline-flex items-center px-1.5 py-0 rounded text-[9px] font-bold ${
-                          zero ? "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400"
-                            : low ? "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400"
-                            : "bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400"
-                        }`}>
-                          {item.balance} {item.unit}
-                        </span>
-                        <span className="text-[9px] text-[#8892a8] dark:text-gray-500">{item.category ?? "—"}</span>
-                      </div>
-                      <p className="text-viton-navy dark:text-white text-xs font-medium truncate">{item.name}</p>
-                      <p className="text-[#8892a8] dark:text-gray-500 text-[9px]">In: {item.total_in} · Out: {item.total_out}</p>
+                      <span className="font-mono text-viton-red dark:text-orange-400 text-[10px] font-semibold">{item.serial_id}</span>
+                      <p className="text-viton-navy dark:text-white text-xs font-medium truncate mt-0.5">{item.name}</p>
+                      <p className="text-[#8892a8] dark:text-gray-500 text-[9px] mt-0.5">{item.category ?? "—"} · In: {item.total_in} · Out: {item.total_out}</p>
                     </div>
-                    <div className="flex items-center gap-1.5 ml-2">
-                      {canAdjust && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); openAdjust(item); }}
-                          className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#f1f3f8] dark:bg-gray-800 text-[#4a5578] dark:text-gray-400"
-                        >
-                          <Plus size={14} />
-                        </button>
-                      )}
-                      <ChevronDown size={16} className={`text-[#8892a8] dark:text-gray-500 transition-transform ${expanded === item.item_id ? "rotate-180" : ""}`} />
+                    <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
+                      <span className={`text-xs font-bold tabular-nums ${
+                        zero ? "text-red-500" : low ? "text-orange-500" : "text-green-600 dark:text-green-400"
+                      }`}>
+                        {item.balance}
+                      </span>
+                      <span className="text-[9px] text-[#8892a8] dark:text-gray-500">{item.unit}</span>
+                      <div className="flex items-center gap-1 mt-0.5">
+                        {canAdjust && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); openAdjust(item); }}
+                            className="w-7 h-7 flex items-center justify-center rounded-lg bg-[#f1f3f8] dark:bg-gray-800 text-[#4a5578] dark:text-gray-400"
+                          >
+                            <Plus size={14} />
+                          </button>
+                        )}
+                        <ChevronDown size={14} className={`text-[#8892a8] dark:text-gray-500 transition-transform ${expanded === item.item_id ? "rotate-180" : ""}`} />
+                      </div>
                     </div>
                   </div>
                   {expanded === item.item_id && (
-                    <div className="px-3 pb-3 border-t border-[#eef1f6] dark:border-gray-800/50 pt-2">
+                    <div className="px-3 pb-2.5 border-t border-[#eef1f6] dark:border-gray-800/50 pt-2">
                       <p className="text-[#8892a8] dark:text-gray-500 text-[9px] font-semibold uppercase tracking-wider mb-1.5">Recent Transactions</p>
                       {ledger.length === 0 ? (
                         <p className="text-[#8892a8] dark:text-gray-600 text-xs">No transactions yet.</p>
