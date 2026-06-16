@@ -380,10 +380,10 @@ function BottomNav() {
 
   const tabs = [
     { href: "/dashboard", label: "Home", Icon: LayoutDashboard },
-    { href: "/dashboard/stock", label: "Stock", Icon: BarChart3 },
-    { href: "/dashboard/grn", label: "GRN", Icon: PackageOpen, permission: "create_grn" as PermissionAction },
     { href: "/dashboard/requisitions", label: "MR", Icon: ArrowRightLeft },
-    { href: "/dashboard/catalog", label: "Catalog", Icon: Package },
+    { href: "/dashboard/history", label: "PO", Icon: FileText, permission: "create_po" as PermissionAction },
+    { href: "/dashboard/grn", label: "GRN", Icon: PackageOpen, permission: "create_grn" as PermissionAction },
+    { href: "/dashboard/stock", label: "Stock", Icon: BarChart3 },
   ].filter((t) => !t.permission || can(role, t.permission));
 
   return (
