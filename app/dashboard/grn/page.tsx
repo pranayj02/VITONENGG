@@ -86,6 +86,27 @@ export default function GRNPage() {
   const [removeReasonByPO, setRemoveReasonByPO] = useState<Record<string, string>>({});
   const [removePanelPOId, setRemovePanelPOId] = useState<string | null>(null);
   const [removingPOId, setRemovingPOId] = useState<string | null>(null);
+  // ── Freeform item catalog creation modal
+  const [freeformModalOpen, setFreeformModalOpen] = useState(false);
+  const [freeformIndex, setFreeformIndex] = useState<number | null>(null);
+  const [freeformName, setFreeformName] = useState("");
+  const [freeformSerial, setFreeformSerial] = useState("");
+  const [freeformCategory, setFreeformCategory] = useState("Misc");
+  const [freeformUnit, setFreeformUnit] = useState("NOS");
+  const [freeformHsn, setFreeformHsn] = useState("");
+  const [freeformSaving, setFreeformSaving] = useState(false);
+  const [freeformError, setFreeformError] = useState("");
+  const [freeformStep, setFreeformStep] = useState<"name" | "code">("name");
+  const [catalogItems, setCatalogItems] = useState<Item[]>([]);
+
+  // Load catalog items for duplicate-checking
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.from("items").select("id, serial_id, name, unit, category").then(({ data }) => {
+      setCatalogItems((data ?? []) as unknown as Item[]);
+    });
+  }, []);
+
 
   const [itemSearch, setItemSearch] = useState("");
   const [itemResults, setItemResults] = useState<Item[]>([]);
@@ -282,7 +303,9 @@ export default function GRNPage() {
     setShowItemSearch(false);
   }
 
+  
   function addFreeformItem() {
+    const index = grnLines.length;
     const nextId = `FREE-${Date.now()}`;
     setGrnLines((prev) => [
       ...prev,
@@ -301,11 +324,105 @@ export default function GRNPage() {
         counted_nos: 1,
       }),
     ]);
+    // Open modal for naming / coding
+    setFreeformIndex(index);
+    setFreeformName("");
+    setFreeformSerial("");
+    setFreeformCategory("Misc");
+    setFreeformUnit("NOS");
+    setFreeformHsn("");
+    setFreeformError("");
+    setFreeformStep("name");
+    setFreeformModalOpen(true);
   }
+
 
   function removeLine(index: number) {
     setGrnLines((prev) => prev.filter((_, i) => i !== index));
   }
+
+  // ── Freeform item helpers ────────────────────────────────────────────────
+  function getFreeformItemType(name: string): string {
+    const n = name.toLowerCase();
+    if (n.includes("valve") || n.includes("ball") || n.includes("gate") || n.includes("globe") || n.includes("check") || n.includes("nrv") || n.includes("butterfly")) return "Valves";
+    if (n.includes("casting") || n.includes("body") || n.includes("bonnet") || n.includes("wedge") || n.includes("disc")) return "Castings";
+    if (n.includes("gasket") || n.includes("ring") || n.includes("spiral")) return "Gaskets";
+    if (n.includes("stud") || n.includes("nut") || n.includes("bolt") || n.includes("fastener") || n.includes("screw") || n.includes("washer")) return "Fasteners";
+    if (n.includes("gland") || n.includes("packing")) return "Gland Packing";
+    if (n.includes("bar") || n.includes("rod") || n.includes("pata") || n.includes("plate") || n.includes("sheet") || n.includes("material") || n.includes("steel")) return "Material";
+    return "Misc";
+  }
+
+  function getFreeformItemUnit(type: string): string {
+    const t = type.toLowerCase();
+    if (t === "valves" || t === "castings") return "NOS";
+    if (t === "gaskets" || t === "fasteners" || t === "gland packing") return "NOS";
+    if (t === "material") return "KGS";
+    return "NOS";
+  }
+
+  async function createFreeformItemInCatalog(index: number) {
+    if (!freeformName.trim()) { setFreeformError("Item name is required."); return; }
+    if (!freeformSerial.trim()) { setFreeformError("Serial ID is required."); return; }
+    if (catalogItems.some((it) => it.serial_id.toLowerCase() === freeformSerial.trim().toLowerCase())) {
+      setFreeformError(`Serial ID "${freeformSerial.trim()}" already exists in catalog. Use a different code.`);
+      return;
+    }
+    setFreeformSaving(true); setFreeformError("");
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data: newItem, error: insertErr } = await supabase.from("items").insert({
+      serial_id: freeformSerial.trim(),
+      name: freeformName.trim(),
+      description: `Added via GRN freeform item on ${new Date().toLocaleDateString("en-IN")}`,
+      hsn_code: freeformHsn.trim() || null,
+      unit: freeformUnit,
+      category: freeformCategory,
+      specs: {},
+    }).select("id, serial_id, name, unit, category").single();
+    if (insertErr) {
+      setFreeformError(insertErr.message);
+      setFreeformSaving(false);
+      return;
+    }
+    const itemData = newItem as any;
+    // Update the GRN line with the real item ID
+    setGrnLines((prev) => prev.map((line, i) => {
+      if (i !== index) return line;
+      return {
+        ...line,
+        item_id: itemData.id,
+        serial_id: itemData.serial_id,
+        name: itemData.name,
+        unit: itemData.unit,
+      };
+    }));
+    // Update catalog cache
+    setCatalogItems((prev) => [...prev, itemData as Item]);
+    await audit({
+      action: "item_created_from_grn",
+      entity_type: "item",
+      entity_id: itemData.id,
+      entity_code: itemData.serial_id,
+      details: {
+        name: itemData.name,
+        category: itemData.category,
+        unit: itemData.unit,
+        created_via: "grn_freeform",
+        created_by: user?.id ?? null,
+      },
+    });
+    setFreeformModalOpen(false);
+    setFreeformSaving(false);
+  }
+
+  function cancelFreeformItem() {
+    if (freeformIndex !== null && (grnLines[freeformIndex]?.item_id ?? "").startsWith("FREE-")) {
+      removeLine(freeformIndex);
+    }
+    setFreeformModalOpen(false);
+  }
+
 
   function normalizeGRNLine(line: GRNLineItem, patch: Partial<GRNLineItem> = {}): GRNLineItem {
     const next = { ...line, ...patch } as GRNLineItem;
@@ -334,6 +451,8 @@ export default function GRNPage() {
     const normalizedLines = grnLines.map((line) => normalizeGRNLine(line));
     const invalidLine = normalizedLines.find((line) => Number(line.accepted_qty ?? 0) + Number(line.rejected_qty ?? 0) !== Number(line.counted_nos ?? line.received_qty ?? 0));
     if (invalidLine) { setError(`Accepted + Rejected must equal Counted/Received for ${invalidLine.name || invalidLine.serial_id || "the item"}.`); return; }
+    const freeformLine = normalizedLines.find((line) => (line.item_id ?? "").startsWith("FREE-"));
+    if (freeformLine) { setError(`Freeform item "${freeformLine.name || freeformLine.serial_id || "unnamed"}" must be added to catalog before submitting. Tap the item name to complete it.`); return; }
     setSaving(true); setError("");
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -1212,7 +1331,159 @@ export default function GRNPage() {
         </div>
       )}
 
-      {/* Filter bar */}
+      
+
+      {/* ── Freeform Item Catalog Modal ─────────────────────────────────────── */}
+      {freeformModalOpen && (
+        <div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl w-full max-w-lg shadow-2xl flex flex-col">
+            <div className="px-6 py-4 border-b border-[#dde1ea] dark:border-gray-800 flex items-center justify-between bg-white dark:bg-gray-900 flex-shrink-0">
+              <div>
+                <h2 className="text-viton-navy dark:text-white font-bold">Add to Catalog</h2>
+                <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-0.5">
+                  {freeformStep === "name" ? "Name the item first, then assign a serial ID" : "Assign a serial ID following your coding rules"}
+                </p>
+              </div>
+              <button onClick={cancelFreeformItem} className="text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              {freeformError && (
+                <div className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-xl p-3 text-red-600 dark:text-red-300 text-sm">{freeformError}</div>
+              )}
+
+              {freeformStep === "name" ? (
+                <>
+                  <div>
+                    <label className="block text-[#4a5578] dark:text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Item Name</label>
+                    <input
+                      value={freeformName}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setFreeformName(val);
+                        if (val.trim()) {
+                          const inferredType = getFreeformItemType(val);
+                          setFreeformCategory(inferredType);
+                          setFreeformUnit(getFreeformItemUnit(inferredType));
+                        }
+                      }}
+                      placeholder="e.g. 3\" x 1500# WCB Globe Valve Casting"
+                      className="w-full bg-[#f1f3f8] dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-viton-navy dark:text-white placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
+                    />
+                    <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-2">
+                      Inferred: <span className="font-semibold text-viton-navy dark:text-white">{freeformCategory}</span> · Unit: <span className="font-semibold text-viton-navy dark:text-white">{freeformUnit}</span>
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[#4a5578] dark:text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Category</label>
+                      <select
+                        value={freeformCategory}
+                        onChange={(e) => { setFreeformCategory(e.target.value); setFreeformUnit(getFreeformItemUnit(e.target.value)); }}
+                        className="w-full bg-[#f1f3f8] dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-viton-navy dark:text-white focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
+                      >
+                        <option value="Valves">Valves</option>
+                        <option value="Castings">Castings</option>
+                        <option value="Gaskets">Gaskets</option>
+                        <option value="Fasteners">Fasteners</option>
+                        <option value="Gland Packing">Gland Packing</option>
+                        <option value="Material">Material</option>
+                        <option value="Misc">Misc</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[#4a5578] dark:text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Unit</label>
+                      <select
+                        value={freeformUnit}
+                        onChange={(e) => setFreeformUnit(e.target.value)}
+                        className="w-full bg-[#f1f3f8] dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-viton-navy dark:text-white focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
+                      >
+                        <option value="NOS">NOS</option>
+                        <option value="KGS">KGS</option>
+                        <option value="MTR">MTR</option>
+                        <option value="SET">SET</option>
+                        <option value="BOX">BOX</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[#4a5578] dark:text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">HSN Code (optional)</label>
+                    <input
+                      value={freeformHsn}
+                      onChange={(e) => setFreeformHsn(e.target.value)}
+                      placeholder="e.g. 8481"
+                      className="w-full bg-[#f1f3f8] dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-viton-navy dark:text-white placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-end gap-3">
+                    <button
+                      onClick={cancelFreeformItem}
+                      className="bg-[#f1f3f8] dark:bg-gray-800 hover:bg-[#e8eaf2] dark:hover:bg-gray-700 text-[#4a5578] dark:text-gray-300 font-semibold px-5 py-3 rounded-xl text-sm"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (!freeformName.trim()) { setFreeformError("Item name is required."); return; }
+                        setFreeformError("");
+                        setFreeformStep("code");
+                      }}
+                      disabled={!freeformName.trim()}
+                      className="bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 disabled:opacity-50 text-white font-semibold px-6 py-3 rounded-xl text-sm flex items-center gap-2"
+                    >
+                      Next: Assign Serial ID
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <label className="block text-[#4a5578] dark:text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Serial ID</label>
+                    <input
+                      value={freeformSerial}
+                      onChange={(e) => setFreeformSerial(e.target.value)}
+                      placeholder="e.g. VALV-BV-3IN-150-SS316"
+                      className="w-full bg-[#f1f3f8] dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-viton-navy dark:text-white placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500 font-mono"
+                    />
+                    <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-2">
+                      Pattern: <span className="font-mono">[CATEGORY]-[SUBTYPE]-[SIZE]-[SPEC]-[MATERIAL]</span>. Must be unique.
+                    </p>
+                  </div>
+
+                  <div className="bg-[#f7f8fb] dark:bg-gray-800/50 border border-[#dde1ea] dark:border-gray-700 rounded-xl p-4">
+                    <p className="text-[#4a5578] dark:text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Preview</p>
+                    <p className="text-viton-navy dark:text-white font-bold">{freeformName || "—"}</p>
+                    <p className="text-viton-red dark:text-orange-400 font-mono text-xs mt-1">{freeformSerial || "—"}</p>
+                    <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-1">{freeformCategory} · {freeformUnit}</p>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-3">
+                    <button
+                      onClick={() => setFreeformStep("name")}
+                      className="bg-[#f1f3f8] dark:bg-gray-800 hover:bg-[#e8eaf2] dark:hover:bg-gray-700 text-[#4a5578] dark:text-gray-300 font-semibold px-5 py-3 rounded-xl text-sm"
+                    >
+                      Back
+                    </button>
+                    <button
+                      onClick={() => createFreeformItemInCatalog(freeformIndex ?? 0)}
+                      disabled={freeformSaving || !freeformSerial.trim() || !freeformName.trim()}
+                      className="bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 disabled:opacity-50 text-white font-semibold px-6 py-3 rounded-xl text-sm flex items-center gap-2"
+                    >
+                      {freeformSaving ? "Saving..." : "Create & Link to GRN"}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+{/* Filter bar */}
       <div className="mb-4 flex items-center gap-3">
         <div className="relative flex-1">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8892a8]" />
