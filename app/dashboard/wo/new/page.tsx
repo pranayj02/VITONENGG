@@ -282,118 +282,93 @@ export default function NewWOPage() {
         </div>
       </div>
 
-      {/* Items List */}
-      <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-xl p-4">
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-[#8892a8] dark:text-gray-400 text-[10px] font-semibold uppercase tracking-widest">
-            Line Items ({items.length})
+            Line Items
           </p>
           <button
             onClick={addRow}
-            className="flex items-center gap-1 text-xs font-semibold text-viton-red dark:text-orange-400 hover:text-viton-red-hover dark:hover:text-orange-300 transition-colors"
+            className="flex items-center gap-1.5 text-sm font-semibold text-viton-red dark:text-orange-400 hover:text-viton-red-hover dark:hover:text-orange-300 transition-colors"
           >
-            <Plus size={13} /> Add Row
+            <Plus size={15} /> Add Row
           </button>
         </div>
 
-        <div className="space-y-2">
-          {items.map((item, idx) => {
-            const isExpanded = expandedRow === idx;
-            return (
-              <div key={idx} className="border border-[#dde1ea] dark:border-gray-700 rounded-lg overflow-hidden">
-                {/* Primary Row */}
-                <div className={`flex items-start gap-2 px-3 py-2 ${idx % 2 === 1 ? "bg-[#f9fafc] dark:bg-gray-800/40" : "bg-white dark:bg-gray-900"}`}>
-                  <div className="w-5 pt-1 text-[10px] font-bold text-viton-navy dark:text-white">{item.sr_no}</div>
-                  <div className="flex-1 flex flex-col gap-1">
-                    {/* Row 1 */}
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <div className="w-16">
-                        <input type="text" value={String(item.po_sr_no ?? "")} onChange={(e) => updateItem(idx, "po_sr_no", e.target.value)} placeholder="PO Sr" className="w-full bg-transparent text-[10px] text-viton-navy dark:text-white placeholder:text-[#8892a8]/60 dark:placeholder:text-gray-600/60 focus:outline-none border-b border-transparent focus:border-viton-red dark:focus:border-orange-500 transition-colors" />
-                      </div>
-                      <div className="w-24">
-                        <input type="text" value={String(item.valve_sr_no ?? "")} onChange={(e) => updateItem(idx, "valve_sr_no", e.target.value)} placeholder="Valve Sr" className="w-full bg-transparent text-[10px] text-viton-navy dark:text-white placeholder:text-[#8892a8]/60 dark:placeholder:text-gray-600/60 focus:outline-none border-b border-transparent focus:border-viton-red dark:focus:border-orange-500 transition-colors" />
-                      </div>
-                      <div className="w-20">
-                        <input type="text" value={String(item.material_no ?? "")} onChange={(e) => updateItem(idx, "material_no", e.target.value)} placeholder="Mat#" className="w-full bg-transparent text-[10px] text-viton-navy dark:text-white placeholder:text-[#8892a8]/60 dark:placeholder:text-gray-600/60 focus:outline-none border-b border-transparent focus:border-viton-red dark:focus:border-orange-500 transition-colors" />
-                      </div>
-                      <div className="w-24">
-                        <input type="text" value={String(item.valve ?? "")} onChange={(e) => updateItem(idx, "valve", e.target.value)} placeholder="Valve" className="w-full bg-transparent text-[10px] text-viton-navy dark:text-white placeholder:text-[#8892a8]/60 dark:placeholder:text-gray-600/60 focus:outline-none border-b border-transparent focus:border-viton-red dark:focus:border-orange-500 transition-colors" />
-                      </div>
-                      <div className="w-28">
-                        <input type="text" value={String(item.type ?? "")} onChange={(e) => updateItem(idx, "type", e.target.value)} placeholder="Type" className="w-full bg-transparent text-[10px] text-viton-navy dark:text-white placeholder:text-[#8892a8]/60 dark:placeholder:text-gray-600/60 focus:outline-none border-b border-transparent focus:border-viton-red dark:focus:border-orange-500 transition-colors" />
-                      </div>
-                      <div className="w-12">
-                        <input type="text" value={String(item.bore ?? "")} onChange={(e) => updateItem(idx, "bore", e.target.value)} placeholder="Bore" className="w-full bg-transparent text-[10px] text-viton-navy dark:text-white placeholder:text-[#8892a8]/60 dark:placeholder:text-gray-600/60 focus:outline-none border-b border-transparent focus:border-viton-red dark:focus:border-orange-500 transition-colors" />
-                      </div>
-                      <div className="w-12">
-                        <input type="text" value={String(item.size_mm ?? "")} onChange={(e) => updateItem(idx, "size_mm", e.target.value)} placeholder="Size" className="w-full bg-transparent text-[10px] text-viton-navy dark:text-white placeholder:text-[#8892a8]/60 dark:placeholder:text-gray-600/60 focus:outline-none border-b border-transparent focus:border-viton-red dark:focus:border-orange-500 transition-colors" />
-                      </div>
-                    </div>
-                    {/* Row 2 */}
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <div className="w-12">
-                        <input type="text" value={String(item.rating ?? "")} onChange={(e) => updateItem(idx, "rating", e.target.value)} placeholder="Rating" className="w-full bg-transparent text-[10px] text-viton-navy dark:text-white placeholder:text-[#8892a8]/60 dark:placeholder:text-gray-600/60 focus:outline-none border-b border-transparent focus:border-viton-red dark:focus:border-orange-500 transition-colors" />
-                      </div>
-                      <div className="w-14">
-                        <input type="text" value={String(item.end_connection ?? "")} onChange={(e) => updateItem(idx, "end_connection", e.target.value)} placeholder="End" className="w-full bg-transparent text-[10px] text-viton-navy dark:text-white placeholder:text-[#8892a8]/60 dark:placeholder:text-gray-600/60 focus:outline-none border-b border-transparent focus:border-viton-red dark:focus:border-orange-500 transition-colors" />
-                      </div>
-                      <div className="w-16">
-                        <input type="text" value={String(item.drawing_no ?? "")} onChange={(e) => updateItem(idx, "drawing_no", e.target.value)} placeholder="Drwg" className="w-full bg-transparent text-[10px] text-viton-navy dark:text-white placeholder:text-[#8892a8]/60 dark:placeholder:text-gray-600/60 focus:outline-none border-b border-transparent focus:border-viton-red dark:focus:border-orange-500 transition-colors" />
-                      </div>
-                      <div className="w-10">
-                        <input type="number" value={String(item.qty ?? "")} onChange={(e) => updateItem(idx, "qty", Number(e.target.value) || 0)} placeholder="Qty" className="w-full bg-transparent text-[10px] text-viton-navy dark:text-white placeholder:text-[#8892a8]/60 dark:placeholder:text-gray-600/60 focus:outline-none border-b border-transparent focus:border-viton-red dark:focus:border-orange-500 transition-colors" />
-                      </div>
-                      <div className="w-20">
-                        <input type="text" value={String(item.delivery ?? "")} onChange={(e) => updateItem(idx, "delivery", e.target.value)} placeholder="Delivery" className="w-full bg-transparent text-[10px] text-viton-navy dark:text-white placeholder:text-[#8892a8]/60 dark:placeholder:text-gray-600/60 focus:outline-none border-b border-transparent focus:border-viton-red dark:focus:border-orange-500 transition-colors" />
-                      </div>
-                    </div>
+        <div className="overflow-x-auto -mx-5 px-5">
+          <div className="min-w-[1600px]">
+            {/* Table Header */}
+            <div className="grid bg-viton-navy dark:bg-gray-800 rounded-t-xl overflow-hidden">
+              <div className="flex">
+                {COL_DEFS.map((col) => (
+                  <div
+                    key={col.key}
+                    style={{ width: col.width, minWidth: col.width }}
+                    className="px-2 py-2 text-[10px] font-bold text-white uppercase tracking-wider text-center border-r border-white/10 last:border-r-0 flex-shrink-0"
+                  >
+                    {col.label}
                   </div>
-                  <div className="flex items-center gap-1 pt-1">
-                    <button
-                      onClick={() => toggleExpand(idx)}
-                      className="p-1 rounded hover:bg-[#e8eaf2] dark:hover:bg-gray-800 text-[#8892a8] dark:text-gray-500 transition-colors"
-                      title="Toggle details"
-                    >
-                      {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                    </button>
+                ))}
+                <div className="w-10 px-1 py-2 flex-shrink-0" />
+              </div>
+            </div>
+
+            {/* Table Rows */}
+            <div className="border border-t-0 border-[#dde1ea] dark:border-gray-700 rounded-b-xl overflow-hidden">
+              {items.map((item, idx) => (
+                <div
+                  key={idx}
+                  className={`flex items-start border-b border-[#dde1ea] dark:border-gray-700 last:border-b-0 ${idx % 2 === 1 ? "bg-[#f9fafc] dark:bg-gray-800/40" : "bg-white dark:bg-gray-900"}`}
+                >
+                  {COL_DEFS.map((col) => {
+                    const isTextarea = col.key === "remarks" || col.key === "special_requirements" || col.key === "type" || col.key === "body_bonnet" || col.key === "wedge_disc_plug_ball" || col.key === "seat" || col.key === "gasket";
+                    const val = item[col.key] ?? "";
+                    return (
+                      <div
+                        key={col.key}
+                        style={{ width: col.width, minWidth: col.width }}
+                        className="px-1 py-1.5 border-r border-[#dde1ea] dark:border-gray-700 last:border-r-0 flex-shrink-0"
+                      >
+                        {isTextarea ? (
+                          <textarea
+                            value={String(val)}
+                            onChange={(e) => updateItem(idx, col.key, e.target.value)}
+                            placeholder={col.placeholder}
+                            rows={2}
+                            className="w-full bg-transparent text-[11px] text-viton-navy dark:text-white placeholder:text-[#8892a8] dark:placeholder:text-gray-600 focus:outline-none resize-none leading-tight"
+                          />
+                        ) : (
+                          <input
+                            type={col.key === "sr_no" ? "number" : "text"}
+                            value={String(val)}
+                            onChange={(e) =>
+                              updateItem(
+                                idx,
+                                col.key,
+                                col.key === "sr_no" ? Number(e.target.value) || 0 : e.target.value
+                              )
+                            }
+                            placeholder={col.placeholder}
+                            className="w-full bg-transparent text-[11px] text-viton-navy dark:text-white placeholder:text-[#8892a8] dark:placeholder:text-gray-600 focus:outline-none"
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                  <div className="w-10 px-1 py-1.5 flex items-center justify-center flex-shrink-0">
                     <button
                       onClick={() => removeRow(idx)}
-                      className="p-1 rounded hover:bg-red-50 dark:hover:bg-red-500/10 text-red-400 hover:text-red-600 transition-colors"
+                      className="p-1 rounded-md hover:bg-red-50 dark:hover:bg-red-500/10 text-red-400 hover:text-red-600 transition-colors"
                       title="Remove row"
                     >
-                      <Trash2 size={12} />
+                      <Trash2 size={13} />
                     </button>
                   </div>
                 </div>
-
-                {/* Expanded Detail */}
-                {isExpanded && (
-                  <div className="px-3 py-2 bg-[#f6f8fc] dark:bg-gray-950/50 border-t border-[#dde1ea] dark:border-gray-700">
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-                      {SPEC_FIELDS.map((col) => (
-                        <div key={col.key} className={col.width}>
-                          <label className="block text-[9px] font-semibold text-[#8892a8] dark:text-gray-500 mb-0.5 uppercase tracking-wider">
-                            {col.label}
-                          </label>
-                          <input
-                            type="text"
-                            value={String(item[col.key] ?? "")}
-                            onChange={(e) => updateItem(idx, col.key, e.target.value)}
-                            placeholder={col.placeholder}
-                            className="w-full bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-700 rounded-md px-2 py-1 text-[10px] text-viton-navy dark:text-white placeholder:text-[#8892a8]/50 dark:placeholder:text-gray-600/50 focus:outline-none focus:ring-1 focus:ring-viton-red/20 dark:focus:ring-orange-500/20 focus:border-viton-red dark:focus:border-orange-500 transition-all"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+              ))}
+            </div>
+          </div>
         </div>
 
         {items.length === 0 && (
-          <div className="text-center py-6 text-[#8892a8] dark:text-gray-500 text-xs">
+          <div className="text-center py-8 text-[#8892a8] dark:text-gray-500 text-sm">
             No items yet. Click "Add Row" to start.
           </div>
         )}
