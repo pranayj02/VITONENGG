@@ -513,9 +513,20 @@ export default function GRNPage() {
       });
     }
 
+    // Build update payload — set approver/inspector fields
+    const updatePayload: Record<string, any> = { status: newStatus, line_items: nextLines };
+    if (newStatus === "approved" || newStatus === "partial") {
+      updatePayload.approved_by = user?.id ?? null;
+      updatePayload.approved_by_name = actorName;
+      updatePayload.approved_at = new Date().toISOString();
+    } else if (newStatus === "inspected") {
+      updatePayload.inspected_by = user?.id ?? null;
+      updatePayload.inspected_by_name = actorName;
+    }
+
     const { error: updateErr } = await supabase
       .from("grn")
-      .update({ status: newStatus, line_items: nextLines })
+      .update(updatePayload)
       .eq("id", grn.id);
 
     if (updateErr) { setError(updateErr.message); return; }
@@ -550,6 +561,8 @@ export default function GRNPage() {
       entity_code: grn.grn_number,
       details: {
         status: newStatus,
+        by: actorName,
+        user_id: user?.id ?? null,
         accepted_lines: nextLines.filter((line) => Number(line.accepted_qty ?? 0) > 0).length,
         rejected_lines: nextLines.filter((line) => Number(line.rejected_qty ?? 0) > 0).length,
       },
@@ -563,6 +576,7 @@ export default function GRNPage() {
         entity_code: grn.grn_number,
         details: {
           status: newStatus,
+          by: actorName,
           accepted_qty: nextLines.reduce((sum, line) => sum + Number(line.accepted_qty ?? 0), 0),
         },
       });
@@ -1297,6 +1311,22 @@ export default function GRNPage() {
                               </table>
                             </div>
 
+                            {(g.approved_by_name || g.inspected_by_name || g.approved_at) && (
+                              <div className="mt-4 flex flex-wrap gap-3 text-xs">
+                                {g.inspected_by_name && (
+                                  <span className="text-[#8892a8] dark:text-gray-500">
+                                    Inspected by <span className="font-semibold text-viton-navy dark:text-white">{g.inspected_by_name}</span>
+                                  </span>
+                                )}
+                                {g.approved_by_name && (
+                                  <span className="text-[#8892a8] dark:text-gray-500">
+                                    Approved by <span className="font-semibold text-green-700 dark:text-green-400">{g.approved_by_name}</span>
+                                    {g.approved_at && <span className="ml-1">· {new Date(g.approved_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</span>}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
                             <div className="mt-4 flex items-center gap-3 flex-wrap">
                               {g.status === "pending" && canSendForInspection && (
                                 <>
@@ -1370,6 +1400,20 @@ export default function GRNPage() {
                             </div>
                           ))}
                         </div>
+                        {(g.approved_by_name || g.inspected_by_name) && (
+                          <div className="mb-3 flex flex-wrap gap-2 text-xs">
+                            {g.inspected_by_name && (
+                              <span className="text-[#8892a8] dark:text-gray-500">
+                                Inspected by <span className="font-semibold text-viton-navy dark:text-white">{g.inspected_by_name}</span>
+                              </span>
+                            )}
+                            {g.approved_by_name && (
+                              <span className="text-[#8892a8] dark:text-gray-500">
+                                Approved by <span className="font-semibold text-green-700 dark:text-green-400">{g.approved_by_name}</span>
+                              </span>
+                            )}
+                          </div>
+                        )}
                         <div className="flex flex-wrap gap-2 pt-2 border-t border-[#eef1f6] dark:border-gray-800/50">
                           {g.status === "pending" && canSendForInspection && (
                             <>
