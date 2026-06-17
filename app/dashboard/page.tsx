@@ -306,10 +306,6 @@ export default function DashboardPage() {
           <p className="text-[#8892a8] dark:text-gray-500 text-sm mt-1">{getFormattedDate()}</p>
         </div>
 
-        <div className="flex items-center gap-2 bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl px-4 py-3 self-start">
-          <div className="w-2 h-2 rounded-full bg-green-500 dark:bg-green-400 animate-pulse" />
-          <span className="text-[#4a5578] dark:text-gray-400 text-xs font-medium">Portal Active</span>
-        </div>
       </div>
 
       {/* Quick Actions */}
