@@ -8,9 +8,9 @@ import { PDFDownloadLink } from "@react-pdf/renderer";
 import { WOPdfDocument } from "@/components/WOPdf";
 import type { WorkOrderItem, WorkOrder } from "@/lib/types";
 import {
-  Plus, Trash2, Save, Printer, X, FileText, Eye, ArrowLeft,
+  Plus, Trash2, Save, Printer, X, Eye, ArrowLeft,
   ChevronDown, ChevronUp, Package, Settings, Wrench, AlignLeft,
-  CheckCircle2, AlertCircle,
+  CheckCircle2, AlertCircle, Copy,
 } from "lucide-react";
 
 const EMPTY_ITEM = (): WorkOrderItem => ({
@@ -112,13 +112,11 @@ function GroupIcon({ id, className }: { id: string; className?: string }) {
 function ItemCard({
   item,
   idx,
-  total,
   onUpdate,
   onRemove,
 }: {
   item: WorkOrderItem;
   idx: number;
-  total: number;
   onUpdate: (key: keyof WorkOrderItem, val: string | number) => void;
   onRemove: () => void;
 }) {
@@ -277,6 +275,17 @@ export default function NewWOPage() {
       ...prev,
       { ...EMPTY_ITEM(), sr_no: prev.length + 1 },
     ]);
+  }, []);
+
+  const duplicateLast = useCallback(() => {
+    setItems((prev) => {
+      if (prev.length === 0) return prev;
+      const last = prev[prev.length - 1];
+      return [
+        ...prev,
+        { ...last, sr_no: prev.length + 1, valve_sr_no: "", po_sr_no: "" },
+      ];
+    });
   }, []);
 
   const removeRow = useCallback((idx: number) => {
@@ -455,7 +464,7 @@ export default function NewWOPage() {
       {savedId && (
         <div className="mb-4 flex items-center gap-2 bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20 text-green-700 dark:text-green-300 px-3 py-2.5 rounded-lg text-xs font-medium">
           <CheckCircle2 size={14} />
-          Work order saved successfully \u2014 ID: {savedId}
+          Work order saved successfully — ID: {savedId}
         </div>
       )}
 
@@ -514,23 +523,13 @@ export default function NewWOPage() {
           </button>
         </div>
 
-        {/* Field Group Legend */}
-        <div className="flex flex-wrap gap-2 mb-4 p-3 bg-[#f6f8fc] dark:bg-gray-800/50 rounded-lg">
-          {FIELD_GROUPS.map((g) => (
-            <div key={g.id} className={`flex items-center gap-1 text-[10px] font-medium px-2 py-1 rounded-md ${g.bg} ${g.color}`}>
-              <GroupIcon id={g.id} />
-              {g.label}
-            </div>
-          ))}
-        </div>
-
         {/* Item Cards */}
         <div className="space-y-3">
           {items.length === 0 ? (
             <div className="text-center py-10 text-[#8892a8] dark:text-gray-500">
               <Package size={28} className="mx-auto mb-2 opacity-40" />
               <p className="text-sm">No items yet.</p>
-              <p className="text-xs mt-0.5">Click \"Add Item\" to start building this work order.</p>
+              <p className="text-xs mt-0.5">Click "Add Item" to start building this work order.</p>
             </div>
           ) : (
             items.map((item, idx) => (
@@ -538,7 +537,6 @@ export default function NewWOPage() {
                 key={idx}
                 item={item}
                 idx={idx}
-                total={items.length}
                 onUpdate={(key, val) => updateItem(idx, key, val)}
                 onRemove={() => removeRow(idx)}
               />
@@ -546,13 +544,22 @@ export default function NewWOPage() {
           )}
         </div>
 
+        {/* Bottom add actions */}
         {items.length > 0 && (
-          <button
-            onClick={addRow}
-            className="mt-3 w-full flex items-center justify-center gap-2 border-2 border-dashed border-[#dde1ea] dark:border-gray-700 text-[#8892a8] dark:text-gray-500 hover:border-viton-red dark:hover:border-orange-500 hover:text-viton-red dark:hover:text-orange-400 py-3 rounded-xl text-xs font-semibold transition-all"
-          >
-            <Plus size={13} /> Add Another Item
-          </button>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <button
+              onClick={addRow}
+              className="flex items-center justify-center gap-2 border-2 border-dashed border-[#dde1ea] dark:border-gray-700 text-[#8892a8] dark:text-gray-500 hover:border-viton-red dark:hover:border-orange-500 hover:text-viton-red dark:hover:text-orange-400 py-3 rounded-xl text-xs font-semibold transition-all"
+            >
+              <Plus size={13} /> Add New Item
+            </button>
+            <button
+              onClick={duplicateLast}
+              className="flex items-center justify-center gap-2 border-2 border-dashed border-[#dde1ea] dark:border-gray-700 text-[#8892a8] dark:text-gray-500 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 py-3 rounded-xl text-xs font-semibold transition-all"
+            >
+              <Copy size={13} /> Duplicate Previous Item
+            </button>
+          </div>
         )}
       </div>
 
@@ -613,7 +620,7 @@ export default function NewWOPage() {
   );
 }
 
-// ── Screen Preview (unchanged \u2014 matches print output) ────────────────────────
+// ── Screen Preview (unchanged — matches print output) ────────────────────────
 function WOScreenPreview({ wo }: { wo: WorkOrder & { items: WorkOrderItem[] } }) {
   const items = wo.items ?? [];
   const colStyle = (w: number): React.CSSProperties => ({
