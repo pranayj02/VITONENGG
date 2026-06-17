@@ -6,9 +6,9 @@ import { audit } from "@/lib/audit";
 import { useRouter } from "next/navigation";
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import { WOPdfDocument } from "@/components/WOPdf";
-import type { WorkOrderItem, WorkOrder } from "@/lib/types";
+import type { WorkOrderItem } from "@/lib/types";
 import {
-  Plus, Trash2, Save, Printer, X, FileText, Eye, ArrowLeft, ChevronDown, ChevronUp,
+  Plus, Trash2, Save, Printer, X, FileText, Eye, ArrowLeft,
 } from "lucide-react";
 
 const EMPTY_ITEM = (): WorkOrderItem => ({
@@ -37,17 +37,30 @@ const EMPTY_ITEM = (): WorkOrderItem => ({
   delivery: "",
 });
 
-const SPEC_FIELDS: { key: keyof WorkOrderItem; label: string; placeholder: string; width: string }[] = [
-  { key: "body_bonnet", label: "Body / Bonnet", placeholder: "ASTM A216 WCB", width: "w-full" },
-  { key: "wedge_disc_plug_ball", label: "Wedge / Disc / Plug / Ball", placeholder: "ASTM A216 WCB + 13% Cr", width: "w-full" },
-  { key: "stem_hinge", label: "Stem / Hinge", placeholder: "SS 410", width: "w-1/2" },
-  { key: "seat", label: "Seat", placeholder: "ASTM A216 WCB + 13% Cr", width: "w-full" },
-  { key: "gasket", label: "Gasket", placeholder: "SPW SS316 + GRAPHITE", width: "w-1/2" },
-  { key: "gl_pkng", label: "GL. PKNG", placeholder: "GRAPHITE", width: "w-1/2" },
-  { key: "fasteners", label: "Fasteners", placeholder: "B7/2H", width: "w-1/2" },
-  { key: "operation", label: "Operation", placeholder: "BARE STEM", width: "w-1/2" },
-  { key: "special_requirements", label: "Special Req", placeholder: "", width: "w-full" },
-  { key: "remarks", label: "Remarks", placeholder: "TORQUE=...", width: "w-full" },
+const COL_DEFS: { key: keyof WorkOrderItem; label: string; placeholder: string; width: number }[] = [
+  { key: "sr_no", label: "Sr. No.", placeholder: "", width: 40 },
+  { key: "po_sr_no", label: "P.O. SR. NO.", placeholder: "1", width: 50 },
+  { key: "valve_sr_no", label: "VALVE SR.NO.", placeholder: "V123-1 TO V123-2", width: 110 },
+  { key: "material_no", label: "Material No.", placeholder: "300905132", width: 90 },
+  { key: "valve", label: "Valve", placeholder: "GATE VALVE", width: 70 },
+  { key: "type", label: "Type", placeholder: "RISING STEM...", width: 100 },
+  { key: "bore", label: "Bore", placeholder: "STD", width: 45 },
+  { key: "size_mm", label: "Size MM", placeholder: "600", width: 50 },
+  { key: "rating", label: "Rating", placeholder: "150#", width: 50 },
+  { key: "end_connection", label: "End Conn.", placeholder: "FE' RF", width: 70 },
+  { key: "body_bonnet", label: "Body / Bonnet", placeholder: "ASTM A 216 GR. WCB", width: 110 },
+  { key: "wedge_disc_plug_ball", label: "Wedge / Disc / Plug / Ball", placeholder: "ASTM A 216 GR. WCB + 13% Cr. SS O/L", width: 130 },
+  { key: "stem_hinge", label: "Stem / Hinge", placeholder: "SS 410", width: 70 },
+  { key: "seat", label: "Seat", placeholder: "ASTM A 216 GR. WCB + 13% Cr. SS O/L", width: 110 },
+  { key: "gasket", label: "Gasket", placeholder: "SPW SS 316 + GRAPHITE", width: 110 },
+  { key: "gl_pkng", label: "GL. PKNG.", placeholder: "GRAPHITE", width: 70 },
+  { key: "fasteners", label: "Fasteners", placeholder: "B7/2H", width: 60 },
+  { key: "operation", label: "Operation", placeholder: "BARE STEM", width: 70 },
+  { key: "special_requirements", label: "Special Req.", placeholder: "", width: 90 },
+  { key: "remarks", label: "Remarks", placeholder: "TORQUE=...\nTHRUST=...", width: 120 },
+  { key: "drawing_no", label: "Drawing No.", placeholder: "", width: 70 },
+  { key: "qty", label: "Qty", placeholder: "2", width: 40 },
+  { key: "delivery", label: "Delivery", placeholder: "08 - 10 WEEKS", width: 90 },
 ];
 
 export default function NewWOPage() {
@@ -64,14 +77,12 @@ export default function NewWOPage() {
   const [savedId, setSavedId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [error, setError] = useState("");
-  const [expandedRow, setExpandedRow] = useState<number | null>(null);
 
   const addRow = useCallback(() => {
     setItems((prev) => [
       ...prev,
       { ...EMPTY_ITEM(), sr_no: prev.length + 1 },
     ]);
-    setExpandedRow(prev => prev !== null ? prev + 1 : null);
   }, []);
 
   const removeRow = useCallback((idx: number) => {
@@ -80,17 +91,12 @@ export default function NewWOPage() {
         .filter((_, i) => i !== idx)
         .map((item, i) => ({ ...item, sr_no: i + 1 }))
     );
-    setExpandedRow(null);
   }, []);
 
   const updateItem = useCallback((idx: number, key: keyof WorkOrderItem, value: string | number) => {
     setItems((prev) =>
       prev.map((item, i) => (i === idx ? { ...item, [key]: value } : item))
     );
-  }, []);
-
-  const toggleExpand = useCallback((idx: number) => {
-    setExpandedRow((prev) => prev === idx ? null : idx);
   }, []);
 
   const buildWOPayload = useCallback(() => {
@@ -168,8 +174,8 @@ export default function NewWOPage() {
       const { error: itemsErr } = await supabase.from("work_order_items").insert(itemRows);
       if (itemsErr) throw itemsErr;
 
-      setSavedId(woId as string);
-      await audit({ action: "created", entity_type: "work_order", entity_id: woId as string, entity_code: woNumber.trim() });
+      setSavedId(woId);
+      await audit({ action: "created", entity_type: "work_order", entity_id: woId, entity_code: woNumber.trim() });
     } catch (e: any) {
       setError(e?.message || "Failed to save work order.");
     } finally {
@@ -194,13 +200,13 @@ export default function NewWOPage() {
   };
 
   return (
-    <div className="p-4 lg:p-6 max-w-[1200px] mx-auto">
+    <div className="p-4 lg:p-6 max-w-[1600px] mx-auto">
       {/* Header */}
       <div className="mb-4 flex items-center justify-between flex-wrap gap-3">
         <div>
           <button
             onClick={() => router.push("/dashboard/wo")}
-            className="flex items-center gap-1 text-sm text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white mb-1 transition-colors"
+            className="flex items-center gap-1 text-sm text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white mb-2 transition-colors"
           >
             <ArrowLeft size={12} /> Back to Work Orders
           </button>
@@ -216,7 +222,7 @@ export default function NewWOPage() {
             onClick={() => setShowPreview(true)}
             className="flex items-center gap-2 bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-700 text-viton-navy dark:text-white font-semibold px-3 py-2 rounded-lg text-xs hover:border-[#c0c8db] dark:hover:border-gray-600 transition-all"
           >
-            <Eye size={13} /> Preview
+            <Eye size={15} /> Preview
           </button>
           {savedId && (
             <PDFDownloadLink
@@ -224,7 +230,7 @@ export default function NewWOPage() {
               fileName={`WO-${woNumber.replace(/\//g, "-")}.pdf`}
               className="flex items-center gap-2 bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 text-white font-semibold px-3 py-2 rounded-lg text-xs transition-all"
             >
-              <Printer size={13} /> Download PDF
+              <Printer size={15} /> Download PDF
             </PDFDownloadLink>
           )}
           <button
@@ -232,7 +238,7 @@ export default function NewWOPage() {
             disabled={saving}
             className="flex items-center gap-2 bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 text-white font-semibold px-3 py-2 rounded-lg text-xs transition-all disabled:opacity-60"
           >
-            <Save size={13} />
+            <Save size={15} />
             {saving ? "Saving..." : savedId ? "Update" : "Save Work Order"}
           </button>
         </div>
@@ -246,14 +252,14 @@ export default function NewWOPage() {
 
       {savedId && (
         <div className="mb-3 bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20 text-green-700 dark:text-green-300 px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-2">
-          <FileText size={13} />
+          <FileText size={15} />
           Work order saved successfully. WO ID: {savedId}
         </div>
       )}
 
-      {/* Header Form */}
+      {/* ── Header Form ── */}
       <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-xl p-4 mb-4">
-        <p className="text-[#8892a8] dark:text-gray-400 text-[10px] font-semibold uppercase tracking-widest mb-3">
+        <p className="text-[#8892a8] dark:text-gray-400 text-xs font-semibold uppercase tracking-widest mb-4">
           Work Order Header
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3">
@@ -282,17 +288,21 @@ export default function NewWOPage() {
         </div>
       </div>
 
-            Line Items
+      {/* ── Items Table ── */}
+      <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-xl p-4 mb-4">
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-[#8892a8] dark:text-gray-400 text-xs font-semibold uppercase tracking-widest">
+            Line Items ({items.length})
           </p>
           <button
             onClick={addRow}
-            className="flex items-center gap-1.5 text-sm font-semibold text-viton-red dark:text-orange-400 hover:text-viton-red-hover dark:hover:text-orange-300 transition-colors"
+            className="flex items-center gap-1.5 text-xs font-semibold text-viton-red dark:text-orange-400 hover:text-viton-red-hover dark:hover:text-orange-300 transition-colors"
           >
-            <Plus size={15} /> Add Row
+            <Plus size={13} /> Add Row
           </button>
         </div>
 
-        <div className="overflow-x-auto -mx-5 px-5">
+        <div className="overflow-x-auto -mx-4 px-4">
           <div className="min-w-[1600px]">
             {/* Table Header */}
             <div className="grid bg-viton-navy dark:bg-gray-800 rounded-t-xl overflow-hidden">
@@ -301,7 +311,7 @@ export default function NewWOPage() {
                   <div
                     key={col.key}
                     style={{ width: col.width, minWidth: col.width }}
-                    className="px-2 py-2 text-[10px] font-bold text-white uppercase tracking-wider text-center border-r border-white/10 last:border-r-0 flex-shrink-0"
+                    className="px-1.5 py-1.5 text-[9px] font-bold text-white uppercase tracking-wider text-center border-r border-white/10 last:border-r-0 flex-shrink-0 leading-tight"
                   >
                     {col.label}
                   </div>
@@ -324,15 +334,15 @@ export default function NewWOPage() {
                       <div
                         key={col.key}
                         style={{ width: col.width, minWidth: col.width }}
-                        className="px-1 py-1.5 border-r border-[#dde1ea] dark:border-gray-700 last:border-r-0 flex-shrink-0"
+                        className="px-1 py-1 border-r border-[#dde1ea] dark:border-gray-700 last:border-r-0 flex-shrink-0"
                       >
                         {isTextarea ? (
                           <textarea
                             value={String(val)}
                             onChange={(e) => updateItem(idx, col.key, e.target.value)}
                             placeholder={col.placeholder}
-                            rows={2}
-                            className="w-full bg-transparent text-[11px] text-viton-navy dark:text-white placeholder:text-[#8892a8] dark:placeholder:text-gray-600 focus:outline-none resize-none leading-tight"
+                            rows={1}
+                            className="w-full bg-transparent text-[10px] text-viton-navy dark:text-white placeholder:text-[#8892a8] dark:placeholder:text-gray-600 focus:outline-none resize-none leading-tight"
                           />
                         ) : (
                           <input
@@ -346,19 +356,19 @@ export default function NewWOPage() {
                               )
                             }
                             placeholder={col.placeholder}
-                            className="w-full bg-transparent text-[11px] text-viton-navy dark:text-white placeholder:text-[#8892a8] dark:placeholder:text-gray-600 focus:outline-none"
+                            className="w-full bg-transparent text-[10px] text-viton-navy dark:text-white placeholder:text-[#8892a8] dark:placeholder:text-gray-600 focus:outline-none"
                           />
                         )}
                       </div>
                     );
                   })}
-                  <div className="w-10 px-1 py-1.5 flex items-center justify-center flex-shrink-0">
+                  <div className="w-8 px-1 py-1 flex items-center justify-center flex-shrink-0">
                     <button
                       onClick={() => removeRow(idx)}
-                      className="p-1 rounded-md hover:bg-red-50 dark:hover:bg-red-500/10 text-red-400 hover:text-red-600 transition-colors"
+                      className="p-0.5 rounded hover:bg-red-50 dark:hover:bg-red-500/10 text-red-400 hover:text-red-600 transition-colors"
                       title="Remove row"
                     >
-                      <Trash2 size={13} />
+                      <Trash2 size={11} />
                     </button>
                   </div>
                 </div>
@@ -368,13 +378,13 @@ export default function NewWOPage() {
         </div>
 
         {items.length === 0 && (
-          <div className="text-center py-8 text-[#8892a8] dark:text-gray-500 text-sm">
+          <div className="text-center py-6 text-[#8892a8] dark:text-gray-500 text-sm">
             No items yet. Click "Add Row" to start.
           </div>
         )}
       </div>
 
-      {/* Preview Modal */}
+      {/* ── Preview Modal ── */}
       {showPreview && (
         <div className="fixed inset-0 z-50 flex items-start justify-center p-4 overflow-y-auto bg-black/80">
           <div className="bg-white rounded-2xl w-full max-w-5xl my-4 shadow-2xl overflow-hidden">
@@ -408,7 +418,7 @@ export default function NewWOPage() {
   );
 }
 
-/* Screen Preview */
+// ── Screen Preview (HTML, not PDF) ───────────────────────────────────────────
 function WOScreenPreview({ wo }: { wo: WorkOrder & { items: WorkOrderItem[] } }) {
   const items = wo.items ?? [];
   const colStyle = (w: number): React.CSSProperties => ({
@@ -458,7 +468,11 @@ function WOScreenPreview({ wo }: { wo: WorkOrder & { items: WorkOrderItem[] } })
   ];
 
   return (
-    <div className="bg-white text-gray-900" style={{ fontFamily: "Arial, sans-serif", fontSize: "10px", padding: "16px", minWidth: "900px" }}>
+    <div
+      className="bg-white text-gray-900"
+      style={{ fontFamily: "Arial, sans-serif", fontSize: "10px", padding: "16px", minWidth: "900px" }}
+    >
+      {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: "8px", borderBottom: "2px solid #c41e3a", marginBottom: "8px" }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
           <img src="/Logo.JPG" alt="Viton" style={{ width: "40px", height: "40px", objectFit: "contain" }} />
@@ -480,6 +494,7 @@ function WOScreenPreview({ wo }: { wo: WorkOrder & { items: WorkOrderItem[] } })
         </div>
       </div>
 
+      {/* Meta */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "4px 16px", marginBottom: "8px", fontSize: "9px" }}>
         {[
           ["Party Name", wo.party_name],
@@ -496,6 +511,7 @@ function WOScreenPreview({ wo }: { wo: WorkOrder & { items: WorkOrderItem[] } })
         ))}
       </div>
 
+      {/* Table */}
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "8px", border: "1px solid #b0b0b0" }}>
         <thead>
           <tr>
