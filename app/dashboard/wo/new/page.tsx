@@ -46,11 +46,6 @@ const REQUIRED_ITEM_FIELDS: { key: keyof WorkOrderItem; label: string }[] = [
   { key: "end_connection", label: "End Connection" },
   { key: "body_bonnet", label: "Body / Bonnet" },
   { key: "wedge_disc_plug_ball", label: "Wedge / Disc / Plug / Ball" },
-  { key: "stem_hinge", label: "Stem / Hinge" },
-  { key: "seat", label: "Seat" },
-  { key: "gasket", label: "Gasket" },
-  { key: "gl_pkng", label: "Gland Packing" },
-  { key: "fasteners", label: "Fasteners" },
   { key: "qty", label: "Qty" },
 ];
 
@@ -93,11 +88,6 @@ const FIELD_GROUPS = [
     fields: [
       { key: "body_bonnet", label: "Body / Bonnet", placeholder: "ASTM A 216 GR. WCB", span: 2, required: true },
       { key: "wedge_disc_plug_ball", label: "Wedge / Disc / Plug / Ball", placeholder: "ASTM A 216 GR. WCB + 13% Cr. SS O/L", span: 2, required: true },
-      { key: "stem_hinge", label: "Stem / Hinge", placeholder: "SS 410", span: 1, required: true },
-      { key: "seat", label: "Seat", placeholder: "ASTM A 216 GR. WCB + 13% Cr.", span: 2, required: true },
-      { key: "gasket", label: "Gasket", placeholder: "SPW SS 316 + GRAPHITE", span: 2, required: true },
-      { key: "gl_pkng", label: "Gland Packing", placeholder: "GRAPHITE", span: 1, required: true },
-      { key: "fasteners", label: "Fasteners", placeholder: "B7/2H", span: 1, required: true },
     ],
   },
   {
@@ -684,11 +674,6 @@ function WOScreenPreview({ wo }: { wo: WorkOrder & { items: WorkOrderItem[] } })
     { key: "end_connection", label: "End Conn.", width: 36 },
     { key: "body_bonnet", label: "Body / Bonnet", width: 50 },
     { key: "wedge_disc_plug_ball", label: "Wedge / Disc / Plug / Ball", width: 60 },
-    { key: "stem_hinge", label: "Stem / Hinge", width: 36 },
-    { key: "seat", label: "Seat", width: 50 },
-    { key: "gasket", label: "Gasket", width: 50 },
-    { key: "gl_pkng", label: "GL. PKNG.", width: 34 },
-    { key: "fasteners", label: "Fasteners", width: 34 },
     { key: "operation", label: "Operation", width: 36 },
     { key: "special_requirements", label: "Special Req.", width: 48 },
     { key: "remarks", label: "Remarks", width: 60 },
