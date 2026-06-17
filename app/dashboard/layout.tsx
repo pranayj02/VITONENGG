@@ -121,19 +121,16 @@ function buildNavSections(role: UserRole | null, pendingReqs: number, pendingIte
 }
 
 function isRouteActive(pathname: string, href: string) {
+  // Exact-match routes — never bleed into sub-paths
   if (href === "/dashboard") return pathname === "/dashboard";
-  if (href === "/dashboard/requisitions") {
-    return pathname === "/dashboard/requisitions";
-  }
-  if (href === "/dashboard/stock") {
-    return pathname === "/dashboard/stock";
-  }
-  if (href === "/dashboard/stock/adjustments") {
-    return pathname === "/dashboard/stock/adjustments";
-  }
-  if (href === "/dashboard/wo") {
-    return pathname === "/dashboard/wo" || pathname.startsWith("/dashboard/wo/");
-  }
+  if (href === "/dashboard/requisitions") return pathname === "/dashboard/requisitions";
+  if (href === "/dashboard/stock") return pathname === "/dashboard/stock";
+  if (href === "/dashboard/stock/adjustments") return pathname === "/dashboard/stock/adjustments";
+  // WO History: only the list page itself, NOT /wo/new or /wo/print/...
+  if (href === "/dashboard/wo") return pathname === "/dashboard/wo";
+  // "New *" and other leaf pages: exact match only
+  if (href.endsWith("/new")) return pathname === href;
+  // Fallback: exact match OR sub-path (e.g. /dashboard/catalog/[id])
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
@@ -405,7 +402,7 @@ function BottomNav() {
           const Icon = tab.Icon;
           const isActive = tab.href === "/dashboard"
             ? pathname === "/dashboard"
-            : pathname === tab.href || pathname.startsWith(`${tab.href}/`);
+            : pathname === tab.href;
           return (
             <Link
               key={tab.href}
