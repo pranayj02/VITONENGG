@@ -11,36 +11,35 @@ import type { WorkOrder, WorkOrderItem } from "@/lib/types";
 
 const BRAND = "#1a2744";
 const ACCENT = "#c41e3a";
-const BORDER = "#b0b0b0";
-const LIGHT_BG = "#f5f5f5";
 const TEXT_DARK = "#111111";
 const TEXT_MID = "#444444";
 
-// ── Column widths (landscape A4 ≈ 842pt, margins 16pt each side = 810pt usable) ──
+// ── Column widths (landscape A4 ≈ 842pt, 16pt margins each side = 810pt usable) ──
+// Delivery column removed; freed pts redistributed to text-heavy cols
 const COLS = {
   sr: 16,
   poSr: 22,
-  valveSr: 44,
-  material: 38,
-  valve: 24,
-  type: 36,
+  valveSr: 46,
+  material: 40,
+  valve: 26,
+  type: 42,      // +6
   bore: 16,
   sizeMm: 20,
   rating: 20,
-  endConn: 28,
-  body: 36,
-  wedge: 44,
+  endConn: 30,
+  body: 44,      // +8
+  wedge: 52,     // +8
   stem: 28,
-  seat: 36,
-  gasket: 36,
-  glPkng: 24,
-  fasteners: 24,
-  operation: 28,
-  special: 36,
-  remarks: 44,
+  seat: 42,      // +6
+  gasket: 38,    // +2
+  glPkng: 26,
+  fasteners: 26,
+  operation: 30,
+  special: 38,   // +2
+  remarks: 46,   // +2
   drawing: 26,
   qty: 18,
-  delivery: 30,
+  // delivery removed
 };
 
 const TOTAL_WIDTH = Object.values(COLS).reduce((a, b) => a + b, 0);
@@ -50,8 +49,8 @@ const S = StyleSheet.create({
     fontFamily: "Helvetica",
     fontSize: 6,
     color: TEXT_DARK,
-    paddingTop: 16,
-    paddingBottom: 16,
+    paddingTop: 14,
+    paddingBottom: 14,
     paddingLeft: 16,
     paddingRight: 16,
     backgroundColor: "#ffffff",
@@ -61,32 +60,26 @@ const S = StyleSheet.create({
   letterhead: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
-    paddingBottom: 8,
+    alignItems: "center",
+    paddingBottom: 6,
     borderBottomWidth: 2,
     borderBottomColor: ACCENT,
-    marginBottom: 8,
+    marginBottom: 7,
   },
   letterheadLeft: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     flex: 1,
   },
   logo: {
-    width: 36,
-    height: 36,
+    width: 32,
+    height: 32,
     marginRight: 8,
   },
   companyName: {
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: "Helvetica-Bold",
     color: TEXT_DARK,
-    marginBottom: 1,
-  },
-  companyDetail: {
-    fontSize: 5.5,
-    color: TEXT_MID,
-    lineHeight: 1.4,
   },
 
   // ── WO Box ──────────────────────────────────────────────────────
@@ -97,7 +90,7 @@ const S = StyleSheet.create({
     paddingVertical: 3,
     paddingHorizontal: 10,
     alignItems: "center",
-    minWidth: 120,
+    minWidth: 110,
   },
   woBoxTitleWrap: {
     backgroundColor: ACCENT,
@@ -115,7 +108,7 @@ const S = StyleSheet.create({
     letterSpacing: 0.6,
   },
   woBoxNumber: {
-    fontSize: 6,
+    fontSize: 7,
     fontFamily: "Helvetica-Bold",
     color: "#333333",
     marginTop: 3,
@@ -211,35 +204,6 @@ const S = StyleSheet.create({
     paddingHorizontal: 1,
     textAlign: "center",
   },
-
-  // ── Footer ──────────────────────────────────────────────────────
-  footer: {
-    marginTop: 8,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    borderTopWidth: 0.5,
-    borderTopColor: "#cccccc",
-    paddingTop: 4,
-  },
-  footerBox: {
-    width: "30%",
-    minHeight: 40,
-    borderTopWidth: 0.5,
-    borderTopColor: "#999999",
-    paddingTop: 2,
-  },
-  footerLabel: {
-    fontSize: 5.5,
-    fontFamily: "Helvetica-Bold",
-    color: TEXT_MID,
-    textAlign: "center",
-  },
-  disclaimer: {
-    marginTop: 6,
-    textAlign: "center",
-    fontSize: 5,
-    color: "#888888",
-  },
 });
 
 function HeaderCell({ children, width }: { children: React.ReactNode; width: number }) {
@@ -266,19 +230,12 @@ export function WOPdfDocument({ wo }: { wo: WorkOrder & { items: WorkOrderItem[]
   return (
     <Document>
       <Page size="A4" orientation="landscape" style={S.page}>
-        {/* ── Letterhead ── */}
+        {/* ── Letterhead: logo + company name + WO box only ── */}
         <View style={S.letterhead}>
           <View style={S.letterheadLeft}>
             <Image src="/Logo.JPG" style={S.logo} />
-            <View style={{ flex: 1 }}>
-              <Text style={S.companyName}>VITON ENGINEERS PVT. LTD.</Text>
-              <Text style={S.companyDetail}>
-                WORKS: B40/1, ADDL. Ambernath MIDC, Anand Nagar, Opp. Hali Pad,{"\n"}
-                Ambernath East, Dist. Thane - 421506{"  "}|{"  "}Tel: 08779301215 / 9769639388{"  "}|{"  "}Email: info@vitonvalves.com
-              </Text>
-            </View>
+            <Text style={S.companyName}>VITON ENGINEERS PVT. LTD.</Text>
           </View>
-
           <View style={{ alignItems: "flex-end" }}>
             <View style={S.woBox}>
               <View style={S.woBoxTitleWrap}>
@@ -294,22 +251,22 @@ export function WOPdfDocument({ wo }: { wo: WorkOrder & { items: WorkOrderItem[]
           <View style={S.metaItem}>
             <Text style={S.metaLabel}>Party Name</Text>
             <Text style={S.metaColon}>:</Text>
-            <Text style={S.metaValueBold}>{wo.party_name || "—"}</Text>
+            <Text style={S.metaValueBold}>{wo.party_name || "\u2014"}</Text>
           </View>
           <View style={S.metaItem}>
             <Text style={S.metaLabel}>Delivery</Text>
             <Text style={S.metaColon}>:</Text>
-            <Text style={S.metaValue}>{wo.delivery_date || "—"}</Text>
+            <Text style={S.metaValue}>{wo.delivery_date || "\u2014"}</Text>
           </View>
           <View style={S.metaItem}>
             <Text style={S.metaLabel}>P.O. No.</Text>
             <Text style={S.metaColon}>:</Text>
-            <Text style={S.metaValue}>{wo.po_no || "—"}</Text>
+            <Text style={S.metaValue}>{wo.po_no || "\u2014"}</Text>
           </View>
           <View style={S.metaItem}>
             <Text style={S.metaLabel}>PO Date</Text>
             <Text style={S.metaColon}>:</Text>
-            <Text style={S.metaValue}>{wo.po_date || "—"}</Text>
+            <Text style={S.metaValue}>{wo.po_date || "\u2014"}</Text>
           </View>
           <View style={S.metaItem}>
             <Text style={S.metaLabel}>Inspection By</Text>
@@ -319,7 +276,7 @@ export function WOPdfDocument({ wo }: { wo: WorkOrder & { items: WorkOrderItem[]
           <View style={S.metaItem}>
             <Text style={S.metaLabel}>QAP No.</Text>
             <Text style={S.metaColon}>:</Text>
-            <Text style={S.metaValue}>{wo.qap_no || "—"}</Text>
+            <Text style={S.metaValue}>{wo.qap_no || "\u2014"}</Text>
           </View>
         </View>
 
@@ -348,11 +305,10 @@ export function WOPdfDocument({ wo }: { wo: WorkOrder & { items: WorkOrderItem[]
             <HeaderCell width={COLS.remarks}>Remarks</HeaderCell>
             <HeaderCell width={COLS.drawing}>Drawing{"\n"}No.</HeaderCell>
             <HeaderCell width={COLS.qty}>Qty</HeaderCell>
-            <HeaderCell width={COLS.delivery}>Delivery</HeaderCell>
           </View>
 
           {items.map((item, i) => (
-            <View key={item.id || i} style={[S.tableRow, i % 2 !== 0 ? S.tableRowAlt : {}]}>
+            <View key={i} style={[S.tableRow, i % 2 !== 0 ? S.tableRowAlt : {}]}>
               <Cell width={COLS.sr}>{item.sr_no}</Cell>
               <Cell width={COLS.poSr}>{item.po_sr_no}</Cell>
               <Cell width={COLS.valveSr} mono>{item.valve_sr_no}</Cell>
@@ -375,27 +331,9 @@ export function WOPdfDocument({ wo }: { wo: WorkOrder & { items: WorkOrderItem[]
               <Cell width={COLS.remarks} left>{item.remarks}</Cell>
               <Cell width={COLS.drawing} mono>{item.drawing_no}</Cell>
               <Cell width={COLS.qty}>{item.qty}</Cell>
-              <Cell width={COLS.delivery}>{item.delivery}</Cell>
             </View>
           ))}
         </View>
-
-        {/* ── Footer ── */}
-        <View style={S.footer}>
-          <View style={S.footerBox}>
-            <Text style={S.footerLabel}>Prepared By</Text>
-          </View>
-          <View style={S.footerBox}>
-            <Text style={S.footerLabel}>Checked By</Text>
-          </View>
-          <View style={S.footerBox}>
-            <Text style={S.footerLabel}>Approved By</Text>
-          </View>
-        </View>
-
-        <Text style={S.disclaimer}>
-          This is a computer generated Work Order and does not require a signature.
-        </Text>
       </Page>
     </Document>
   );
