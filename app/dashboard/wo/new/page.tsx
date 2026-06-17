@@ -50,22 +50,6 @@ const SPEC_FIELDS: { key: keyof WorkOrderItem; label: string; placeholder: strin
   { key: "remarks", label: "Remarks", placeholder: "TORQUE=...", width: "w-full" },
 ];
 
-const MAIN_FIELDS: { key: keyof WorkOrderItem; label: string; placeholder: string; width: string }[] = [
-  { key: "sr_no", label: "Sr", placeholder: "", width: "w-10" },
-  { key: "po_sr_no", label: "PO Sr", placeholder: "1", width: "w-12" },
-  { key: "valve_sr_no", label: "Val Sr", placeholder: "V123-1..", width: "w-24" },
-  { key: "material_no", label: "Mat#", placeholder: "300905132", width: "w-20" },
-  { key: "valve", label: "Valve", placeholder: "GATE VALVE", width: "w-24" },
-  { key: "type", label: "Type", placeholder: "RISING STEM", width: "w-28" },
-  { key: "bore", label: "Bore", placeholder: "STD", width: "w-12" },
-  { key: "size_mm", label: "Size", placeholder: "600", width: "w-12" },
-  { key: "rating", label: "Rating", placeholder: "150#", width: "w-14" },
-  { key: "end_connection", label: "End", placeholder: "FE' RF", width: "w-14" },
-  { key: "drawing_no", label: "Drwg", placeholder: "", width: "w-16" },
-  { key: "qty", label: "Qty", placeholder: "2", width: "w-10" },
-  { key: "delivery", label: "Delivery", placeholder: "08-10 WK", width: "w-20" },
-];
-
 export default function NewWOPage() {
   const router = useRouter();
   const [woNumber, setWoNumber] = useState("");
@@ -267,7 +251,7 @@ export default function NewWOPage() {
         </div>
       )}
 
-      {/* ── Header Form ── */}
+      {/* Header Form */}
       <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-xl p-4 mb-4">
         <p className="text-[#8892a8] dark:text-gray-400 text-[10px] font-semibold uppercase tracking-widest mb-3">
           Work Order Header
@@ -298,7 +282,7 @@ export default function NewWOPage() {
         </div>
       </div>
 
-      {/* ── Items List ── */}
+      {/* Items List */}
       <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-xl p-4">
         <div className="flex items-center justify-between mb-3">
           <p className="text-[#8892a8] dark:text-gray-400 text-[10px] font-semibold uppercase tracking-widest">
@@ -317,11 +301,11 @@ export default function NewWOPage() {
             const isExpanded = expandedRow === idx;
             return (
               <div key={idx} className="border border-[#dde1ea] dark:border-gray-700 rounded-lg overflow-hidden">
-                {/* Primary Row — always visible */}
+                {/* Primary Row */}
                 <div className={`flex items-start gap-2 px-3 py-2 ${idx % 2 === 1 ? "bg-[#f9fafc] dark:bg-gray-800/40" : "bg-white dark:bg-gray-900"}`}>
                   <div className="w-5 pt-1 text-[10px] font-bold text-viton-navy dark:text-white">{item.sr_no}</div>
                   <div className="flex-1 flex flex-col gap-1">
-                    {/* Row 1 — Key identifiers */}
+                    {/* Row 1 */}
                     <div className="flex items-center gap-2 flex-wrap">
                       <div className="w-16">
                         <input type="text" value={String(item.po_sr_no ?? "")} onChange={(e) => updateItem(idx, "po_sr_no", e.target.value)} placeholder="PO Sr" className="w-full bg-transparent text-[10px] text-viton-navy dark:text-white placeholder:text-[#8892a8]/60 dark:placeholder:text-gray-600/60 focus:outline-none border-b border-transparent focus:border-viton-red dark:focus:border-orange-500 transition-colors" />
@@ -345,7 +329,7 @@ export default function NewWOPage() {
                         <input type="text" value={String(item.size_mm ?? "")} onChange={(e) => updateItem(idx, "size_mm", e.target.value)} placeholder="Size" className="w-full bg-transparent text-[10px] text-viton-navy dark:text-white placeholder:text-[#8892a8]/60 dark:placeholder:text-gray-600/60 focus:outline-none border-b border-transparent focus:border-viton-red dark:focus:border-orange-500 transition-colors" />
                       </div>
                     </div>
-                    {/* Row 2 — Technical specs */}
+                    {/* Row 2 */}
                     <div className="flex items-center gap-2 flex-wrap">
                       <div className="w-12">
                         <input type="text" value={String(item.rating ?? "")} onChange={(e) => updateItem(idx, "rating", e.target.value)} placeholder="Rating" className="w-full bg-transparent text-[10px] text-viton-navy dark:text-white placeholder:text-[#8892a8]/60 dark:placeholder:text-gray-600/60 focus:outline-none border-b border-transparent focus:border-viton-red dark:focus:border-orange-500 transition-colors" />
@@ -382,7 +366,7 @@ export default function NewWOPage() {
                   </div>
                 </div>
 
-                {/* Expanded Detail — Material Specs */}
+                {/* Expanded Detail */}
                 {isExpanded && (
                   <div className="px-3 py-2 bg-[#f6f8fc] dark:bg-gray-950/50 border-t border-[#dde1ea] dark:border-gray-700">
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
@@ -415,7 +399,7 @@ export default function NewWOPage() {
         )}
       </div>
 
-      {/* ── Preview Modal ── */}
+      {/* Preview Modal */}
       {showPreview && (
         <div className="fixed inset-0 z-50 flex items-start justify-center p-4 overflow-y-auto bg-black/80">
           <div className="bg-white rounded-2xl w-full max-w-5xl my-4 shadow-2xl overflow-hidden">
@@ -449,7 +433,7 @@ export default function NewWOPage() {
   );
 }
 
-// ── Screen Preview (HTML, not PDF) ───────────────────────────────────────────
+/* Screen Preview */
 function WOScreenPreview({ wo }: { wo: WorkOrder & { items: WorkOrderItem[] } }) {
   const items = wo.items ?? [];
   const colStyle = (w: number): React.CSSProperties => ({
@@ -499,11 +483,7 @@ function WOScreenPreview({ wo }: { wo: WorkOrder & { items: WorkOrderItem[] } })
   ];
 
   return (
-    <div
-      className="bg-white text-gray-900"
-      style={{ fontFamily: "Arial, sans-serif", fontSize: "10px", padding: "16px", minWidth: "900px" }}
-    >
-      {/* Header */}
+    <div className="bg-white text-gray-900" style={{ fontFamily: "Arial, sans-serif", fontSize: "10px", padding: "16px", minWidth: "900px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: "8px", borderBottom: "2px solid #c41e3a", marginBottom: "8px" }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
           <img src="/Logo.JPG" alt="Viton" style={{ width: "40px", height: "40px", objectFit: "contain" }} />
@@ -525,7 +505,6 @@ function WOScreenPreview({ wo }: { wo: WorkOrder & { items: WorkOrderItem[] } })
         </div>
       </div>
 
-      {/* Meta */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "4px 16px", marginBottom: "8px", fontSize: "9px" }}>
         {[
           ["Party Name", wo.party_name],
@@ -542,7 +521,6 @@ function WOScreenPreview({ wo }: { wo: WorkOrder & { items: WorkOrderItem[] } })
         ))}
       </div>
 
-      {/* Table */}
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "8px", border: "1px solid #b0b0b0" }}>
         <thead>
           <tr>
