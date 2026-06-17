@@ -221,7 +221,7 @@ export default function NewWOPage() {
           {savedId && (
             <PDFDownloadLink
               document={<WOPdfDocument wo={woForPdf} />}
-              fileName={`WO-${woNumber.replace(/\/g, "-")}.pdf`}
+              fileName={`WO-${woNumber.replace(/\//g, "-")}.pdf`}
               className="flex items-center gap-2 bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 text-white font-semibold px-3 py-2 rounded-lg text-xs transition-all"
             >
               <Printer size={13} /> Download PDF
@@ -409,7 +409,7 @@ export default function NewWOPage() {
                 {savedId && (
                   <PDFDownloadLink
                     document={<WOPdfDocument wo={woForPdf} />}
-                    fileName={`WO-${woNumber.replace(/\/g, "-")}.pdf`}
+                    fileName={`WO-${woNumber.replace(/\//g, "-")}.pdf`}
                     className="flex items-center gap-2 bg-viton-red hover:bg-viton-red-hover text-white font-semibold px-4 py-2 rounded-xl text-sm transition-all"
                   >
                     <Printer size={15} /> Download PDF
