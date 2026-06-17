@@ -46,6 +46,7 @@ export const PERMISSIONS = {
   // GRN / Stock
   create_grn: ["quality_assurance"],
   edit_grn: ["quality_assurance"],
+  delete_grn: ["admin", "quality_assurance"],
   send_for_inspection: ["admin", "purchase_manager"],
   inspect_grn: ["admin", "quality_assurance"],
   approve_grn: ["admin", "quality_assurance"],

@@ -862,7 +862,7 @@ export default function GRNPage() {
   const canSendForInspection = role && can(role, "send_for_inspection");
   const canInspect = role && can(role, "inspect_grn");
   const canApprove = role && can(role, "approve_grn");
-  const canDelete = !!role && (can(role, "create_grn") || can(role, "inspect_grn") || can(role, "approve_grn"));
+  const canDelete = role && can(role, "delete_grn");
 
   async function cleanupRejectedGRNStock() {
     setError("");
