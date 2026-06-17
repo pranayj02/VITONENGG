@@ -6,7 +6,7 @@ import { audit } from "@/lib/audit";
 import { useRouter } from "next/navigation";
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import { WOPdfDocument } from "@/components/WOPdf";
-import type { WorkOrderItem } from "@/lib/types";
+import type { WorkOrderItem, WorkOrder } from "@/lib/types";
 import {
   Plus, Trash2, Save, Printer, X, FileText, Eye, ArrowLeft,
 } from "lucide-react";
