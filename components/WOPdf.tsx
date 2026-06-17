@@ -14,35 +14,31 @@ const ACCENT = "#c41e3a";
 const TEXT_DARK = "#111111";
 const TEXT_MID = "#444444";
 
-// ── Column widths (landscape A4 ≈ 842pt, 16pt margins each side = 810pt usable) ──
-// Delivery column removed; freed pts redistributed to text-heavy cols
+// ── Column widths scaled to fill 810pt usable (landscape A4, 16pt margins each side) ──
 const COLS = {
-  sr: 16,
-  poSr: 22,
-  valveSr: 46,
-  material: 40,
-  valve: 26,
-  type: 42,      // +6
-  bore: 16,
-  sizeMm: 20,
-  rating: 20,
-  endConn: 30,
-  body: 44,      // +8
-  wedge: 52,     // +8
-  stem: 28,
-  seat: 42,      // +6
-  gasket: 38,    // +2
-  glPkng: 26,
-  fasteners: 26,
-  operation: 30,
-  special: 38,   // +2
-  remarks: 46,   // +2
-  drawing: 26,
-  qty: 18,
-  // delivery removed
+  sr: 19,
+  poSr: 26,
+  valveSr: 54,
+  material: 47,
+  valve: 30,
+  type: 49,
+  bore: 19,
+  sizeMm: 23,
+  rating: 23,
+  endConn: 35,
+  body: 52,
+  wedge: 63,
+  stem: 33,
+  seat: 49,
+  gasket: 44,
+  glPkng: 30,
+  fasteners: 30,
+  operation: 35,
+  special: 44,
+  remarks: 54,
+  drawing: 30,
+  qty: 21,
 };
-
-const TOTAL_WIDTH = Object.values(COLS).reduce((a, b) => a + b, 0);
 
 const S = StyleSheet.create({
   page: {
@@ -56,7 +52,6 @@ const S = StyleSheet.create({
     backgroundColor: "#ffffff",
   },
 
-  // ── Letterhead ──────────────────────────────────────────────────
   letterhead: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -82,7 +77,6 @@ const S = StyleSheet.create({
     color: TEXT_DARK,
   },
 
-  // ── WO Box ──────────────────────────────────────────────────────
   woBox: {
     borderWidth: 1.5,
     borderColor: ACCENT,
@@ -115,7 +109,6 @@ const S = StyleSheet.create({
     textAlign: "center",
   },
 
-  // ── Meta Grid ───────────────────────────────────────────────────
   metaGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -154,15 +147,14 @@ const S = StyleSheet.create({
     flex: 1,
   },
 
-  // ── Table ───────────────────────────────────────────────────────
   tableWrap: {
-    width: TOTAL_WIDTH,
+    width: "100%",
   },
   tableHeader: {
     flexDirection: "row",
     backgroundColor: BRAND,
     paddingVertical: 3,
-    paddingHorizontal: 2,
+    paddingHorizontal: 0,
     minHeight: 14,
     alignItems: "center",
   },
@@ -178,7 +170,7 @@ const S = StyleSheet.create({
     borderBottomWidth: 0.5,
     borderBottomColor: "#d0d0d0",
     paddingVertical: 2,
-    paddingHorizontal: 2,
+    paddingHorizontal: 0,
     minHeight: 12,
     alignItems: "flex-start",
   },
@@ -214,23 +206,40 @@ function HeaderCell({ children, width }: { children: React.ReactNode; width: num
   );
 }
 
-function Cell({ children, width, left, mono }: { children: React.ReactNode; width: number; left?: boolean; mono?: boolean }) {
+function Cell({
+  children,
+  width,
+  left,
+  mono,
+}: {
+  children: React.ReactNode;
+  width: number;
+  left?: boolean;
+  mono?: boolean;
+}) {
   return (
     <View style={{ width, flexShrink: 0 }}>
-      <Text style={mono ? S.tableCellMono : left ? S.tableCellLeft : S.tableCell} wrap>
+      <Text
+        style={mono ? S.tableCellMono : left ? S.tableCellLeft : S.tableCell}
+        wrap
+      >
         {children}
       </Text>
     </View>
   );
 }
 
-export function WOPdfDocument({ wo }: { wo: WorkOrder & { items: WorkOrderItem[] } }) {
+export function WOPdfDocument({
+  wo,
+}: {
+  wo: WorkOrder & { items: WorkOrderItem[] };
+}) {
   const items = wo.items ?? [];
 
   return (
     <Document>
       <Page size="A4" orientation="landscape" style={S.page}>
-        {/* ── Letterhead: logo + company name + WO box only ── */}
+        {/* Letterhead */}
         <View style={S.letterhead}>
           <View style={S.letterheadLeft}>
             <Image src="/Logo.JPG" style={S.logo} />
@@ -246,7 +255,7 @@ export function WOPdfDocument({ wo }: { wo: WorkOrder & { items: WorkOrderItem[]
           </View>
         </View>
 
-        {/* ── Meta Fields ── */}
+        {/* Meta */}
         <View style={S.metaGrid}>
           <View style={S.metaItem}>
             <Text style={S.metaLabel}>Party Name</Text>
@@ -280,35 +289,38 @@ export function WOPdfDocument({ wo }: { wo: WorkOrder & { items: WorkOrderItem[]
           </View>
         </View>
 
-        {/* ── Items Table ── */}
+        {/* Table */}
         <View style={S.tableWrap}>
           <View style={S.tableHeader}>
-            <HeaderCell width={COLS.sr}>Sr.{"\n"}No.</HeaderCell>
-            <HeaderCell width={COLS.poSr}>P.O.{"\n"}SR.NO.</HeaderCell>
-            <HeaderCell width={COLS.valveSr}>VALVE{"\n"}SR.NO.</HeaderCell>
-            <HeaderCell width={COLS.material}>Material{"\n"}No.</HeaderCell>
+            <HeaderCell width={COLS.sr}>{"Sr.\nNo."}</HeaderCell>
+            <HeaderCell width={COLS.poSr}>{"P.O.\nSR.NO."}</HeaderCell>
+            <HeaderCell width={COLS.valveSr}>{"VALVE\nSR.NO."}</HeaderCell>
+            <HeaderCell width={COLS.material}>{"Material\nNo."}</HeaderCell>
             <HeaderCell width={COLS.valve}>Valve</HeaderCell>
             <HeaderCell width={COLS.type}>Type</HeaderCell>
             <HeaderCell width={COLS.bore}>Bore</HeaderCell>
-            <HeaderCell width={COLS.sizeMm}>Size{"\n"}MM</HeaderCell>
+            <HeaderCell width={COLS.sizeMm}>{"Size\nMM"}</HeaderCell>
             <HeaderCell width={COLS.rating}>Rating</HeaderCell>
-            <HeaderCell width={COLS.endConn}>End{"\n"}Conn.</HeaderCell>
-            <HeaderCell width={COLS.body}>Body /{"\n"}Bonnet</HeaderCell>
-            <HeaderCell width={COLS.wedge}>Wedge / Disc /{"\n"}Plug / Ball</HeaderCell>
-            <HeaderCell width={COLS.stem}>Stem /{"\n"}Hinge</HeaderCell>
+            <HeaderCell width={COLS.endConn}>{"End\nConn."}</HeaderCell>
+            <HeaderCell width={COLS.body}>{"Body /\nBonnet"}</HeaderCell>
+            <HeaderCell width={COLS.wedge}>{"Wedge / Disc /\nPlug / Ball"}</HeaderCell>
+            <HeaderCell width={COLS.stem}>{"Stem /\nHinge"}</HeaderCell>
             <HeaderCell width={COLS.seat}>Seat</HeaderCell>
             <HeaderCell width={COLS.gasket}>Gasket</HeaderCell>
-            <HeaderCell width={COLS.glPkng}>GL.{"\n"}PKNG.</HeaderCell>
+            <HeaderCell width={COLS.glPkng}>{"GL.\nPKNG."}</HeaderCell>
             <HeaderCell width={COLS.fasteners}>Fasteners</HeaderCell>
             <HeaderCell width={COLS.operation}>Operation</HeaderCell>
-            <HeaderCell width={COLS.special}>Special{"\n"}Req.</HeaderCell>
+            <HeaderCell width={COLS.special}>{"Special\nReq."}</HeaderCell>
             <HeaderCell width={COLS.remarks}>Remarks</HeaderCell>
-            <HeaderCell width={COLS.drawing}>Drawing{"\n"}No.</HeaderCell>
+            <HeaderCell width={COLS.drawing}>{"Drawing\nNo."}</HeaderCell>
             <HeaderCell width={COLS.qty}>Qty</HeaderCell>
           </View>
 
           {items.map((item, i) => (
-            <View key={i} style={[S.tableRow, i % 2 !== 0 ? S.tableRowAlt : {}]}>
+            <View
+              key={i}
+              style={[S.tableRow, i % 2 !== 0 ? S.tableRowAlt : {}]}
+            >
               <Cell width={COLS.sr}>{item.sr_no}</Cell>
               <Cell width={COLS.poSr}>{item.po_sr_no}</Cell>
               <Cell width={COLS.valveSr} mono>{item.valve_sr_no}</Cell>
