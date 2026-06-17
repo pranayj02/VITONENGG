@@ -177,6 +177,52 @@ export interface StockSummary {
   balance: number;
 }
 
+// ── ERP: Work Order ─────────────────────────────────────────────────────────
+
+export interface WorkOrderItem {
+  id?: string;
+  work_order_id?: string;
+  sr_no: number;
+  po_sr_no: string;
+  valve_sr_no: string;
+  material_no: string;
+  valve: string;
+  type: string;
+  bore: string;
+  size_mm: string;
+  rating: string;
+  end_connection: string;
+  body_bonnet: string;
+  wedge_disc_plug_ball: string;
+  stem_hinge: string;
+  seat: string;
+  gasket: string;
+  gl_pkng: string;
+  fasteners: string;
+  operation: string;
+  special_requirements: string;
+  remarks: string;
+  drawing_no: string;
+  qty: string;
+  delivery: string;
+}
+
+export interface WorkOrder {
+  id: string;
+  wo_number: string;
+  party_name: string;
+  delivery_date: string | null;
+  po_no: string | null;
+  po_date: string | null;
+  inspection_by: string | null;
+  qap_no: string | null;
+  created_by: string | null;
+  created_by_name: string | null;
+  created_at: string;
+  updated_at?: string | null;
+  items?: WorkOrderItem[];
+}
+
 // ── ERP: Activity Log ───────────────────────────────────────────────────────
 
 export interface ActivityLog {

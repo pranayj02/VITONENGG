@@ -29,6 +29,7 @@ import {
   BellDot,
   Search,
   Settings,
+  Wrench,
 } from "lucide-react";
 
 interface NavItem {
@@ -72,6 +73,13 @@ function buildNavSections(role: UserRole | null, pendingReqs: number, pendingIte
       items: [
         { href: "/dashboard/po/new", label: "New PO", icon: FileText, permission: "create_po" },
         { href: "/dashboard/history", label: "PO History", icon: History, permission: "create_po" },
+      ],
+    },
+    {
+      title: "Work Orders",
+      items: [
+        { href: "/dashboard/wo/new", label: "New WO", icon: Wrench, permission: "create_work_order" },
+        { href: "/dashboard/wo", label: "WO History", icon: History, permission: "create_work_order" },
       ],
     },
     // INVOICES SECTION — hidden from all users (e-invoicing handled externally)
@@ -122,6 +130,9 @@ function isRouteActive(pathname: string, href: string) {
   }
   if (href === "/dashboard/stock/adjustments") {
     return pathname === "/dashboard/stock/adjustments";
+  }
+  if (href === "/dashboard/wo") {
+    return pathname === "/dashboard/wo" || pathname.startsWith("/dashboard/wo/");
   }
   return pathname === href || pathname.startsWith(`${href}/`);
 }
@@ -382,6 +393,7 @@ function BottomNav() {
     { href: "/dashboard", label: "Home", Icon: LayoutDashboard },
     { href: "/dashboard/requisitions", label: "MR", Icon: ArrowRightLeft },
     { href: "/dashboard/po/new", label: "PO", Icon: FileText, permission: "create_po" as PermissionAction },
+    { href: "/dashboard/wo/new", label: "WO", Icon: Wrench, permission: "create_work_order" as PermissionAction },
     { href: "/dashboard/grn", label: "GRN", Icon: PackageOpen, permission: "create_grn" as PermissionAction },
     { href: "/dashboard/stock", label: "Stock", Icon: BarChart3 },
   ].filter((t) => !t.permission || can(role, t.permission));
