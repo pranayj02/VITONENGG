@@ -451,8 +451,76 @@ export default function GRNPage() {
     const normalizedLines = grnLines.map((line) => normalizeGRNLine(line));
     const invalidLine = normalizedLines.find((line) => Number(line.accepted_qty ?? 0) + Number(line.rejected_qty ?? 0) !== Number(line.counted_nos ?? line.received_qty ?? 0));
     if (invalidLine) { setError(`Accepted + Rejected must equal Counted/Received for ${invalidLine.name || invalidLine.serial_id || "the item"}.`); return; }
-    const freeformLine = normalizedLines.find((line) => (line.item_id ?? "").startsWith("FREE-"));
-    if (freeformLine) { setError(`Freeform item "${freeformLine.name || freeformLine.serial_id || "unnamed"}" must be added to catalog before submitting. Tap the item name to complete it.`); return; }
+
+    // ── Auto-create catalog items for FREE- entries ─────────────────────────
+    const freeformLines = normalizedLines.filter((line) => (line.item_id ?? "").startsWith("FREE-"));
+    if (freeformLines.length > 0) {
+      setSaving(true); setError("");
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+
+      for (const line of freeformLines) {
+        const itemName = (line.name ?? line.serial_id ?? "Unknown Item").trim();
+        const inferredCategory = getFreeformItemType(itemName);
+        const inferredUnit = getFreeformItemUnit(inferredCategory);
+        // Generate serial ID: take first 3 letters of each word, uppercase, max 12 chars
+        const serialFromName = itemName
+          .replace(/[^a-zA-Z0-9 ]/g, "")
+          .split(/\s+/)
+          .map((w) => w.substring(0, 3).toUpperCase())
+          .join("")
+          .substring(0, 12);
+        const uniqueSerial = `${serialFromName}-${Date.now().toString(36).toUpperCase()}`;
+
+        const { data: newItem, error: itemErr } = await supabase
+          .from("items")
+          .insert({
+            serial_id: uniqueSerial,
+            name: itemName,
+            description: `Auto-created from GRN on ${new Date().toLocaleDateString("en-IN")}`,
+            unit: inferredUnit,
+            category: inferredCategory,
+            specs: {},
+          })
+          .select("id, serial_id, name, unit, category")
+          .single();
+
+        if (itemErr) {
+          setError(`Failed to create catalog item "${itemName}": ${itemErr.message}`);
+          setSaving(false);
+          return;
+        }
+
+        // Replace FREE- item_id with real item_id in the line
+        const idx = normalizedLines.findIndex((l) => l.item_id === line.item_id);
+        if (idx !== -1) {
+          normalizedLines[idx] = {
+            ...normalizedLines[idx],
+            item_id: (newItem as any).id,
+            serial_id: (newItem as any).serial_id,
+            name: (newItem as any).name,
+            unit: (newItem as any).unit,
+          };
+        }
+
+        await audit({
+          action: "item_created_from_grn",
+          entity_type: "item",
+          entity_id: (newItem as any).id,
+          entity_code: (newItem as any).serial_id,
+          details: {
+            name: (newItem as any).name,
+            category: (newItem as any).category,
+            unit: (newItem as any).unit,
+            created_via: "grn_freeform_auto",
+            created_by: user?.id ?? null,
+          },
+        });
+      }
+
+      setSaving(false);
+    }
+
     setSaving(true); setError("");
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -1369,7 +1437,7 @@ export default function GRNPage() {
                           setFreeformUnit(getFreeformItemUnit(inferredType));
                         }
                       }}
-                      placeholder="e.g. 3\" x 1500# WCB Globe Valve Casting"
+                      placeholder={"e.g. 3\" x 1500# WCB Globe Valve Casting"}
                       className="w-full bg-[#f1f3f8] dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-viton-navy dark:text-white placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
                     />
                     <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-2">
