@@ -39,6 +39,21 @@ const EMPTY_ITEM = (): WorkOrderItem => ({
   delivery: "",
 });
 
+const REQUIRED_ITEM_FIELDS: { key: keyof WorkOrderItem; label: string }[] = [
+  { key: "valve", label: "Valve Type" },
+  { key: "size_mm", label: "Size" },
+  { key: "rating", label: "Rating" },
+  { key: "end_connection", label: "End Connection" },
+  { key: "body_bonnet", label: "Body / Bonnet" },
+  { key: "wedge_disc_plug_ball", label: "Wedge / Disc / Plug / Ball" },
+  { key: "stem_hinge", label: "Stem / Hinge" },
+  { key: "seat", label: "Seat" },
+  { key: "gasket", label: "Gasket" },
+  { key: "gl_pkng", label: "Gland Packing" },
+  { key: "fasteners", label: "Fasteners" },
+  { key: "qty", label: "Qty" },
+];
+
 // ── Field Groups ────────────────────────────────────────────────────────────
 const FIELD_GROUPS = [
   {
@@ -51,7 +66,7 @@ const FIELD_GROUPS = [
       { key: "po_sr_no", label: "P.O. Sr. No.", placeholder: "1", span: 1 },
       { key: "valve_sr_no", label: "Valve Sr. No.", placeholder: "V123-1 TO V123-2", span: 2 },
       { key: "material_no", label: "Material No.", placeholder: "300905132", span: 1 },
-      { key: "valve", label: "Valve Type", placeholder: "GATE VALVE", span: 1 },
+      { key: "valve", label: "Valve Type", placeholder: "GATE VALVE", span: 1, required: true },
       { key: "drawing_no", label: "Drawing No.", placeholder: "DWG-001", span: 1 },
     ],
   },
@@ -64,9 +79,9 @@ const FIELD_GROUPS = [
     fields: [
       { key: "type", label: "Type", placeholder: "RISING STEM, OS&Y", span: 2 },
       { key: "bore", label: "Bore", placeholder: "STD", span: 1 },
-      { key: "size_mm", label: "Size (MM)", placeholder: "600", span: 1 },
-      { key: "rating", label: "Rating", placeholder: "150#", span: 1 },
-      { key: "end_connection", label: "End Connection", placeholder: "FE\u2019 RF", span: 1 },
+      { key: "size_mm", label: "Size (MM)", placeholder: "600", span: 1, required: true },
+      { key: "rating", label: "Rating", placeholder: "150#", span: 1, required: true },
+      { key: "end_connection", label: "End Connection", placeholder: "FE’ RF", span: 1, required: true },
     ],
   },
   {
@@ -76,13 +91,13 @@ const FIELD_GROUPS = [
     color: "text-emerald-600 dark:text-emerald-400",
     bg: "bg-emerald-50 dark:bg-emerald-500/10",
     fields: [
-      { key: "body_bonnet", label: "Body / Bonnet", placeholder: "ASTM A 216 GR. WCB", span: 2 },
-      { key: "wedge_disc_plug_ball", label: "Wedge / Disc / Plug / Ball", placeholder: "ASTM A 216 GR. WCB + 13% Cr. SS O/L", span: 2 },
-      { key: "stem_hinge", label: "Stem / Hinge", placeholder: "SS 410", span: 1 },
-      { key: "seat", label: "Seat", placeholder: "ASTM A 216 GR. WCB + 13% Cr.", span: 2 },
-      { key: "gasket", label: "Gasket", placeholder: "SPW SS 316 + GRAPHITE", span: 2 },
-      { key: "gl_pkng", label: "Gland Packing", placeholder: "GRAPHITE", span: 1 },
-      { key: "fasteners", label: "Fasteners", placeholder: "B7/2H", span: 1 },
+      { key: "body_bonnet", label: "Body / Bonnet", placeholder: "ASTM A 216 GR. WCB", span: 2, required: true },
+      { key: "wedge_disc_plug_ball", label: "Wedge / Disc / Plug / Ball", placeholder: "ASTM A 216 GR. WCB + 13% Cr. SS O/L", span: 2, required: true },
+      { key: "stem_hinge", label: "Stem / Hinge", placeholder: "SS 410", span: 1, required: true },
+      { key: "seat", label: "Seat", placeholder: "ASTM A 216 GR. WCB + 13% Cr.", span: 2, required: true },
+      { key: "gasket", label: "Gasket", placeholder: "SPW SS 316 + GRAPHITE", span: 2, required: true },
+      { key: "gl_pkng", label: "Gland Packing", placeholder: "GRAPHITE", span: 1, required: true },
+      { key: "fasteners", label: "Fasteners", placeholder: "B7/2H", span: 1, required: true },
     ],
   },
   {
@@ -93,8 +108,7 @@ const FIELD_GROUPS = [
     bg: "bg-purple-50 dark:bg-purple-500/10",
     fields: [
       { key: "operation", label: "Operation", placeholder: "BARE STEM", span: 1 },
-      { key: "qty", label: "Qty", placeholder: "2", span: 1 },
-      { key: "delivery", label: "Item Delivery", placeholder: "08 - 10 WEEKS", span: 1 },
+      { key: "qty", label: "Qty", placeholder: "2", span: 1, required: true },
       { key: "special_requirements", label: "Special Requirements", placeholder: "Enter any special requirements...", span: 3, textarea: true },
       { key: "remarks", label: "Remarks", placeholder: "TORQUE=...\nTHRUST=...", span: 3, textarea: true },
     ],
@@ -106,6 +120,10 @@ function GroupIcon({ id, className }: { id: string; className?: string }) {
   if (id === "specs") return <Settings size={14} className={className} />;
   if (id === "materials") return <Wrench size={14} className={className} />;
   return <AlignLeft size={14} className={className} />;
+}
+
+function getMissingRequiredFields(item: WorkOrderItem) {
+  return REQUIRED_ITEM_FIELDS.filter(({ key }) => !String(item[key] ?? "").trim());
 }
 
 // ── Item Card ───────────────────────────────────────────────────────────────
@@ -124,10 +142,11 @@ function ItemCard({
   const [activeGroup, setActiveGroup] = useState<string>("identity");
 
   const hasContent = item.valve || item.valve_sr_no || item.material_no || item.type;
+  const missingRequired = getMissingRequiredFields(item);
+  const isComplete = missingRequired.length === 0;
 
   return (
     <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-700 rounded-xl overflow-hidden transition-all">
-      {/* Card Header */}
       <div
         className="flex items-center justify-between px-4 py-3 cursor-pointer select-none hover:bg-[#f9fafc] dark:hover:bg-gray-800/50 transition-colors"
         onClick={() => setExpanded((p) => !p)}
@@ -159,15 +178,22 @@ function ItemCard({
                 </span>
               )}
             </div>
-            {item.valve_sr_no && (
-              <div className="text-[11px] text-[#8892a8] dark:text-gray-500 mt-0.5 truncate">
-                Sr. {item.valve_sr_no}
-              </div>
-            )}
+            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+              {item.valve_sr_no && (
+                <div className="text-[11px] text-[#8892a8] dark:text-gray-500 truncate">
+                  Sr. {item.valve_sr_no}
+                </div>
+              )}
+              {hasContent && !isComplete && (
+                <div className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+                  {missingRequired.length} required field{missingRequired.length > 1 ? "s" : ""} missing
+                </div>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          {hasContent && (
+          {hasContent && isComplete && (
             <CheckCircle2 size={14} className="text-emerald-500" />
           )}
           <button
@@ -185,10 +211,8 @@ function ItemCard({
         </div>
       </div>
 
-      {/* Expanded Body */}
       {expanded && (
         <div className="border-t border-[#dde1ea] dark:border-gray-700">
-          {/* Group Tabs */}
           <div className="flex border-b border-[#dde1ea] dark:border-gray-700 overflow-x-auto">
             {FIELD_GROUPS.map((group) => (
               <button
@@ -206,7 +230,6 @@ function ItemCard({
             ))}
           </div>
 
-          {/* Active Group Fields */}
           {FIELD_GROUPS.map((group) => {
             if (group.id !== activeGroup) return null;
             return (
@@ -223,6 +246,7 @@ function ItemCard({
                       >
                         <label className="block text-[10px] font-semibold text-[#4a5578] dark:text-gray-400 mb-1 uppercase tracking-wide">
                           {f.label}
+                          {(f as any).required && <span className="text-red-500 ml-0.5">*</span>}
                         </label>
                         {isTextarea ? (
                           <textarea
@@ -254,7 +278,6 @@ function ItemCard({
   );
 }
 
-// ── Main Page ───────────────────────────────────────────────────────────────
 export default function NewWOPage() {
   const router = useRouter();
   const [woNumber, setWoNumber] = useState("");
@@ -283,7 +306,13 @@ export default function NewWOPage() {
       const last = prev[prev.length - 1];
       return [
         ...prev,
-        { ...last, sr_no: prev.length + 1, valve_sr_no: "", po_sr_no: "" },
+        {
+          ...last,
+          sr_no: prev.length + 1,
+          valve_sr_no: "",
+          po_sr_no: "",
+          delivery: "",
+        },
       ];
     });
   }, []);
@@ -314,7 +343,7 @@ export default function NewWOPage() {
       po_date: poDate || null,
       inspection_by: inspectionBy || null,
       qap_no: qapNo || null,
-      items: items.map((it) => ({ ...it })),
+      items: items.map((it) => ({ ...it, delivery: "" })),
     };
   }, [woNumber, partyName, deliveryDate, poNo, poDate, inspectionBy, qapNo, items]);
 
@@ -322,6 +351,14 @@ export default function NewWOPage() {
     if (!woNumber.trim()) { setError("WO Number is required."); return; }
     if (!partyName.trim()) { setError("Party Name is required."); return; }
     if (items.length === 0) { setError("Add at least one item."); return; }
+
+    const firstInvalidIndex = items.findIndex((item) => getMissingRequiredFields(item).length > 0);
+    if (firstInvalidIndex !== -1) {
+      const missing = getMissingRequiredFields(items[firstInvalidIndex]).map((field) => field.label).join(", ");
+      setError(`Line Item ${firstInvalidIndex + 1} is missing required fields: ${missing}.`);
+      return;
+    }
+
     setSaving(true);
     setError("");
 
@@ -374,7 +411,7 @@ export default function NewWOPage() {
         remarks: it.remarks || null,
         drawing_no: it.drawing_no || null,
         qty: it.qty || null,
-        delivery: it.delivery || null,
+        delivery: null,
       }));
 
       const { error: itemsErr } = await supabase.from("work_order_items").insert(itemRows);
@@ -409,7 +446,6 @@ export default function NewWOPage() {
 
   return (
     <div className="p-4 lg:p-6 max-w-[920px] mx-auto">
-      {/* Page Header */}
       <div className="mb-6">
         <button
           onClick={() => router.push("/dashboard/wo")}
@@ -454,7 +490,6 @@ export default function NewWOPage() {
         </div>
       </div>
 
-      {/* Alerts */}
       {error && (
         <div className="mb-4 flex items-center gap-2 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-700 dark:text-red-300 px-3 py-2.5 rounded-lg text-xs font-medium">
           <AlertCircle size={14} />
@@ -468,7 +503,6 @@ export default function NewWOPage() {
         </div>
       )}
 
-      {/* ── Section 1: Work Order Header ── */}
       <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-xl p-5 mb-4">
         <div className="flex items-center gap-2 mb-4">
           <div className="w-1 h-4 bg-viton-red dark:bg-orange-500 rounded-full" />
@@ -484,7 +518,7 @@ export default function NewWOPage() {
             { label: "P.O. No.", value: poNo, setter: setPoNo, placeholder: "4500061886" },
             { label: "PO Date", value: poDate, setter: setPoDate, placeholder: "26.05.2026" },
             { label: "Inspection By", value: inspectionBy, setter: setInspectionBy, placeholder: "NO" },
-            { label: "QAP No.", value: qapNo, setter: setQapNo, placeholder: "\u2014" },
+            { label: "QAP No.", value: qapNo, setter: setQapNo, placeholder: "—" },
           ].map((f) => (
             <div key={f.label} className={(f as any).wide ? "col-span-2 sm:col-span-3 lg:col-span-2" : ""}>
               <label className="block text-[10px] font-semibold text-[#4a5578] dark:text-gray-400 mb-1.5 uppercase tracking-wide">
@@ -503,7 +537,6 @@ export default function NewWOPage() {
         </div>
       </div>
 
-      {/* ── Section 2: Line Items ── */}
       <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-xl p-5 mb-4">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
@@ -512,7 +545,7 @@ export default function NewWOPage() {
               Line Items
             </h2>
             <span className="text-[11px] font-semibold text-[#8892a8] dark:text-gray-500 bg-[#f1f3f8] dark:bg-gray-800 px-2 py-0.5 rounded-full">
-              {items.length} total{filledItems > 0 ? ` \u00b7 ${filledItems} filled` : ""}
+              {items.length} total{filledItems > 0 ? ` · ${filledItems} filled` : ""}
             </span>
           </div>
           <button
@@ -523,7 +556,6 @@ export default function NewWOPage() {
           </button>
         </div>
 
-        {/* Item Cards */}
         <div className="space-y-3">
           {items.length === 0 ? (
             <div className="text-center py-10 text-[#8892a8] dark:text-gray-500">
@@ -544,7 +576,6 @@ export default function NewWOPage() {
           )}
         </div>
 
-        {/* Bottom add actions */}
         {items.length > 0 && (
           <div className="mt-3 grid grid-cols-2 gap-2">
             <button
@@ -563,7 +594,6 @@ export default function NewWOPage() {
         )}
       </div>
 
-      {/* Bottom Save Bar */}
       <div className="sticky bottom-4 flex justify-end">
         <div className="flex items-center gap-2 bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-xl px-4 py-3 shadow-lg">
           <span className="text-xs text-[#8892a8] dark:text-gray-500 mr-2">
@@ -586,7 +616,6 @@ export default function NewWOPage() {
         </div>
       </div>
 
-      {/* ── Preview Modal ── */}
       {showPreview && (
         <div className="fixed inset-0 z-50 flex items-start justify-center p-4 overflow-y-auto bg-black/80">
           <div className="bg-white rounded-2xl w-full max-w-5xl my-4 shadow-2xl overflow-hidden">
@@ -620,7 +649,6 @@ export default function NewWOPage() {
   );
 }
 
-// ── Screen Preview (unchanged — matches print output) ────────────────────────
 function WOScreenPreview({ wo }: { wo: WorkOrder & { items: WorkOrderItem[] } }) {
   const items = wo.items ?? [];
   const colStyle = (w: number): React.CSSProperties => ({
@@ -666,7 +694,6 @@ function WOScreenPreview({ wo }: { wo: WorkOrder & { items: WorkOrderItem[] } })
     { key: "remarks", label: "Remarks", width: 60 },
     { key: "drawing_no", label: "Drawing No.", width: 34 },
     { key: "qty", label: "Qty", width: 24 },
-    { key: "delivery", label: "Delivery", width: 36 },
   ];
 
   return (
@@ -696,7 +723,7 @@ function WOScreenPreview({ wo }: { wo: WorkOrder & { items: WorkOrderItem[] } })
         {[["Party Name", wo.party_name], ["Delivery", wo.delivery_date], ["P.O. No.", wo.po_no], ["PO Date", wo.po_date], ["Inspection By", wo.inspection_by], ["QAP No.", wo.qap_no]].map(([label, val]) => (
           <div key={label as string} style={{ display: "flex" }}>
             <span style={{ fontWeight: 700, color: "#c41e3a", width: "90px", textTransform: "uppercase" }}>{label}:</span>
-            <span style={{ fontWeight: 600 }}>{val || "\u2014"}</span>
+            <span style={{ fontWeight: 600 }}>{val || "—"}</span>
           </div>
         ))}
       </div>
