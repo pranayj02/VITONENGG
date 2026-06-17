@@ -36,8 +36,8 @@ async function verifyUser(request: NextRequest): Promise<{ error: string } | { u
 
   const p = profile as any;
   const role = p?.role;
-  if (!role || !["admin", "store_keeper", "purchase_manager", "quality_assurance"].includes(role)) {
-    return { error: "Forbidden: you need admin, store_keeper, purchase_manager, or quality_assurance role to delete GRNs" };
+  if (!role || !["admin", "quality_assurance"].includes(role)) {
+    return { error: "Forbidden: you need admin or quality_assurance role to delete GRNs" };
   }
 
   return { user, role, name: p?.full_name || user.email || "Unknown" };
