@@ -200,27 +200,27 @@ export default function NewWOPage() {
   };
 
   return (
-    <div className="p-6 lg:p-8 max-w-[1600px] mx-auto">
+    <div className="p-4 lg:p-6 max-w-[1600px] mx-auto">
       {/* Header */}
-      <div className="mb-6 flex items-center justify-between flex-wrap gap-4">
+      <div className="mb-4 flex items-center justify-between flex-wrap gap-3">
         <div>
           <button
             onClick={() => router.push("/dashboard/wo")}
             className="flex items-center gap-1 text-sm text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white mb-2 transition-colors"
           >
-            <ArrowLeft size={14} /> Back to Work Orders
+            <ArrowLeft size={12} /> Back to Work Orders
           </button>
-          <h1 className="text-viton-navy dark:text-white text-2xl font-bold tracking-tight">
+          <h1 className="text-viton-navy dark:text-white text-xl font-bold tracking-tight">
             New Work Order
           </h1>
-          <p className="text-[#8892a8] dark:text-gray-500 text-sm mt-1">
+          <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-0.5">
             Manually enter all fields. Nothing is auto-filled.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowPreview(true)}
-            className="flex items-center gap-2 bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-700 text-viton-navy dark:text-white font-semibold px-4 py-2.5 rounded-xl text-sm hover:border-[#c0c8db] dark:hover:border-gray-600 transition-all"
+            className="flex items-center gap-2 bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-700 text-viton-navy dark:text-white font-semibold px-3 py-2 rounded-lg text-xs hover:border-[#c0c8db] dark:hover:border-gray-600 transition-all"
           >
             <Eye size={15} /> Preview
           </button>
@@ -228,7 +228,7 @@ export default function NewWOPage() {
             <PDFDownloadLink
               document={<WOPdfDocument wo={woForPdf} />}
               fileName={`WO-${woNumber.replace(/\//g, "-")}.pdf`}
-              className="flex items-center gap-2 bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-all"
+              className="flex items-center gap-2 bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 text-white font-semibold px-3 py-2 rounded-lg text-xs transition-all"
             >
               <Printer size={15} /> Download PDF
             </PDFDownloadLink>
@@ -236,7 +236,7 @@ export default function NewWOPage() {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center gap-2 bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 text-white font-semibold px-4 py-2.5 rounded-xl text-sm transition-all disabled:opacity-60"
+            className="flex items-center gap-2 bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 text-white font-semibold px-3 py-2 rounded-lg text-xs transition-all disabled:opacity-60"
           >
             <Save size={15} />
             {saving ? "Saving..." : savedId ? "Update" : "Save Work Order"}
@@ -245,24 +245,24 @@ export default function NewWOPage() {
       </div>
 
       {error && (
-        <div className="mb-4 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-700 dark:text-red-300 px-4 py-3 rounded-xl text-sm font-medium">
+        <div className="mb-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-700 dark:text-red-300 px-3 py-2 rounded-lg text-xs font-medium">
           {error}
         </div>
       )}
 
       {savedId && (
-        <div className="mb-4 bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20 text-green-700 dark:text-green-300 px-4 py-3 rounded-xl text-sm font-medium flex items-center gap-2">
+        <div className="mb-3 bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20 text-green-700 dark:text-green-300 px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-2">
           <FileText size={15} />
           Work order saved successfully. WO ID: {savedId}
         </div>
       )}
 
       {/* ── Header Form ── */}
-      <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl p-5 mb-6">
+      <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-xl p-4 mb-4">
         <p className="text-[#8892a8] dark:text-gray-400 text-xs font-semibold uppercase tracking-widest mb-4">
           Work Order Header
         </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3">
           {[
             { label: "WO Number", value: woNumber, setter: setWoNumber, placeholder: "e.g. 1092", required: true },
             { label: "Party Name", value: partyName, setter: setPartyName, placeholder: "INDIA GLYCOLS LTD - GORAKHPUR", required: true },
@@ -273,7 +273,7 @@ export default function NewWOPage() {
             { label: "QAP No.", value: qapNo, setter: setQapNo, placeholder: "—" },
           ].map((f) => (
             <div key={f.label}>
-              <label className="block text-xs font-semibold text-[#4a5578] dark:text-gray-400 mb-1.5">
+              <label className="block text-[10px] font-semibold text-[#4a5578] dark:text-gray-400 mb-1">
                 {f.label} {f.required ? <span className="text-red-500">*</span> : null}
               </label>
               <input
@@ -281,7 +281,7 @@ export default function NewWOPage() {
                 value={f.value}
                 onChange={(e) => f.setter(e.target.value)}
                 placeholder={f.placeholder}
-                className="w-full bg-[#f6f8fc] dark:bg-gray-950 border border-[#dde1ea] dark:border-gray-700 rounded-xl px-3.5 py-2.5 text-sm text-viton-navy dark:text-white placeholder:text-[#8892a8] dark:placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red/20 dark:focus:ring-orange-500/20 focus:border-viton-red dark:focus:border-orange-500 transition-all"
+                className="w-full bg-[#f6f8fc] dark:bg-gray-950 border border-[#dde1ea] dark:border-gray-700 rounded-lg px-3 py-1.5 text-xs text-viton-navy dark:text-white placeholder:text-[#8892a8] dark:placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red/20 dark:focus:ring-orange-500/20 focus:border-viton-red dark:focus:border-orange-500 transition-all"
               />
             </div>
           ))}
@@ -289,16 +289,16 @@ export default function NewWOPage() {
       </div>
 
       {/* ── Items Table ── */}
-      <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl p-5 mb-6">
+      <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-xl p-4 mb-4">
         <div className="flex items-center justify-between mb-4">
           <p className="text-[#8892a8] dark:text-gray-400 text-xs font-semibold uppercase tracking-widest">
             Line Items
           </p>
           <button
             onClick={addRow}
-            className="flex items-center gap-1.5 text-sm font-semibold text-viton-red dark:text-orange-400 hover:text-viton-red-hover dark:hover:text-orange-300 transition-colors"
+            className="flex items-center gap-1.5 text-xs font-semibold text-viton-red dark:text-orange-400 hover:text-viton-red-hover dark:hover:text-orange-300 transition-colors"
           >
-            <Plus size={15} /> Add Row
+            <Plus size={13} /> Add Row
           </button>
         </div>
 
@@ -311,7 +311,7 @@ export default function NewWOPage() {
                   <div
                     key={col.key}
                     style={{ width: col.width, minWidth: col.width }}
-                    className="px-2 py-2 text-[10px] font-bold text-white uppercase tracking-wider text-center border-r border-white/10 last:border-r-0 flex-shrink-0"
+                    className="px-1.5 py-1.5 text-[9px] font-bold text-white uppercase tracking-wider text-center border-r border-white/10 last:border-r-0 flex-shrink-0 leading-tight"
                   >
                     {col.label}
                   </div>
@@ -334,15 +334,15 @@ export default function NewWOPage() {
                       <div
                         key={col.key}
                         style={{ width: col.width, minWidth: col.width }}
-                        className="px-1 py-1.5 border-r border-[#dde1ea] dark:border-gray-700 last:border-r-0 flex-shrink-0"
+                        className="px-1 py-1 border-r border-[#dde1ea] dark:border-gray-700 last:border-r-0 flex-shrink-0"
                       >
                         {isTextarea ? (
                           <textarea
                             value={String(val)}
                             onChange={(e) => updateItem(idx, col.key, e.target.value)}
                             placeholder={col.placeholder}
-                            rows={2}
-                            className="w-full bg-transparent text-[11px] text-viton-navy dark:text-white placeholder:text-[#8892a8] dark:placeholder:text-gray-600 focus:outline-none resize-none leading-tight"
+                            rows={1}
+                            className="w-full bg-transparent text-[10px] text-viton-navy dark:text-white placeholder:text-[#8892a8] dark:placeholder:text-gray-600 focus:outline-none resize-none leading-tight"
                           />
                         ) : (
                           <input
@@ -356,19 +356,19 @@ export default function NewWOPage() {
                               )
                             }
                             placeholder={col.placeholder}
-                            className="w-full bg-transparent text-[11px] text-viton-navy dark:text-white placeholder:text-[#8892a8] dark:placeholder:text-gray-600 focus:outline-none"
+                            className="w-full bg-transparent text-[10px] text-viton-navy dark:text-white placeholder:text-[#8892a8] dark:placeholder:text-gray-600 focus:outline-none"
                           />
                         )}
                       </div>
                     );
                   })}
-                  <div className="w-10 px-1 py-1.5 flex items-center justify-center flex-shrink-0">
+                  <div className="w-8 px-1 py-1 flex items-center justify-center flex-shrink-0">
                     <button
                       onClick={() => removeRow(idx)}
-                      className="p-1 rounded-md hover:bg-red-50 dark:hover:bg-red-500/10 text-red-400 hover:text-red-600 transition-colors"
+                      className="p-0.5 rounded hover:bg-red-50 dark:hover:bg-red-500/10 text-red-400 hover:text-red-600 transition-colors"
                       title="Remove row"
                     >
-                      <Trash2 size={13} />
+                      <Trash2 size={11} />
                     </button>
                   </div>
                 </div>
@@ -378,7 +378,7 @@ export default function NewWOPage() {
         </div>
 
         {items.length === 0 && (
-          <div className="text-center py-8 text-[#8892a8] dark:text-gray-500 text-sm">
+          <div className="text-center py-6 text-[#8892a8] dark:text-gray-500 text-sm">
             No items yet. Click "Add Row" to start.
           </div>
         )}
