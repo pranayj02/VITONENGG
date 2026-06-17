@@ -713,6 +713,27 @@ export default function GRNPage() {
   const revDate = "01/10/2025";
   const fy = getCurrentFY();
 
+  // ── Helper: combined PO numbers string for the header ──────────────────────
+  const combinedPONumbers = selectedPOs.length > 0
+    ? selectedPOs.map((po) => po.po_number).join(", ")
+    : "Direct Receipt";
+
+  // ── Helper: get PO date for a given line (by source_po_id) ─────────────────
+  function getLinePODate(line: GRNLineItem): string {
+    const sourcePOId = (line as any).source_po_id;
+    const matchedPO = sourcePOId
+      ? selectedPOs.find((po) => po.id === sourcePOId)
+      : selectedPOs[0];
+    return matchedPO
+      ? new Date(matchedPO.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" })
+      : "—";
+  }
+
+  // ── Helper: get PO number for a given line (by source_po_number) ───────────
+  function getLinePONumber(line: GRNLineItem): string {
+    return (line as any).source_po_number ?? selectedPOs[0]?.po_number ?? "—";
+  }
+
   return (
     <div className="p-6 lg:p-8 max-w-6xl mx-auto">
       {error && (
@@ -1038,16 +1059,24 @@ export default function GRNPage() {
                           <input value={receivedByName} onChange={(e) => setReceivedByName(e.target.value)} placeholder="Enter name" style={{ width:"100%", fontSize:"8pt", border:"none", background:"transparent", outline:"none" }} />
                         </td>
                       </tr>
+                      {/* ── PO No. row: show ALL selected PO numbers ── */}
                       <tr>
                         <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>PO No.</td>
-                        <td colSpan={2} style={{ border:"1px solid #000", padding:"4px 6px", fontFamily:"monospace", color:"#1a1a6e", fontWeight:"700" }}>{selectedPOs[0]?.po_number ?? "Direct Receipt"}</td>
+                        <td colSpan={2} style={{ border:"1px solid #000", padding:"4px 6px", fontFamily:"monospace", color:"#1a1a6e", fontWeight:"700" }}>
+                          {combinedPONumbers}
+                        </td>
                         <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }} />
                         <td style={{ border:"1px solid #000", padding:"4px 6px", fontSize:"8pt" }} />
                       </tr>
+                      {/* ── PO Date row: show dates for all selected POs ── */}
                       <tr>
                         <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }}>PO Date</td>
                         <td colSpan={2} style={{ border:"1px solid #000", padding:"4px 6px", fontSize:"8pt" }}>
-                          {selectedPOs[0] ? new Date(selectedPOs[0].created_at).toLocaleDateString("en-IN", { day:"2-digit", month:"2-digit", year:"numeric" }) : "—"}
+                          {selectedPOs.length > 0
+                            ? selectedPOs.map((po) =>
+                                new Date(po.created_at).toLocaleDateString("en-IN", { day:"2-digit", month:"2-digit", year:"numeric" })
+                              ).join(", ")
+                            : "—"}
                         </td>
                         <td style={{ border:"1px solid #000", padding:"4px 6px", fontWeight:"700", fontSize:"8pt", background:"#ebebeb" }} />
                         <td style={{ border:"1px solid #000", padding:"4px 6px", fontSize:"8pt" }} />
@@ -1108,11 +1137,13 @@ export default function GRNPage() {
                               <input value={line.name} onChange={(e) => updateGRNLine(i, { name: e.target.value })} style={{ width:"100%", fontSize:"8pt", border:"none", background:"transparent", outline:"none" }} />
                             ) : ""}
                           </td>
+                          {/* ── PO No. per line: use source_po_number from the line itself ── */}
                           <td style={{ border:"1px solid #ccc", padding:"4px 5px", textAlign:"center", fontSize:"7.5pt", fontFamily:"monospace", color:"#1a1a6e" }}>
-                            {line ? (selectedPOs[0]?.po_number ?? "—") : ""}
+                            {line ? getLinePONumber(line) : ""}
                           </td>
+                          {/* ── PO Date per line: look up by source_po_id ── */}
                           <td style={{ border:"1px solid #ccc", padding:"4px 5px", textAlign:"center", fontSize:"7.5pt" }}>
-                            {line ? (selectedPOs[0] ? new Date(selectedPOs[0].created_at).toLocaleDateString("en-IN", { day:"2-digit", month:"2-digit", year:"numeric" }) : "—") : ""}
+                            {line ? getLinePODate(line) : ""}
                           </td>
                           <td style={{ border:"1px solid #ccc", padding:"4px 5px", textAlign:"center", fontSize:"8pt" }}>
                             {line ? (
