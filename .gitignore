@@ -18,3 +18,4 @@ out/
 
 # Supabase CLI temp files
 supabase/.temp/
+.vercel

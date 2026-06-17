@@ -6,7 +6,7 @@ import { audit } from "@/lib/audit";
 import { useRouter } from "next/navigation";
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import { WOPdfDocument } from "@/components/WOPdf";
-import type { WorkOrderItem } from "@/lib/types";
+import type { WorkOrderItem, WorkOrder } from "@/lib/types";
 import {
   Plus, Trash2, Save, Printer, X, FileText, Eye, ArrowLeft,
 } from "lucide-react";
@@ -174,8 +174,8 @@ export default function NewWOPage() {
       const { error: itemsErr } = await supabase.from("work_order_items").insert(itemRows);
       if (itemsErr) throw itemsErr;
 
-      setSavedId(woId);
-      await audit({ action: "created", entity_type: "work_order", entity_id: woId, entity_code: woNumber.trim() });
+      setSavedId(woId as string);
+      await audit({ action: "created", entity_type: "work_order", entity_id: woId as string, entity_code: woNumber.trim() });
     } catch (e: any) {
       setError(e?.message || "Failed to save work order.");
     } finally {
