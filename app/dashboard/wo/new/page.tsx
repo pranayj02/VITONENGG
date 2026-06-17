@@ -9,6 +9,8 @@ import { WOPdfDocument } from "@/components/WOPdf";
 import type { WorkOrderItem, WorkOrder } from "@/lib/types";
 import {
   Plus, Trash2, Save, Printer, X, FileText, Eye, ArrowLeft,
+  ChevronDown, ChevronUp, Package, Settings, Wrench, AlignLeft,
+  CheckCircle2, AlertCircle,
 } from "lucide-react";
 
 const EMPTY_ITEM = (): WorkOrderItem => ({
@@ -37,32 +39,224 @@ const EMPTY_ITEM = (): WorkOrderItem => ({
   delivery: "",
 });
 
-const COL_DEFS: { key: keyof WorkOrderItem; label: string; placeholder: string; width: number }[] = [
-  { key: "sr_no", label: "Sr. No.", placeholder: "", width: 40 },
-  { key: "po_sr_no", label: "P.O. SR. NO.", placeholder: "1", width: 50 },
-  { key: "valve_sr_no", label: "VALVE SR.NO.", placeholder: "V123-1 TO V123-2", width: 110 },
-  { key: "material_no", label: "Material No.", placeholder: "300905132", width: 90 },
-  { key: "valve", label: "Valve", placeholder: "GATE VALVE", width: 70 },
-  { key: "type", label: "Type", placeholder: "RISING STEM...", width: 100 },
-  { key: "bore", label: "Bore", placeholder: "STD", width: 45 },
-  { key: "size_mm", label: "Size MM", placeholder: "600", width: 50 },
-  { key: "rating", label: "Rating", placeholder: "150#", width: 50 },
-  { key: "end_connection", label: "End Conn.", placeholder: "FE' RF", width: 70 },
-  { key: "body_bonnet", label: "Body / Bonnet", placeholder: "ASTM A 216 GR. WCB", width: 110 },
-  { key: "wedge_disc_plug_ball", label: "Wedge / Disc / Plug / Ball", placeholder: "ASTM A 216 GR. WCB + 13% Cr. SS O/L", width: 130 },
-  { key: "stem_hinge", label: "Stem / Hinge", placeholder: "SS 410", width: 70 },
-  { key: "seat", label: "Seat", placeholder: "ASTM A 216 GR. WCB + 13% Cr. SS O/L", width: 110 },
-  { key: "gasket", label: "Gasket", placeholder: "SPW SS 316 + GRAPHITE", width: 110 },
-  { key: "gl_pkng", label: "GL. PKNG.", placeholder: "GRAPHITE", width: 70 },
-  { key: "fasteners", label: "Fasteners", placeholder: "B7/2H", width: 60 },
-  { key: "operation", label: "Operation", placeholder: "BARE STEM", width: 70 },
-  { key: "special_requirements", label: "Special Req.", placeholder: "", width: 90 },
-  { key: "remarks", label: "Remarks", placeholder: "TORQUE=...\nTHRUST=...", width: 120 },
-  { key: "drawing_no", label: "Drawing No.", placeholder: "", width: 70 },
-  { key: "qty", label: "Qty", placeholder: "2", width: 40 },
-  { key: "delivery", label: "Delivery", placeholder: "08 - 10 WEEKS", width: 90 },
-];
+// ── Field Groups ────────────────────────────────────────────────────────────
+const FIELD_GROUPS = [
+  {
+    id: "identity",
+    label: "Identity & Reference",
+    icon: "package",
+    color: "text-blue-600 dark:text-blue-400",
+    bg: "bg-blue-50 dark:bg-blue-500/10",
+    fields: [
+      { key: "po_sr_no", label: "P.O. Sr. No.", placeholder: "1", span: 1 },
+      { key: "valve_sr_no", label: "Valve Sr. No.", placeholder: "V123-1 TO V123-2", span: 2 },
+      { key: "material_no", label: "Material No.", placeholder: "300905132", span: 1 },
+      { key: "valve", label: "Valve Type", placeholder: "GATE VALVE", span: 1 },
+      { key: "drawing_no", label: "Drawing No.", placeholder: "DWG-001", span: 1 },
+    ],
+  },
+  {
+    id: "specs",
+    label: "Valve Specifications",
+    icon: "settings",
+    color: "text-amber-600 dark:text-amber-400",
+    bg: "bg-amber-50 dark:bg-amber-500/10",
+    fields: [
+      { key: "type", label: "Type", placeholder: "RISING STEM, OS&Y", span: 2 },
+      { key: "bore", label: "Bore", placeholder: "STD", span: 1 },
+      { key: "size_mm", label: "Size (MM)", placeholder: "600", span: 1 },
+      { key: "rating", label: "Rating", placeholder: "150#", span: 1 },
+      { key: "end_connection", label: "End Connection", placeholder: "FE\u2019 RF", span: 1 },
+    ],
+  },
+  {
+    id: "materials",
+    label: "Materials of Construction",
+    icon: "wrench",
+    color: "text-emerald-600 dark:text-emerald-400",
+    bg: "bg-emerald-50 dark:bg-emerald-500/10",
+    fields: [
+      { key: "body_bonnet", label: "Body / Bonnet", placeholder: "ASTM A 216 GR. WCB", span: 2 },
+      { key: "wedge_disc_plug_ball", label: "Wedge / Disc / Plug / Ball", placeholder: "ASTM A 216 GR. WCB + 13% Cr. SS O/L", span: 2 },
+      { key: "stem_hinge", label: "Stem / Hinge", placeholder: "SS 410", span: 1 },
+      { key: "seat", label: "Seat", placeholder: "ASTM A 216 GR. WCB + 13% Cr.", span: 2 },
+      { key: "gasket", label: "Gasket", placeholder: "SPW SS 316 + GRAPHITE", span: 2 },
+      { key: "gl_pkng", label: "Gland Packing", placeholder: "GRAPHITE", span: 1 },
+      { key: "fasteners", label: "Fasteners", placeholder: "B7/2H", span: 1 },
+    ],
+  },
+  {
+    id: "operations",
+    label: "Operations & Notes",
+    icon: "align-left",
+    color: "text-purple-600 dark:text-purple-400",
+    bg: "bg-purple-50 dark:bg-purple-500/10",
+    fields: [
+      { key: "operation", label: "Operation", placeholder: "BARE STEM", span: 1 },
+      { key: "qty", label: "Qty", placeholder: "2", span: 1 },
+      { key: "delivery", label: "Item Delivery", placeholder: "08 - 10 WEEKS", span: 1 },
+      { key: "special_requirements", label: "Special Requirements", placeholder: "Enter any special requirements...", span: 3, textarea: true },
+      { key: "remarks", label: "Remarks", placeholder: "TORQUE=...\nTHRUST=...", span: 3, textarea: true },
+    ],
+  },
+] as const;
 
+function GroupIcon({ id, className }: { id: string; className?: string }) {
+  if (id === "identity") return <Package size={14} className={className} />;
+  if (id === "specs") return <Settings size={14} className={className} />;
+  if (id === "materials") return <Wrench size={14} className={className} />;
+  return <AlignLeft size={14} className={className} />;
+}
+
+// ── Item Card ───────────────────────────────────────────────────────────────
+function ItemCard({
+  item,
+  idx,
+  total,
+  onUpdate,
+  onRemove,
+}: {
+  item: WorkOrderItem;
+  idx: number;
+  total: number;
+  onUpdate: (key: keyof WorkOrderItem, val: string | number) => void;
+  onRemove: () => void;
+}) {
+  const [expanded, setExpanded] = useState(idx === 0);
+  const [activeGroup, setActiveGroup] = useState<string>("identity");
+
+  const hasContent = item.valve || item.valve_sr_no || item.material_no || item.type;
+
+  return (
+    <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-700 rounded-xl overflow-hidden transition-all">
+      {/* Card Header */}
+      <div
+        className="flex items-center justify-between px-4 py-3 cursor-pointer select-none hover:bg-[#f9fafc] dark:hover:bg-gray-800/50 transition-colors"
+        onClick={() => setExpanded((p) => !p)}
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-7 h-7 rounded-lg bg-viton-navy dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+            <span className="text-white text-xs font-bold">{idx + 1}</span>
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              {item.valve && (
+                <span className="text-xs font-semibold text-viton-navy dark:text-white">
+                  {item.valve}
+                </span>
+              )}
+              {item.size_mm && (
+                <span className="text-[11px] bg-[#f1f3f8] dark:bg-gray-700 text-[#4a5578] dark:text-gray-300 px-1.5 py-0.5 rounded font-medium">
+                  {item.size_mm} MM
+                </span>
+              )}
+              {item.rating && (
+                <span className="text-[11px] bg-[#f1f3f8] dark:bg-gray-700 text-[#4a5578] dark:text-gray-300 px-1.5 py-0.5 rounded font-medium">
+                  {item.rating}
+                </span>
+              )}
+              {!hasContent && (
+                <span className="text-[#8892a8] dark:text-gray-500 text-xs">
+                  Line Item {idx + 1} — click to fill
+                </span>
+              )}
+            </div>
+            {item.valve_sr_no && (
+              <div className="text-[11px] text-[#8892a8] dark:text-gray-500 mt-0.5 truncate">
+                Sr. {item.valve_sr_no}
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {hasContent && (
+            <CheckCircle2 size={14} className="text-emerald-500" />
+          )}
+          <button
+            onClick={(e) => { e.stopPropagation(); onRemove(); }}
+            className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-500/10 text-[#8892a8] hover:text-red-500 transition-colors"
+            title="Remove item"
+          >
+            <Trash2 size={13} />
+          </button>
+          {expanded ? (
+            <ChevronUp size={15} className="text-[#8892a8]" />
+          ) : (
+            <ChevronDown size={15} className="text-[#8892a8]" />
+          )}
+        </div>
+      </div>
+
+      {/* Expanded Body */}
+      {expanded && (
+        <div className="border-t border-[#dde1ea] dark:border-gray-700">
+          {/* Group Tabs */}
+          <div className="flex border-b border-[#dde1ea] dark:border-gray-700 overflow-x-auto">
+            {FIELD_GROUPS.map((group) => (
+              <button
+                key={group.id}
+                onClick={() => setActiveGroup(group.id)}
+                className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold whitespace-nowrap transition-all border-b-2 -mb-px ${
+                  activeGroup === group.id
+                    ? `border-viton-red dark:border-orange-500 text-viton-navy dark:text-white`
+                    : `border-transparent text-[#8892a8] dark:text-gray-500 hover:text-[#4a5578] dark:hover:text-gray-300`
+                }`}
+              >
+                <GroupIcon id={group.id} className={activeGroup === group.id ? group.color : ""} />
+                {group.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Active Group Fields */}
+          {FIELD_GROUPS.map((group) => {
+            if (group.id !== activeGroup) return null;
+            return (
+              <div key={group.id} className="p-4">
+                <div className="grid grid-cols-3 lg:grid-cols-6 gap-3">
+                  {group.fields.map((f) => {
+                    const val = item[f.key as keyof WorkOrderItem] ?? "";
+                    const isTextarea = (f as any).textarea;
+                    const span = (f as any).span ?? 1;
+                    return (
+                      <div
+                        key={f.key}
+                        className={`${span === 1 ? "col-span-1" : span === 2 ? "col-span-3 lg:col-span-2" : "col-span-3 lg:col-span-6"}`}
+                      >
+                        <label className="block text-[10px] font-semibold text-[#4a5578] dark:text-gray-400 mb-1 uppercase tracking-wide">
+                          {f.label}
+                        </label>
+                        {isTextarea ? (
+                          <textarea
+                            value={String(val)}
+                            onChange={(e) => onUpdate(f.key as keyof WorkOrderItem, e.target.value)}
+                            placeholder={f.placeholder}
+                            rows={2}
+                            className="w-full bg-[#f6f8fc] dark:bg-gray-950 border border-[#dde1ea] dark:border-gray-700 rounded-lg px-3 py-2 text-xs text-viton-navy dark:text-white placeholder:text-[#8892a8] dark:placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red/20 dark:focus:ring-orange-500/20 focus:border-viton-red dark:focus:border-orange-500 transition-all resize-none"
+                          />
+                        ) : (
+                          <input
+                            type="text"
+                            value={String(val)}
+                            onChange={(e) => onUpdate(f.key as keyof WorkOrderItem, e.target.value)}
+                            placeholder={f.placeholder}
+                            className="w-full bg-[#f6f8fc] dark:bg-gray-950 border border-[#dde1ea] dark:border-gray-700 rounded-lg px-3 py-2 text-xs text-viton-navy dark:text-white placeholder:text-[#8892a8] dark:placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red/20 dark:focus:ring-orange-500/20 focus:border-viton-red dark:focus:border-orange-500 transition-all"
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main Page ───────────────────────────────────────────────────────────────
 export default function NewWOPage() {
   const router = useRouter();
   const [woNumber, setWoNumber] = useState("");
@@ -93,11 +287,14 @@ export default function NewWOPage() {
     );
   }, []);
 
-  const updateItem = useCallback((idx: number, key: keyof WorkOrderItem, value: string | number) => {
-    setItems((prev) =>
-      prev.map((item, i) => (i === idx ? { ...item, [key]: value } : item))
-    );
-  }, []);
+  const updateItem = useCallback(
+    (idx: number, key: keyof WorkOrderItem, value: string | number) => {
+      setItems((prev) =>
+        prev.map((item, i) => (i === idx ? { ...item, [key]: value } : item))
+      );
+    },
+    []
+  );
 
   const buildWOPayload = useCallback(() => {
     return {
@@ -199,189 +396,187 @@ export default function NewWOPage() {
     items: woPayload.items,
   };
 
+  const filledItems = items.filter((i) => i.valve || i.valve_sr_no || i.material_no).length;
+
   return (
-    <div className="p-4 lg:p-6 max-w-[1600px] mx-auto">
-      {/* Header */}
-      <div className="mb-4 flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <button
-            onClick={() => router.push("/dashboard/wo")}
-            className="flex items-center gap-1 text-sm text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white mb-2 transition-colors"
-          >
-            <ArrowLeft size={12} /> Back to Work Orders
-          </button>
-          <h1 className="text-viton-navy dark:text-white text-xl font-bold tracking-tight">
-            New Work Order
-          </h1>
-          <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-0.5">
-            Manually enter all fields. Nothing is auto-filled.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowPreview(true)}
-            className="flex items-center gap-2 bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-700 text-viton-navy dark:text-white font-semibold px-3 py-2 rounded-lg text-xs hover:border-[#c0c8db] dark:hover:border-gray-600 transition-all"
-          >
-            <Eye size={15} /> Preview
-          </button>
-          {savedId && (
-            <PDFDownloadLink
-              document={<WOPdfDocument wo={woForPdf} />}
-              fileName={`WO-${woNumber.replace(/\//g, "-")}.pdf`}
-              className="flex items-center gap-2 bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 text-white font-semibold px-3 py-2 rounded-lg text-xs transition-all"
+    <div className="p-4 lg:p-6 max-w-[920px] mx-auto">
+      {/* Page Header */}
+      <div className="mb-6">
+        <button
+          onClick={() => router.push("/dashboard/wo")}
+          className="flex items-center gap-1.5 text-xs text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white mb-3 transition-colors"
+        >
+          <ArrowLeft size={12} /> Back to Work Orders
+        </button>
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-viton-navy dark:text-white text-xl font-bold tracking-tight">
+              New Work Order
+            </h1>
+            <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-0.5">
+              All fields must be entered manually.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowPreview(true)}
+              className="flex items-center gap-2 bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-700 text-viton-navy dark:text-white font-semibold px-3 py-2 rounded-lg text-xs hover:border-[#c0c8db] dark:hover:border-gray-600 transition-all"
             >
-              <Printer size={15} /> Download PDF
-            </PDFDownloadLink>
-          )}
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="flex items-center gap-2 bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 text-white font-semibold px-3 py-2 rounded-lg text-xs transition-all disabled:opacity-60"
-          >
-            <Save size={15} />
-            {saving ? "Saving..." : savedId ? "Update" : "Save Work Order"}
-          </button>
+              <Eye size={14} /> Preview
+            </button>
+            {savedId && (
+              <PDFDownloadLink
+                document={<WOPdfDocument wo={woForPdf} />}
+                fileName={`WO-${woNumber.replace(/\//g, "-")}.pdf`}
+                className="flex items-center gap-2 bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 text-white font-semibold px-3 py-2 rounded-lg text-xs transition-all"
+              >
+                <Printer size={14} /> Download PDF
+              </PDFDownloadLink>
+            )}
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex items-center gap-2 bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 text-white font-semibold px-4 py-2 rounded-lg text-xs transition-all disabled:opacity-60"
+            >
+              <Save size={14} />
+              {saving ? "Saving..." : savedId ? "Update WO" : "Save Work Order"}
+            </button>
+          </div>
         </div>
       </div>
 
+      {/* Alerts */}
       {error && (
-        <div className="mb-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-700 dark:text-red-300 px-3 py-2 rounded-lg text-xs font-medium">
+        <div className="mb-4 flex items-center gap-2 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-700 dark:text-red-300 px-3 py-2.5 rounded-lg text-xs font-medium">
+          <AlertCircle size={14} />
           {error}
         </div>
       )}
-
       {savedId && (
-        <div className="mb-3 bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20 text-green-700 dark:text-green-300 px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-2">
-          <FileText size={15} />
-          Work order saved successfully. WO ID: {savedId}
+        <div className="mb-4 flex items-center gap-2 bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20 text-green-700 dark:text-green-300 px-3 py-2.5 rounded-lg text-xs font-medium">
+          <CheckCircle2 size={14} />
+          Work order saved successfully \u2014 ID: {savedId}
         </div>
       )}
 
-      {/* ── Header Form ── */}
-      <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-xl p-4 mb-4">
-        <p className="text-[#8892a8] dark:text-gray-400 text-xs font-semibold uppercase tracking-widest mb-4">
-          Work Order Header
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3">
+      {/* ── Section 1: Work Order Header ── */}
+      <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-xl p-5 mb-4">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="w-1 h-4 bg-viton-red dark:bg-orange-500 rounded-full" />
+          <h2 className="text-xs font-bold text-viton-navy dark:text-white uppercase tracking-widest">
+            Work Order Header
+          </h2>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {[
             { label: "WO Number", value: woNumber, setter: setWoNumber, placeholder: "e.g. 1092", required: true },
-            { label: "Party Name", value: partyName, setter: setPartyName, placeholder: "INDIA GLYCOLS LTD - GORAKHPUR", required: true },
-            { label: "Delivery", value: deliveryDate, setter: setDeliveryDate, placeholder: "30.06.2026" },
+            { label: "Party Name", value: partyName, setter: setPartyName, placeholder: "INDIA GLYCOLS LTD - GORAKHPUR", required: true, wide: true },
+            { label: "Delivery Date", value: deliveryDate, setter: setDeliveryDate, placeholder: "30.06.2026" },
             { label: "P.O. No.", value: poNo, setter: setPoNo, placeholder: "4500061886" },
             { label: "PO Date", value: poDate, setter: setPoDate, placeholder: "26.05.2026" },
             { label: "Inspection By", value: inspectionBy, setter: setInspectionBy, placeholder: "NO" },
-            { label: "QAP No.", value: qapNo, setter: setQapNo, placeholder: "—" },
+            { label: "QAP No.", value: qapNo, setter: setQapNo, placeholder: "\u2014" },
           ].map((f) => (
-            <div key={f.label}>
-              <label className="block text-[10px] font-semibold text-[#4a5578] dark:text-gray-400 mb-1">
-                {f.label} {f.required ? <span className="text-red-500">*</span> : null}
+            <div key={f.label} className={(f as any).wide ? "col-span-2 sm:col-span-3 lg:col-span-2" : ""}>
+              <label className="block text-[10px] font-semibold text-[#4a5578] dark:text-gray-400 mb-1.5 uppercase tracking-wide">
+                {f.label}
+                {f.required && <span className="text-red-500 ml-0.5">*</span>}
               </label>
               <input
                 type="text"
                 value={f.value}
                 onChange={(e) => f.setter(e.target.value)}
                 placeholder={f.placeholder}
-                className="w-full bg-[#f6f8fc] dark:bg-gray-950 border border-[#dde1ea] dark:border-gray-700 rounded-lg px-3 py-1.5 text-xs text-viton-navy dark:text-white placeholder:text-[#8892a8] dark:placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red/20 dark:focus:ring-orange-500/20 focus:border-viton-red dark:focus:border-orange-500 transition-all"
+                className="w-full bg-[#f6f8fc] dark:bg-gray-950 border border-[#dde1ea] dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-viton-navy dark:text-white placeholder:text-[#8892a8] dark:placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red/20 dark:focus:ring-orange-500/20 focus:border-viton-red dark:focus:border-orange-500 transition-all"
               />
             </div>
           ))}
         </div>
       </div>
 
-      {/* ── Items Table ── */}
-      <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-xl p-4 mb-4">
+      {/* ── Section 2: Line Items ── */}
+      <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-xl p-5 mb-4">
         <div className="flex items-center justify-between mb-4">
-          <p className="text-[#8892a8] dark:text-gray-400 text-xs font-semibold uppercase tracking-widest">
-            Line Items ({items.length})
-          </p>
+          <div className="flex items-center gap-2">
+            <div className="w-1 h-4 bg-viton-red dark:bg-orange-500 rounded-full" />
+            <h2 className="text-xs font-bold text-viton-navy dark:text-white uppercase tracking-widest">
+              Line Items
+            </h2>
+            <span className="text-[11px] font-semibold text-[#8892a8] dark:text-gray-500 bg-[#f1f3f8] dark:bg-gray-800 px-2 py-0.5 rounded-full">
+              {items.length} total{filledItems > 0 ? ` \u00b7 ${filledItems} filled` : ""}
+            </span>
+          </div>
           <button
             onClick={addRow}
-            className="flex items-center gap-1.5 text-xs font-semibold text-viton-red dark:text-orange-400 hover:text-viton-red-hover dark:hover:text-orange-300 transition-colors"
+            className="flex items-center gap-1.5 text-xs font-semibold bg-viton-red/5 dark:bg-orange-500/10 text-viton-red dark:text-orange-400 hover:bg-viton-red/10 dark:hover:bg-orange-500/20 px-3 py-1.5 rounded-lg transition-colors"
           >
-            <Plus size={13} /> Add Row
+            <Plus size={13} /> Add Item
           </button>
         </div>
 
-        <div className="overflow-x-auto -mx-4 px-4">
-          <div className="min-w-[1600px]">
-            {/* Table Header */}
-            <div className="grid bg-viton-navy dark:bg-gray-800 rounded-t-xl overflow-hidden">
-              <div className="flex">
-                {COL_DEFS.map((col) => (
-                  <div
-                    key={col.key}
-                    style={{ width: col.width, minWidth: col.width }}
-                    className="px-1.5 py-1.5 text-[9px] font-bold text-white uppercase tracking-wider text-center border-r border-white/10 last:border-r-0 flex-shrink-0 leading-tight"
-                  >
-                    {col.label}
-                  </div>
-                ))}
-                <div className="w-10 px-1 py-2 flex-shrink-0" />
-              </div>
+        {/* Field Group Legend */}
+        <div className="flex flex-wrap gap-2 mb-4 p-3 bg-[#f6f8fc] dark:bg-gray-800/50 rounded-lg">
+          {FIELD_GROUPS.map((g) => (
+            <div key={g.id} className={`flex items-center gap-1 text-[10px] font-medium px-2 py-1 rounded-md ${g.bg} ${g.color}`}>
+              <GroupIcon id={g.id} />
+              {g.label}
             </div>
-
-            {/* Table Rows */}
-            <div className="border border-t-0 border-[#dde1ea] dark:border-gray-700 rounded-b-xl overflow-hidden">
-              {items.map((item, idx) => (
-                <div
-                  key={idx}
-                  className={`flex items-start border-b border-[#dde1ea] dark:border-gray-700 last:border-b-0 ${idx % 2 === 1 ? "bg-[#f9fafc] dark:bg-gray-800/40" : "bg-white dark:bg-gray-900"}`}
-                >
-                  {COL_DEFS.map((col) => {
-                    const isTextarea = col.key === "remarks" || col.key === "special_requirements" || col.key === "type" || col.key === "body_bonnet" || col.key === "wedge_disc_plug_ball" || col.key === "seat" || col.key === "gasket";
-                    const val = item[col.key] ?? "";
-                    return (
-                      <div
-                        key={col.key}
-                        style={{ width: col.width, minWidth: col.width }}
-                        className="px-1 py-1 border-r border-[#dde1ea] dark:border-gray-700 last:border-r-0 flex-shrink-0"
-                      >
-                        {isTextarea ? (
-                          <textarea
-                            value={String(val)}
-                            onChange={(e) => updateItem(idx, col.key, e.target.value)}
-                            placeholder={col.placeholder}
-                            rows={1}
-                            className="w-full bg-transparent text-[10px] text-viton-navy dark:text-white placeholder:text-[#8892a8] dark:placeholder:text-gray-600 focus:outline-none resize-none leading-tight"
-                          />
-                        ) : (
-                          <input
-                            type={col.key === "sr_no" ? "number" : "text"}
-                            value={String(val)}
-                            onChange={(e) =>
-                              updateItem(
-                                idx,
-                                col.key,
-                                col.key === "sr_no" ? Number(e.target.value) || 0 : e.target.value
-                              )
-                            }
-                            placeholder={col.placeholder}
-                            className="w-full bg-transparent text-[10px] text-viton-navy dark:text-white placeholder:text-[#8892a8] dark:placeholder:text-gray-600 focus:outline-none"
-                          />
-                        )}
-                      </div>
-                    );
-                  })}
-                  <div className="w-8 px-1 py-1 flex items-center justify-center flex-shrink-0">
-                    <button
-                      onClick={() => removeRow(idx)}
-                      className="p-0.5 rounded hover:bg-red-50 dark:hover:bg-red-500/10 text-red-400 hover:text-red-600 transition-colors"
-                      title="Remove row"
-                    >
-                      <Trash2 size={11} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          ))}
         </div>
 
-        {items.length === 0 && (
-          <div className="text-center py-6 text-[#8892a8] dark:text-gray-500 text-sm">
-            No items yet. Click "Add Row" to start.
-          </div>
+        {/* Item Cards */}
+        <div className="space-y-3">
+          {items.length === 0 ? (
+            <div className="text-center py-10 text-[#8892a8] dark:text-gray-500">
+              <Package size={28} className="mx-auto mb-2 opacity-40" />
+              <p className="text-sm">No items yet.</p>
+              <p className="text-xs mt-0.5">Click \"Add Item\" to start building this work order.</p>
+            </div>
+          ) : (
+            items.map((item, idx) => (
+              <ItemCard
+                key={idx}
+                item={item}
+                idx={idx}
+                total={items.length}
+                onUpdate={(key, val) => updateItem(idx, key, val)}
+                onRemove={() => removeRow(idx)}
+              />
+            ))
+          )}
+        </div>
+
+        {items.length > 0 && (
+          <button
+            onClick={addRow}
+            className="mt-3 w-full flex items-center justify-center gap-2 border-2 border-dashed border-[#dde1ea] dark:border-gray-700 text-[#8892a8] dark:text-gray-500 hover:border-viton-red dark:hover:border-orange-500 hover:text-viton-red dark:hover:text-orange-400 py-3 rounded-xl text-xs font-semibold transition-all"
+          >
+            <Plus size={13} /> Add Another Item
+          </button>
         )}
+      </div>
+
+      {/* Bottom Save Bar */}
+      <div className="sticky bottom-4 flex justify-end">
+        <div className="flex items-center gap-2 bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-xl px-4 py-3 shadow-lg">
+          <span className="text-xs text-[#8892a8] dark:text-gray-500 mr-2">
+            {items.length} item{items.length !== 1 ? "s" : ""}
+          </span>
+          <button
+            onClick={() => setShowPreview(true)}
+            className="flex items-center gap-1.5 text-xs font-semibold text-viton-navy dark:text-white border border-[#dde1ea] dark:border-gray-700 px-3 py-2 rounded-lg hover:bg-[#f6f8fc] dark:hover:bg-gray-800 transition-all"
+          >
+            <Eye size={13} /> Preview
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex items-center gap-2 bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 text-white font-semibold px-4 py-2 rounded-lg text-xs transition-all disabled:opacity-60"
+          >
+            <Save size={13} />
+            {saving ? "Saving..." : savedId ? "Update WO" : "Save Work Order"}
+          </button>
+        </div>
       </div>
 
       {/* ── Preview Modal ── */}
@@ -418,7 +613,7 @@ export default function NewWOPage() {
   );
 }
 
-// ── Screen Preview (HTML, not PDF) ───────────────────────────────────────────
+// ── Screen Preview (unchanged \u2014 matches print output) ────────────────────────
 function WOScreenPreview({ wo }: { wo: WorkOrder & { items: WorkOrderItem[] } }) {
   const items = wo.items ?? [];
   const colStyle = (w: number): React.CSSProperties => ({
@@ -472,7 +667,6 @@ function WOScreenPreview({ wo }: { wo: WorkOrder & { items: WorkOrderItem[] } })
       className="bg-white text-gray-900"
       style={{ fontFamily: "Arial, sans-serif", fontSize: "10px", padding: "16px", minWidth: "900px" }}
     >
-      {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", paddingBottom: "8px", borderBottom: "2px solid #c41e3a", marginBottom: "8px" }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: "8px" }}>
           <img src="/Logo.JPG" alt="Viton" style={{ width: "40px", height: "40px", objectFit: "contain" }} />
@@ -487,38 +681,21 @@ function WOScreenPreview({ wo }: { wo: WorkOrder & { items: WorkOrderItem[] } })
           </div>
         </div>
         <div style={{ border: "2px solid #c41e3a", borderRadius: "4px", padding: "4px 12px", textAlign: "center" }}>
-          <div style={{ background: "#c41e3a", color: "white", fontWeight: 800, fontSize: "11px", padding: "2px 4px", borderRadius: "2px" }}>
-            WORK ORDER
-          </div>
+          <div style={{ background: "#c41e3a", color: "white", fontWeight: 800, fontSize: "11px", padding: "2px 4px", borderRadius: "2px" }}>WORK ORDER</div>
           <div style={{ fontSize: "9px", fontWeight: 700, marginTop: "3px" }}>{wo.wo_number}</div>
         </div>
       </div>
-
-      {/* Meta */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "4px 16px", marginBottom: "8px", fontSize: "9px" }}>
-        {[
-          ["Party Name", wo.party_name],
-          ["Delivery", wo.delivery_date],
-          ["P.O. No.", wo.po_no],
-          ["PO Date", wo.po_date],
-          ["Inspection By", wo.inspection_by],
-          ["QAP No.", wo.qap_no],
-        ].map(([label, val]) => (
+        {[["Party Name", wo.party_name], ["Delivery", wo.delivery_date], ["P.O. No.", wo.po_no], ["PO Date", wo.po_date], ["Inspection By", wo.inspection_by], ["QAP No.", wo.qap_no]].map(([label, val]) => (
           <div key={label as string} style={{ display: "flex" }}>
             <span style={{ fontWeight: 700, color: "#c41e3a", width: "90px", textTransform: "uppercase" }}>{label}:</span>
-            <span style={{ fontWeight: 600 }}>{val || "—"}</span>
+            <span style={{ fontWeight: 600 }}>{val || "\u2014"}</span>
           </div>
         ))}
       </div>
-
-      {/* Table */}
       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "8px", border: "1px solid #b0b0b0" }}>
         <thead>
-          <tr>
-            {COLS_PREVIEW.map((c) => (
-              <th key={c.key} style={headerStyle(c.width)}>{c.label}</th>
-            ))}
-          </tr>
+          <tr>{COLS_PREVIEW.map((c) => <th key={c.key} style={headerStyle(c.width)}>{c.label}</th>)}</tr>
         </thead>
         <tbody>
           {items.map((item, i) => (
@@ -532,7 +709,6 @@ function WOScreenPreview({ wo }: { wo: WorkOrder & { items: WorkOrderItem[] } })
           ))}
         </tbody>
       </table>
-
       <div style={{ marginTop: "8px", textAlign: "center", fontSize: "8px", color: "#888" }}>
         This is a computer generated Work Order and does not require a signature.
       </div>
