@@ -21,6 +21,8 @@ import {
   Trash2,
   Package,
   Download,
+  RefreshCw,
+  Save,
 } from "lucide-react";
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import { GRNPdfDocument } from "@/components/GRNPdf";
@@ -30,6 +32,7 @@ interface POWithVendor extends PurchaseOrder {
 }
 
 const FIXED_RECEIVED_BY_NAME = "Yatish Jain";
+const UNITS = ["NOS", "SET", "KG", "MTR", "MM", "PCS"];
 
 // ── Catalog item builder helpers (mirrors catalog page) ──────────────────
 const CATEGORY_FIELDS: Record<string, { key: string; label: string; options?: string[]; placeholder?: string }[]> = {
@@ -192,9 +195,15 @@ export default function GRNPage() {
   // ── Freeform item catalog creation modal
   const [freeformModalOpen, setFreeformModalOpen] = useState(false);
   const [freeformIndex, setFreeformIndex] = useState<number | null>(null);
-  const [freeformCategory, setFreeformCategory] = useState("Misc");
-  const [freeformUnit, setFreeformUnit] = useState("NOS");
-  const [freeformHsn, setFreeformHsn] = useState("");
+  const [freeformMeta, setFreeformMeta] = useState({
+    category: "Valves",
+    serial_id: "",
+    name: "",
+    unit: "NOS",
+    hsn_code: "",
+    description: "",
+    codeEdited: false,
+  });
   const [freeformCodeFields, setFreeformCodeFields] = useState<Record<string, string>>({});
   const [freeformSaving, setFreeformSaving] = useState(false);
   const [freeformError, setFreeformError] = useState("");
@@ -426,9 +435,7 @@ export default function GRNPage() {
       }),
     ]);
     setFreeformIndex(index);
-    setFreeformCategory("Misc");
-    setFreeformUnit("NOS");
-    setFreeformHsn("");
+    setFreeformMeta({ category: "Valves", serial_id: "", name: "", unit: "NOS", hsn_code: "", description: "", codeEdited: false });
     setFreeformCodeFields({});
     setFreeformError("");
     setFreeformModalOpen(true);
@@ -439,28 +446,40 @@ export default function GRNPage() {
     setGrnLines((prev) => prev.filter((_, i) => i !== index));
   }
 
+  function handleFreeformCategoryChange(cat: string) {
+    setFreeformCodeFields({});
+    setFreeformMeta(f => ({ ...f, category: cat, serial_id: CATEGORY_PREFIX[cat] ?? "MISC", codeEdited: false, name: "" }));
+  }
+
   function setFreeformCodeField(key: string, val: string) {
-    setFreeformCodeFields(f => ({ ...f, [key]: val }));
+    setFreeformCodeFields(prev => {
+      const next = { ...prev, [key]: val };
+      const generated = generateCode(freeformMeta.category, next);
+      const generatedName = generateName(freeformMeta.category, next);
+      setFreeformMeta(f => ({ ...f, serial_id: f.codeEdited ? f.serial_id : generated, name: f.name || generatedName ? generatedName : f.name }));
+      return next;
+    });
   }
 
   async function createFreeformItemInCatalog(index: number) {
-    const generatedSerial = generateCode(freeformCategory, freeformCodeFields);
-    if (!generatedSerial) { setFreeformError("Please fill in at least one field to generate a serial ID."); return; }
-    if (catalogItems.some((it) => it.serial_id.toLowerCase() === generatedSerial.toLowerCase())) {
-      setFreeformError(`Serial ID "${generatedSerial}" already exists. Add more details to make it unique.`);
+    const serial = freeformMeta.serial_id.trim();
+    const name = freeformMeta.name.trim();
+    if (!serial) { setFreeformError("Serial ID is required."); return; }
+    if (!name) { setFreeformError("Item name is required."); return; }
+    if (catalogItems.some((it) => it.serial_id.toLowerCase() === serial.toLowerCase())) {
+      setFreeformError(`Serial ID "${serial}" already exists in catalog.`);
       return;
     }
-    const generatedName = generateName(freeformCategory, freeformCodeFields);
     setFreeformSaving(true); setFreeformError("");
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     const { data: newItem, error: insertErr } = await supabase.from("items").insert({
-      serial_id: generatedSerial,
-      name: generatedName || freeformCategory,
-      description: `Added via GRN freeform item on ${new Date().toLocaleDateString("en-IN")}`,
-      hsn_code: freeformHsn.trim() || null,
-      unit: freeformUnit,
-      category: freeformCategory,
+      serial_id: serial.toUpperCase(),
+      name,
+      description: freeformMeta.description.trim() || `Added via GRN freeform item on ${new Date().toLocaleDateString("en-IN")}`,
+      hsn_code: freeformMeta.hsn_code.trim() || null,
+      unit: freeformMeta.unit,
+      category: freeformMeta.category,
       specs: Object.fromEntries(Object.entries(freeformCodeFields).map(([k, v]) => [k, v.trim().toUpperCase()])),
     }).select("id, serial_id, name, unit, category").single();
     if (insertErr) {
@@ -1468,14 +1487,14 @@ export default function GRNPage() {
 
       
 
-      {/* ── Freeform Item Catalog Modal ─────────────────────────────────────── */}
+      {/* ── Freeform Item Catalog Modal (mirrors catalog page) ──────────────── */}
       {freeformModalOpen && (
         <div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl w-full max-w-lg shadow-2xl flex flex-col">
+          <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl w-full max-w-lg shadow-2xl flex flex-col max-h-[90vh]">
             <div className="px-6 py-4 border-b border-[#dde1ea] dark:border-gray-800 flex items-center justify-between bg-white dark:bg-gray-900 flex-shrink-0">
               <div>
                 <h2 className="text-viton-navy dark:text-white font-bold">Add New Catalog Item</h2>
-                <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-0.5">Select category, fill in details, serial ID auto-generates.</p>
+                <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-0.5">Select category, fill spec fields, serial ID auto-builds.</p>
               </div>
               <button onClick={cancelFreeformItem} className="text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white">
                 <X size={18} />
@@ -1483,121 +1502,142 @@ export default function GRNPage() {
             </div>
 
             <div className="p-6 space-y-4 overflow-y-auto flex-1">
-              {freeformError && (
-                <div className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-xl p-3 text-red-600 dark:text-red-300 text-sm">{freeformError}</div>
-              )}
+              {freeformError && <div className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-xl p-3 text-red-600 dark:text-red-400 text-sm">{freeformError}</div>}
 
-              {/* Category */}
+              {/* Category selector */}
               <div>
                 <label className="block text-[#4a5578] dark:text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Category</label>
-                <select
-                  value={freeformCategory}
-                  onChange={(e) => { setFreeformCategory(e.target.value); setFreeformUnit(getFreeformItemUnit(e.target.value)); setFreeformCodeFields({}); }}
-                  className="w-full bg-[#f1f3f8] dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-viton-navy dark:text-white focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
-                >
-                  {Object.keys(CATEGORY_FIELDS).map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                </select>
-              </div>
-
-              {/* Category-specific fields */}
-              {CATEGORY_FIELDS[freeformCategory]?.length > 0 && (
-                <div className="grid grid-cols-2 gap-3">
-                  {CATEGORY_FIELDS[freeformCategory].map((field) => (
-                    <div key={field.key}>
-                      <label className="block text-[#4a5578] dark:text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">{field.label}</label>
-                      {field.options ? (
-                        <select
-                          value={freeformCodeFields[field.key] ?? ""}
-                          onChange={(e) => setFreeformCodeField(field.key, e.target.value)}
-                          className="w-full bg-[#f1f3f8] dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-viton-navy dark:text-white focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
-                        >
-                          <option value="">Select...</option>
-                          {field.options.map(opt => (
-                            <option key={opt} value={opt}>{TYPE_LABELS[opt] ?? opt}</option>
-                          ))}
-                        </select>
-                      ) : (
-                        <input
-                          value={freeformCodeFields[field.key] ?? ""}
-                          onChange={(e) => setFreeformCodeField(field.key, e.target.value.toUpperCase())}
-                          placeholder={field.placeholder}
-                          className="w-full bg-[#f1f3f8] dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-viton-navy dark:text-white placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
-                        />
-                      )}
-                    </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {Object.keys(CATEGORY_FIELDS).map(cat => (
+                    <button key={cat} onClick={() => handleFreeformCategoryChange(cat)}
+                      className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all border ${
+                        freeformMeta.category === cat
+                          ? "bg-viton-red border-viton-red text-white dark:bg-orange-500 dark:border-orange-500"
+                          : "bg-[#f7f8fb] dark:bg-gray-800 border-[#dde1ea] dark:border-gray-700 text-[#4a5578] dark:text-gray-400 hover:text-viton-navy dark:hover:text-white hover:border-[#cfd5e2] dark:hover:border-gray-600"
+                      }`}>
+                      {cat}
+                    </button>
                   ))}
                 </div>
-              )}
+              </div>
 
-              {/* Misc: free text name */}
-              {freeformCategory === "Misc" && (
-                <div>
-                  <label className="block text-[#4a5578] dark:text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Item Name</label>
-                  <input
-                    value={freeformCodeFields["name"] ?? ""}
-                    onChange={(e) => setFreeformCodeField("name", e.target.value)}
-                    placeholder="e.g. Consumable item, tool, etc."
-                    className="w-full bg-[#f1f3f8] dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-viton-navy dark:text-white placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
-                  />
+              {/* Spec Fields */}
+              {CATEGORY_FIELDS[freeformMeta.category]?.length > 0 && (
+                <div className="bg-[#f7f8fb] dark:bg-gray-800/50 rounded-xl p-4 space-y-3 border border-[#dde1ea] dark:border-gray-700">
+                  <p className="text-[#4a5578] dark:text-gray-400 text-xs font-semibold uppercase tracking-wider">Spec Fields → Auto-builds Code</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {CATEGORY_FIELDS[freeformMeta.category].map(field => (
+                      <div key={field.key}>
+                        <label className="block text-[#8892a8] dark:text-gray-500 text-xs mb-1">{field.label}</label>
+                        {field.options ? (
+                          <div className="relative">
+                            <input
+                              list={`grn-ff-${freeformMeta.category}-${field.key}`}
+                              value={freeformCodeFields[field.key] ?? ""}
+                              onChange={e => setFreeformCodeField(field.key, e.target.value.toUpperCase())}
+                              placeholder="Select or type"
+                              className="w-full bg-white dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-lg px-3 py-2 pr-8 text-viton-navy dark:text-white text-xs font-mono placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
+                            />
+                            <datalist id={`grn-ff-${freeformMeta.category}-${field.key}`}>
+                              {field.options.map(o => <option key={o} value={o} />)}
+                            </datalist>
+                            <div className="pointer-events-none absolute inset-y-0 right-2.5 flex items-center">
+                              <svg className="w-3.5 h-3.5 text-[#8892a8] dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </div>
+                          </div>
+                        ) : (
+                          <input
+                            value={freeformCodeFields[field.key] ?? ""}
+                            onChange={e => setFreeformCodeField(field.key, e.target.value)}
+                            placeholder={field.placeholder}
+                            className="w-full bg-white dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-lg px-3 py-2 text-viton-navy dark:text-white text-xs font-mono placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
+                          />
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
-              {/* Auto-generated serial ID preview */}
-              {generateCode(freeformCategory, freeformCodeFields) && (
-                <div className="bg-[#f7f8fb] dark:bg-gray-800/50 border border-[#dde1ea] dark:border-gray-700 rounded-xl p-4">
-                  <p className="text-[#4a5578] dark:text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Generated Serial ID</p>
-                  <p className="text-viton-red dark:text-orange-400 font-mono text-sm font-bold">{generateCode(freeformCategory, freeformCodeFields)}</p>
-                  {generateName(freeformCategory, freeformCodeFields) && (
-                    <p className="text-viton-navy dark:text-white font-semibold text-xs mt-1">{generateName(freeformCategory, freeformCodeFields)}</p>
-                  )}
-                  <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-1">{freeformCategory} · {freeformUnit}</p>
+              {/* Serial ID */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-[#4a5578] dark:text-gray-400 text-xs font-semibold uppercase tracking-wider">Serial ID (Auto-generated)</label>
+                  <button onClick={() => setFreeformMeta(f => ({ ...f, codeEdited: false }))}
+                    className="flex items-center gap-1 text-[#8892a8] dark:text-gray-500 hover:text-viton-red dark:hover:text-orange-400 text-xs transition-colors">
+                    <RefreshCw size={11} /> Reset
+                  </button>
                 </div>
-              )}
+                <input
+                  value={freeformMeta.serial_id}
+                  onChange={e => setFreeformMeta(f => ({ ...f, serial_id: e.target.value, codeEdited: true }))}
+                  placeholder="Auto-generated from fields above"
+                  className="w-full bg-white dark:bg-gray-800 border border-viton-red/30 dark:border-orange-500/30 rounded-xl px-4 py-3 text-viton-red dark:text-orange-400 text-sm font-mono placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
+                />
+              </div>
+
+              {/* Item Name */}
+              <div>
+                <label className="block text-[#4a5578] dark:text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Item Name</label>
+                <input
+                  value={freeformMeta.name}
+                  onChange={e => setFreeformMeta(f => ({ ...f, name: e.target.value }))}
+                  placeholder="Auto-filled or type manually"
+                  className="w-full bg-white dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-xl px-4 py-3 text-viton-navy dark:text-white text-sm placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
+                />
+              </div>
 
               {/* Unit + HSN */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[#4a5578] dark:text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Unit</label>
-                  <select
-                    value={freeformUnit}
-                    onChange={(e) => setFreeformUnit(e.target.value)}
-                    className="w-full bg-[#f1f3f8] dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-viton-navy dark:text-white focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
-                  >
-                    <option value="NOS">NOS</option>
-                    <option value="KGS">KGS</option>
-                    <option value="MTR">MTR</option>
-                    <option value="SET">SET</option>
-                    <option value="BOX">BOX</option>
-                    <option value="LTS">LTS</option>
-                  </select>
+                  <div className="relative">
+                    <select
+                      value={freeformMeta.unit}
+                      onChange={e => setFreeformMeta(f => ({ ...f, unit: e.target.value }))}
+                      className="w-full appearance-none bg-white dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-xl px-4 py-3 pr-10 text-viton-navy dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500 cursor-pointer"
+                    >
+                      {UNITS.map(u => <option key={u}>{u}</option>)}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                      <svg className="w-4 h-4 text-[#8892a8] dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-[#4a5578] dark:text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">HSN (optional)</label>
+                  <label className="block text-[#4a5578] dark:text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">HSN Code</label>
                   <input
-                    value={freeformHsn}
-                    onChange={(e) => setFreeformHsn(e.target.value)}
-                    placeholder="e.g. 8481"
-                    className="w-full bg-[#f1f3f8] dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-xl px-4 py-3 text-sm text-viton-navy dark:text-white placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
+                    value={freeformMeta.hsn_code}
+                    onChange={e => setFreeformMeta(f => ({ ...f, hsn_code: e.target.value }))}
+                    placeholder="e.g. 84818090"
+                    className="w-full bg-white dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-xl px-4 py-3 text-viton-navy dark:text-white text-sm font-mono placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
                   />
                 </div>
               </div>
 
-              {/* Actions */}
-              <div className="flex items-center justify-end gap-3 pt-2">
-                <button
-                  onClick={cancelFreeformItem}
-                  className="bg-[#f1f3f8] dark:bg-gray-800 hover:bg-[#e8eaf2] dark:hover:bg-gray-700 text-[#4a5578] dark:text-gray-300 font-semibold px-5 py-3 rounded-xl text-sm"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => createFreeformItemInCatalog(freeformIndex ?? 0)}
-                  disabled={freeformSaving || !generateCode(freeformCategory, freeformCodeFields)}
-                  className="bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 disabled:opacity-50 text-white font-semibold px-6 py-3 rounded-xl text-sm flex items-center gap-2"
-                >
-                  {freeformSaving ? "Saving..." : "Create & Link to GRN"}
-                </button>
+              {/* Description */}
+              <div>
+                <label className="block text-[#4a5578] dark:text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Extra Specs / Notes</label>
+                <textarea
+                  value={freeformMeta.description}
+                  onChange={e => setFreeformMeta(f => ({ ...f, description: e.target.value }))}
+                  rows={2}
+                  placeholder="Certifications, additional specs, remarks..."
+                  className="w-full bg-white dark:bg-gray-800 border border-[#dde1ea] dark:border-gray-700 rounded-xl px-4 py-3 text-viton-navy dark:text-white text-sm placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500 resize-none"
+                />
               </div>
+            </div>
+
+            <div className="p-6 border-t border-[#dde1ea] dark:border-gray-800 flex gap-3 flex-shrink-0">
+              <button onClick={cancelFreeformItem} className="flex-1 bg-[#f1f3f8] hover:bg-[#e7ebf3] dark:bg-gray-800 dark:hover:bg-gray-700 text-[#4a5578] dark:text-gray-300 font-semibold py-3 rounded-xl text-sm">Cancel</button>
+              <button onClick={() => createFreeformItemInCatalog(freeformIndex ?? 0)} disabled={freeformSaving}
+                className="flex-1 bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 disabled:opacity-50 text-white font-semibold py-3 rounded-xl text-sm flex items-center justify-center gap-2">
+                <Save size={15} />{freeformSaving ? "Saving..." : "Create & Link to GRN"}
+              </button>
             </div>
           </div>
         </div>
