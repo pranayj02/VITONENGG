@@ -236,8 +236,8 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
           <tr>
             <td style={labelCell}>Inspected By</td>
             <td colSpan={2} style={valueCell}>{grn.inspected_by_name ?? "—"}</td>
-            <td style={labelCell}>Approved By</td>
-            <td style={{ ...valueCell, fontWeight: "700" }}>Yatish Jain</td>
+            <td style={labelCell}>Approved At</td>
+            <td style={valueCell}>{grn.approved_at ? new Date(grn.approved_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—"}</td>
           </tr>
         </tbody>
       </table>
@@ -342,9 +342,9 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
             </td>
             <td style={{ width: "50%", paddingLeft: "16px", verticalAlign: "bottom" }}>
               <div style={{ borderTop: "1.5px solid #000", paddingTop: "6px" }}>
-                <div style={{ fontWeight: "700", fontSize: "9pt" }}>Approved By</div>
+                <div style={{ fontWeight: "700", fontSize: "9pt" }}>Inspected By</div>
                 <div style={{ fontSize: "8pt", color: "#444", marginTop: "4px" }}>
-                  Yatish Jain
+                  {grn.inspected_by_name ?? ""}
                 </div>
               </div>
             </td>

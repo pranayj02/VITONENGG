@@ -462,8 +462,8 @@ export function GRNPdfDocument({
             <Text style={S.signatureName}>{grn.received_by_name ?? ""}</Text>
           </View>
           <View style={S.signatureBlock}>
-            <Text style={S.signatureLabel}>Approved By</Text>
-            <Text style={S.signatureName}>Yatish Jain</Text>
+            <Text style={S.signatureLabel}>Inspected By</Text>
+            <Text style={S.signatureName}>{grn.inspected_by_name ?? ""}</Text>
           </View>
         </View>
 
