@@ -12,9 +12,10 @@ import type { WorkOrder, WorkOrderItem } from "@/lib/types";
 const BRAND = "#1a2744";
 const ACCENT = "#c41e3a";
 const TEXT_DARK = "#111111";
-const TEXT_MID = "#444444";
+const COL_BORDER = "#b8b8b8";
 
-// ── Column widths scaled to fill 810pt usable (landscape A4, 16pt margins each side) ──
+// Landscape A4: 842pt wide, 16pt margins each side = 810pt usable
+// wedge ↔ remarks swapped: remarks gets 63, wedge gets 54
 const COLS = {
   sr: 19,
   poSr: 26,
@@ -27,7 +28,7 @@ const COLS = {
   rating: 23,
   endConn: 35,
   body: 52,
-  wedge: 63,
+  wedge: 54,      // was 63, swapped with remarks
   stem: 33,
   seat: 49,
   gasket: 44,
@@ -35,7 +36,7 @@ const COLS = {
   fasteners: 30,
   operation: 35,
   special: 44,
-  remarks: 54,
+  remarks: 63,    // was 54, swapped with wedge
   drawing: 30,
   qty: 21,
 };
@@ -51,7 +52,6 @@ const S = StyleSheet.create({
     paddingRight: 16,
     backgroundColor: "#ffffff",
   },
-
   letterhead: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -66,17 +66,12 @@ const S = StyleSheet.create({
     alignItems: "center",
     flex: 1,
   },
-  logo: {
-    width: 32,
-    height: 32,
-    marginRight: 8,
-  },
+  logo: { width: 32, height: 32, marginRight: 8 },
   companyName: {
     fontSize: 12,
     fontFamily: "Helvetica-Bold",
     color: TEXT_DARK,
   },
-
   woBox: {
     borderWidth: 1.5,
     borderColor: ACCENT,
@@ -108,7 +103,6 @@ const S = StyleSheet.create({
     marginTop: 3,
     textAlign: "center",
   },
-
   metaGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -146,61 +140,74 @@ const S = StyleSheet.create({
     color: TEXT_DARK,
     flex: 1,
   },
-
   tableWrap: {
     width: "100%",
+    borderWidth: 0.5,
+    borderColor: COL_BORDER,
   },
   tableHeader: {
     flexDirection: "row",
     backgroundColor: BRAND,
-    paddingVertical: 3,
-    paddingHorizontal: 0,
-    minHeight: 14,
-    alignItems: "center",
+    minHeight: 16,
+    alignItems: "stretch",
   },
   tableHeaderCell: {
-    fontSize: 5,
+    fontSize: 4.8,
     fontFamily: "Helvetica-Bold",
     color: "#ffffff",
     textAlign: "center",
     paddingHorizontal: 1,
+    paddingVertical: 2,
   },
   tableRow: {
     flexDirection: "row",
-    borderBottomWidth: 0.5,
-    borderBottomColor: "#d0d0d0",
-    paddingVertical: 2,
-    paddingHorizontal: 0,
-    minHeight: 12,
-    alignItems: "flex-start",
+    borderTopWidth: 0.5,
+    borderTopColor: COL_BORDER,
+    minHeight: 14,
+    alignItems: "stretch",
   },
   tableRowAlt: {
-    backgroundColor: "#fafafa",
+    backgroundColor: "#f5f7fb",
   },
   tableCell: {
     fontSize: 5,
     color: TEXT_DARK,
-    paddingHorizontal: 1,
+    paddingHorizontal: 2,
+    paddingVertical: 2,
     textAlign: "center",
-  },
-  tableCellLeft: {
-    fontSize: 5,
-    color: TEXT_DARK,
-    paddingHorizontal: 1,
-    textAlign: "left",
   },
   tableCellMono: {
     fontSize: 4.5,
     fontFamily: "Helvetica",
     color: "#2a3a6a",
-    paddingHorizontal: 1,
+    paddingHorizontal: 2,
+    paddingVertical: 2,
     textAlign: "center",
   },
 });
 
-function HeaderCell({ children, width }: { children: React.ReactNode; width: number }) {
+// Shared column separator style applied to every cell except the last
+const SEP = {
+  borderRightWidth: 0.5,
+  borderRightColor: COL_BORDER,
+};
+
+function HeaderCell({
+  children,
+  width,
+  last,
+}: {
+  children: React.ReactNode;
+  width: number;
+  last?: boolean;
+}) {
   return (
-    <View style={{ width, flexShrink: 0, justifyContent: "center" }}>
+    <View
+      style={[
+        { width, flexShrink: 0, justifyContent: "center", alignItems: "center" },
+        last ? {} : SEP,
+      ]}
+    >
       <Text style={S.tableHeaderCell}>{children}</Text>
     </View>
   );
@@ -209,21 +216,18 @@ function HeaderCell({ children, width }: { children: React.ReactNode; width: num
 function Cell({
   children,
   width,
-  left,
   mono,
+  last,
 }: {
   children: React.ReactNode;
   width: number;
-  left?: boolean;
   mono?: boolean;
+  last?: boolean;
 }) {
   return (
-    <View style={{ width, flexShrink: 0 }}>
-      <Text
-        style={mono ? S.tableCellMono : left ? S.tableCellLeft : S.tableCell}
-        wrap
-      >
-        {children}
+    <View style={[{ width, flexShrink: 0, justifyContent: "center" }, last ? {} : SEP]}>
+      <Text style={mono ? S.tableCellMono : S.tableCell} wrap>
+        {children ?? ""}
       </Text>
     </View>
   );
@@ -313,36 +317,33 @@ export function WOPdfDocument({
             <HeaderCell width={COLS.special}>{"Special\nReq."}</HeaderCell>
             <HeaderCell width={COLS.remarks}>Remarks</HeaderCell>
             <HeaderCell width={COLS.drawing}>{"Drawing\nNo."}</HeaderCell>
-            <HeaderCell width={COLS.qty}>Qty</HeaderCell>
+            <HeaderCell width={COLS.qty} last>Qty</HeaderCell>
           </View>
 
           {items.map((item, i) => (
-            <View
-              key={i}
-              style={[S.tableRow, i % 2 !== 0 ? S.tableRowAlt : {}]}
-            >
+            <View key={i} style={[S.tableRow, i % 2 !== 0 ? S.tableRowAlt : {}]}>
               <Cell width={COLS.sr}>{item.sr_no}</Cell>
               <Cell width={COLS.poSr}>{item.po_sr_no}</Cell>
               <Cell width={COLS.valveSr} mono>{item.valve_sr_no}</Cell>
               <Cell width={COLS.material} mono>{item.material_no}</Cell>
               <Cell width={COLS.valve}>{item.valve}</Cell>
-              <Cell width={COLS.type} left>{item.type}</Cell>
+              <Cell width={COLS.type}>{item.type}</Cell>
               <Cell width={COLS.bore}>{item.bore}</Cell>
               <Cell width={COLS.sizeMm}>{item.size_mm}</Cell>
               <Cell width={COLS.rating}>{item.rating}</Cell>
               <Cell width={COLS.endConn}>{item.end_connection}</Cell>
-              <Cell width={COLS.body} left>{item.body_bonnet}</Cell>
-              <Cell width={COLS.wedge} left>{item.wedge_disc_plug_ball}</Cell>
+              <Cell width={COLS.body}>{item.body_bonnet}</Cell>
+              <Cell width={COLS.wedge}>{item.wedge_disc_plug_ball}</Cell>
               <Cell width={COLS.stem}>{item.stem_hinge}</Cell>
-              <Cell width={COLS.seat} left>{item.seat}</Cell>
-              <Cell width={COLS.gasket} left>{item.gasket}</Cell>
+              <Cell width={COLS.seat}>{item.seat}</Cell>
+              <Cell width={COLS.gasket}>{item.gasket}</Cell>
               <Cell width={COLS.glPkng}>{item.gl_pkng}</Cell>
               <Cell width={COLS.fasteners}>{item.fasteners}</Cell>
               <Cell width={COLS.operation}>{item.operation}</Cell>
-              <Cell width={COLS.special} left>{item.special_requirements}</Cell>
-              <Cell width={COLS.remarks} left>{item.remarks}</Cell>
+              <Cell width={COLS.special}>{item.special_requirements}</Cell>
+              <Cell width={COLS.remarks}>{item.remarks}</Cell>
               <Cell width={COLS.drawing} mono>{item.drawing_no}</Cell>
-              <Cell width={COLS.qty}>{item.qty}</Cell>
+              <Cell width={COLS.qty} last>{item.qty}</Cell>
             </View>
           ))}
         </View>
