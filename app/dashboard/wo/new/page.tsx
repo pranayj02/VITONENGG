@@ -8,7 +8,7 @@ import { PDFDownloadLink } from "@react-pdf/renderer";
 import { WOPdfDocument } from "@/components/WOPdf";
 import type { WorkOrderItem, WorkOrder } from "@/lib/types";
 import {
-  Plus, Trash2, Save, Printer, X, FileText, Eye, ArrowLeft,
+  Plus, Trash2, Save, Printer, X, FileText, Eye, ArrowLeft, ChevronDown, ChevronUp,
 } from "lucide-react";
 
 const EMPTY_ITEM = (): WorkOrderItem => ({
@@ -37,30 +37,33 @@ const EMPTY_ITEM = (): WorkOrderItem => ({
   delivery: "",
 });
 
-const COL_DEFS: { key: keyof WorkOrderItem; label: string; placeholder: string; width: number }[] = [
-  { key: "sr_no", label: "Sr. No.", placeholder: "", width: 40 },
-  { key: "po_sr_no", label: "P.O. SR. NO.", placeholder: "1", width: 50 },
-  { key: "valve_sr_no", label: "VALVE SR.NO.", placeholder: "V123-1 TO V123-2", width: 110 },
-  { key: "material_no", label: "Material No.", placeholder: "300905132", width: 90 },
-  { key: "valve", label: "Valve", placeholder: "GATE VALVE", width: 70 },
-  { key: "type", label: "Type", placeholder: "RISING STEM...", width: 100 },
-  { key: "bore", label: "Bore", placeholder: "STD", width: 45 },
-  { key: "size_mm", label: "Size MM", placeholder: "600", width: 50 },
-  { key: "rating", label: "Rating", placeholder: "150#", width: 50 },
-  { key: "end_connection", label: "End Conn.", placeholder: "FE' RF", width: 70 },
-  { key: "body_bonnet", label: "Body / Bonnet", placeholder: "ASTM A 216 GR. WCB", width: 110 },
-  { key: "wedge_disc_plug_ball", label: "Wedge / Disc / Plug / Ball", placeholder: "ASTM A 216 GR. WCB + 13% Cr. SS O/L", width: 130 },
-  { key: "stem_hinge", label: "Stem / Hinge", placeholder: "SS 410", width: 70 },
-  { key: "seat", label: "Seat", placeholder: "ASTM A 216 GR. WCB + 13% Cr. SS O/L", width: 110 },
-  { key: "gasket", label: "Gasket", placeholder: "SPW SS 316 + GRAPHITE", width: 110 },
-  { key: "gl_pkng", label: "GL. PKNG.", placeholder: "GRAPHITE", width: 70 },
-  { key: "fasteners", label: "Fasteners", placeholder: "B7/2H", width: 60 },
-  { key: "operation", label: "Operation", placeholder: "BARE STEM", width: 70 },
-  { key: "special_requirements", label: "Special Req.", placeholder: "", width: 90 },
-  { key: "remarks", label: "Remarks", placeholder: "TORQUE=...\nTHRUST=...", width: 120 },
-  { key: "drawing_no", label: "Drawing No.", placeholder: "", width: 70 },
-  { key: "qty", label: "Qty", placeholder: "2", width: 40 },
-  { key: "delivery", label: "Delivery", placeholder: "08 - 10 WEEKS", width: 90 },
+const SPEC_FIELDS: { key: keyof WorkOrderItem; label: string; placeholder: string; width: string }[] = [
+  { key: "body_bonnet", label: "Body / Bonnet", placeholder: "ASTM A216 WCB", width: "w-full" },
+  { key: "wedge_disc_plug_ball", label: "Wedge / Disc / Plug / Ball", placeholder: "ASTM A216 WCB + 13% Cr", width: "w-full" },
+  { key: "stem_hinge", label: "Stem / Hinge", placeholder: "SS 410", width: "w-1/2" },
+  { key: "seat", label: "Seat", placeholder: "ASTM A216 WCB + 13% Cr", width: "w-full" },
+  { key: "gasket", label: "Gasket", placeholder: "SPW SS316 + GRAPHITE", width: "w-1/2" },
+  { key: "gl_pkng", label: "GL. PKNG", placeholder: "GRAPHITE", width: "w-1/2" },
+  { key: "fasteners", label: "Fasteners", placeholder: "B7/2H", width: "w-1/2" },
+  { key: "operation", label: "Operation", placeholder: "BARE STEM", width: "w-1/2" },
+  { key: "special_requirements", label: "Special Req", placeholder: "", width: "w-full" },
+  { key: "remarks", label: "Remarks", placeholder: "TORQUE=...", width: "w-full" },
+];
+
+const MAIN_FIELDS: { key: keyof WorkOrderItem; label: string; placeholder: string; width: string }[] = [
+  { key: "sr_no", label: "Sr", placeholder: "", width: "w-10" },
+  { key: "po_sr_no", label: "PO Sr", placeholder: "1", width: "w-12" },
+  { key: "valve_sr_no", label: "Val Sr", placeholder: "V123-1..", width: "w-24" },
+  { key: "material_no", label: "Mat#", placeholder: "300905132", width: "w-20" },
+  { key: "valve", label: "Valve", placeholder: "GATE VALVE", width: "w-24" },
+  { key: "type", label: "Type", placeholder: "RISING STEM", width: "w-28" },
+  { key: "bore", label: "Bore", placeholder: "STD", width: "w-12" },
+  { key: "size_mm", label: "Size", placeholder: "600", width: "w-12" },
+  { key: "rating", label: "Rating", placeholder: "150#", width: "w-14" },
+  { key: "end_connection", label: "End", placeholder: "FE' RF", width: "w-14" },
+  { key: "drawing_no", label: "Drwg", placeholder: "", width: "w-16" },
+  { key: "qty", label: "Qty", placeholder: "2", width: "w-10" },
+  { key: "delivery", label: "Delivery", placeholder: "08-10 WK", width: "w-20" },
 ];
 
 export default function NewWOPage() {
@@ -77,12 +80,14 @@ export default function NewWOPage() {
   const [savedId, setSavedId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [error, setError] = useState("");
+  const [expandedRow, setExpandedRow] = useState<number | null>(null);
 
   const addRow = useCallback(() => {
     setItems((prev) => [
       ...prev,
       { ...EMPTY_ITEM(), sr_no: prev.length + 1 },
     ]);
+    setExpandedRow(prev => prev !== null ? prev + 1 : null);
   }, []);
 
   const removeRow = useCallback((idx: number) => {
@@ -91,12 +96,17 @@ export default function NewWOPage() {
         .filter((_, i) => i !== idx)
         .map((item, i) => ({ ...item, sr_no: i + 1 }))
     );
+    setExpandedRow(null);
   }, []);
 
   const updateItem = useCallback((idx: number, key: keyof WorkOrderItem, value: string | number) => {
     setItems((prev) =>
       prev.map((item, i) => (i === idx ? { ...item, [key]: value } : item))
     );
+  }, []);
+
+  const toggleExpand = useCallback((idx: number) => {
+    setExpandedRow((prev) => prev === idx ? null : idx);
   }, []);
 
   const buildWOPayload = useCallback(() => {
@@ -200,13 +210,13 @@ export default function NewWOPage() {
   };
 
   return (
-    <div className="p-4 lg:p-6 max-w-[1600px] mx-auto">
+    <div className="p-4 lg:p-6 max-w-[1200px] mx-auto">
       {/* Header */}
       <div className="mb-4 flex items-center justify-between flex-wrap gap-3">
         <div>
           <button
             onClick={() => router.push("/dashboard/wo")}
-            className="flex items-center gap-1 text-sm text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white mb-2 transition-colors"
+            className="flex items-center gap-1 text-sm text-[#8892a8] dark:text-gray-500 hover:text-viton-navy dark:hover:text-white mb-1 transition-colors"
           >
             <ArrowLeft size={12} /> Back to Work Orders
           </button>
@@ -222,15 +232,15 @@ export default function NewWOPage() {
             onClick={() => setShowPreview(true)}
             className="flex items-center gap-2 bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-700 text-viton-navy dark:text-white font-semibold px-3 py-2 rounded-lg text-xs hover:border-[#c0c8db] dark:hover:border-gray-600 transition-all"
           >
-            <Eye size={15} /> Preview
+            <Eye size={13} /> Preview
           </button>
           {savedId && (
             <PDFDownloadLink
               document={<WOPdfDocument wo={woForPdf} />}
-              fileName={`WO-${woNumber.replace(/\//g, "-")}.pdf`}
+              fileName={`WO-${woNumber.replace(/\/g, "-")}.pdf`}
               className="flex items-center gap-2 bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 text-white font-semibold px-3 py-2 rounded-lg text-xs transition-all"
             >
-              <Printer size={15} /> Download PDF
+              <Printer size={13} /> Download PDF
             </PDFDownloadLink>
           )}
           <button
@@ -238,7 +248,7 @@ export default function NewWOPage() {
             disabled={saving}
             className="flex items-center gap-2 bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 text-white font-semibold px-3 py-2 rounded-lg text-xs transition-all disabled:opacity-60"
           >
-            <Save size={15} />
+            <Save size={13} />
             {saving ? "Saving..." : savedId ? "Update" : "Save Work Order"}
           </button>
         </div>
@@ -252,14 +262,14 @@ export default function NewWOPage() {
 
       {savedId && (
         <div className="mb-3 bg-green-50 dark:bg-green-500/10 border border-green-200 dark:border-green-500/20 text-green-700 dark:text-green-300 px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-2">
-          <FileText size={15} />
+          <FileText size={13} />
           Work order saved successfully. WO ID: {savedId}
         </div>
       )}
 
       {/* ── Header Form ── */}
       <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-xl p-4 mb-4">
-        <p className="text-[#8892a8] dark:text-gray-400 text-xs font-semibold uppercase tracking-widest mb-4">
+        <p className="text-[#8892a8] dark:text-gray-400 text-[10px] font-semibold uppercase tracking-widest mb-3">
           Work Order Header
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3">
@@ -288,97 +298,118 @@ export default function NewWOPage() {
         </div>
       </div>
 
-      {/* ── Items Table ── */}
-      <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-xl p-4 mb-4">
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-[#8892a8] dark:text-gray-400 text-xs font-semibold uppercase tracking-widest">
-            Line Items
+      {/* ── Items List ── */}
+      <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-xl p-4">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-[#8892a8] dark:text-gray-400 text-[10px] font-semibold uppercase tracking-widest">
+            Line Items ({items.length})
           </p>
           <button
             onClick={addRow}
-            className="flex items-center gap-1.5 text-xs font-semibold text-viton-red dark:text-orange-400 hover:text-viton-red-hover dark:hover:text-orange-300 transition-colors"
+            className="flex items-center gap-1 text-xs font-semibold text-viton-red dark:text-orange-400 hover:text-viton-red-hover dark:hover:text-orange-300 transition-colors"
           >
             <Plus size={13} /> Add Row
           </button>
         </div>
 
-        <div className="overflow-x-auto -mx-5 px-5">
-          <div className="min-w-[1600px]">
-            {/* Table Header */}
-            <div className="grid bg-viton-navy dark:bg-gray-800 rounded-t-xl overflow-hidden">
-              <div className="flex">
-                {COL_DEFS.map((col) => (
-                  <div
-                    key={col.key}
-                    style={{ width: col.width, minWidth: col.width }}
-                    className="px-1.5 py-1.5 text-[9px] font-bold text-white uppercase tracking-wider text-center border-r border-white/10 last:border-r-0 flex-shrink-0 leading-tight"
-                  >
-                    {col.label}
-                  </div>
-                ))}
-                <div className="w-10 px-1 py-2 flex-shrink-0" />
-              </div>
-            </div>
-
-            {/* Table Rows */}
-            <div className="border border-t-0 border-[#dde1ea] dark:border-gray-700 rounded-b-xl overflow-hidden">
-              {items.map((item, idx) => (
-                <div
-                  key={idx}
-                  className={`flex items-start border-b border-[#dde1ea] dark:border-gray-700 last:border-b-0 ${idx % 2 === 1 ? "bg-[#f9fafc] dark:bg-gray-800/40" : "bg-white dark:bg-gray-900"}`}
-                >
-                  {COL_DEFS.map((col) => {
-                    const isTextarea = col.key === "remarks" || col.key === "special_requirements" || col.key === "type" || col.key === "body_bonnet" || col.key === "wedge_disc_plug_ball" || col.key === "seat" || col.key === "gasket";
-                    const val = item[col.key] ?? "";
-                    return (
-                      <div
-                        key={col.key}
-                        style={{ width: col.width, minWidth: col.width }}
-                        className="px-1 py-1 border-r border-[#dde1ea] dark:border-gray-700 last:border-r-0 flex-shrink-0"
-                      >
-                        {isTextarea ? (
-                          <textarea
-                            value={String(val)}
-                            onChange={(e) => updateItem(idx, col.key, e.target.value)}
-                            placeholder={col.placeholder}
-                            rows={1}
-                            className="w-full bg-transparent text-[10px] text-viton-navy dark:text-white placeholder:text-[#8892a8] dark:placeholder:text-gray-600 focus:outline-none resize-none leading-tight"
-                          />
-                        ) : (
-                          <input
-                            type={col.key === "sr_no" ? "number" : "text"}
-                            value={String(val)}
-                            onChange={(e) =>
-                              updateItem(
-                                idx,
-                                col.key,
-                                col.key === "sr_no" ? Number(e.target.value) || 0 : e.target.value
-                              )
-                            }
-                            placeholder={col.placeholder}
-                            className="w-full bg-transparent text-[10px] text-viton-navy dark:text-white placeholder:text-[#8892a8] dark:placeholder:text-gray-600 focus:outline-none"
-                          />
-                        )}
+        <div className="space-y-2">
+          {items.map((item, idx) => {
+            const isExpanded = expandedRow === idx;
+            return (
+              <div key={idx} className="border border-[#dde1ea] dark:border-gray-700 rounded-lg overflow-hidden">
+                {/* Primary Row — always visible */}
+                <div className={`flex items-start gap-2 px-3 py-2 ${idx % 2 === 1 ? "bg-[#f9fafc] dark:bg-gray-800/40" : "bg-white dark:bg-gray-900"}`}>
+                  <div className="w-5 pt-1 text-[10px] font-bold text-viton-navy dark:text-white">{item.sr_no}</div>
+                  <div className="flex-1 flex flex-col gap-1">
+                    {/* Row 1 — Key identifiers */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div className="w-16">
+                        <input type="text" value={String(item.po_sr_no ?? "")} onChange={(e) => updateItem(idx, "po_sr_no", e.target.value)} placeholder="PO Sr" className="w-full bg-transparent text-[10px] text-viton-navy dark:text-white placeholder:text-[#8892a8]/60 dark:placeholder:text-gray-600/60 focus:outline-none border-b border-transparent focus:border-viton-red dark:focus:border-orange-500 transition-colors" />
                       </div>
-                    );
-                  })}
-                  <div className="w-8 px-1 py-1 flex items-center justify-center flex-shrink-0">
+                      <div className="w-24">
+                        <input type="text" value={String(item.valve_sr_no ?? "")} onChange={(e) => updateItem(idx, "valve_sr_no", e.target.value)} placeholder="Valve Sr" className="w-full bg-transparent text-[10px] text-viton-navy dark:text-white placeholder:text-[#8892a8]/60 dark:placeholder:text-gray-600/60 focus:outline-none border-b border-transparent focus:border-viton-red dark:focus:border-orange-500 transition-colors" />
+                      </div>
+                      <div className="w-20">
+                        <input type="text" value={String(item.material_no ?? "")} onChange={(e) => updateItem(idx, "material_no", e.target.value)} placeholder="Mat#" className="w-full bg-transparent text-[10px] text-viton-navy dark:text-white placeholder:text-[#8892a8]/60 dark:placeholder:text-gray-600/60 focus:outline-none border-b border-transparent focus:border-viton-red dark:focus:border-orange-500 transition-colors" />
+                      </div>
+                      <div className="w-24">
+                        <input type="text" value={String(item.valve ?? "")} onChange={(e) => updateItem(idx, "valve", e.target.value)} placeholder="Valve" className="w-full bg-transparent text-[10px] text-viton-navy dark:text-white placeholder:text-[#8892a8]/60 dark:placeholder:text-gray-600/60 focus:outline-none border-b border-transparent focus:border-viton-red dark:focus:border-orange-500 transition-colors" />
+                      </div>
+                      <div className="w-28">
+                        <input type="text" value={String(item.type ?? "")} onChange={(e) => updateItem(idx, "type", e.target.value)} placeholder="Type" className="w-full bg-transparent text-[10px] text-viton-navy dark:text-white placeholder:text-[#8892a8]/60 dark:placeholder:text-gray-600/60 focus:outline-none border-b border-transparent focus:border-viton-red dark:focus:border-orange-500 transition-colors" />
+                      </div>
+                      <div className="w-12">
+                        <input type="text" value={String(item.bore ?? "")} onChange={(e) => updateItem(idx, "bore", e.target.value)} placeholder="Bore" className="w-full bg-transparent text-[10px] text-viton-navy dark:text-white placeholder:text-[#8892a8]/60 dark:placeholder:text-gray-600/60 focus:outline-none border-b border-transparent focus:border-viton-red dark:focus:border-orange-500 transition-colors" />
+                      </div>
+                      <div className="w-12">
+                        <input type="text" value={String(item.size_mm ?? "")} onChange={(e) => updateItem(idx, "size_mm", e.target.value)} placeholder="Size" className="w-full bg-transparent text-[10px] text-viton-navy dark:text-white placeholder:text-[#8892a8]/60 dark:placeholder:text-gray-600/60 focus:outline-none border-b border-transparent focus:border-viton-red dark:focus:border-orange-500 transition-colors" />
+                      </div>
+                    </div>
+                    {/* Row 2 — Technical specs */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div className="w-12">
+                        <input type="text" value={String(item.rating ?? "")} onChange={(e) => updateItem(idx, "rating", e.target.value)} placeholder="Rating" className="w-full bg-transparent text-[10px] text-viton-navy dark:text-white placeholder:text-[#8892a8]/60 dark:placeholder:text-gray-600/60 focus:outline-none border-b border-transparent focus:border-viton-red dark:focus:border-orange-500 transition-colors" />
+                      </div>
+                      <div className="w-14">
+                        <input type="text" value={String(item.end_connection ?? "")} onChange={(e) => updateItem(idx, "end_connection", e.target.value)} placeholder="End" className="w-full bg-transparent text-[10px] text-viton-navy dark:text-white placeholder:text-[#8892a8]/60 dark:placeholder:text-gray-600/60 focus:outline-none border-b border-transparent focus:border-viton-red dark:focus:border-orange-500 transition-colors" />
+                      </div>
+                      <div className="w-16">
+                        <input type="text" value={String(item.drawing_no ?? "")} onChange={(e) => updateItem(idx, "drawing_no", e.target.value)} placeholder="Drwg" className="w-full bg-transparent text-[10px] text-viton-navy dark:text-white placeholder:text-[#8892a8]/60 dark:placeholder:text-gray-600/60 focus:outline-none border-b border-transparent focus:border-viton-red dark:focus:border-orange-500 transition-colors" />
+                      </div>
+                      <div className="w-10">
+                        <input type="number" value={String(item.qty ?? "")} onChange={(e) => updateItem(idx, "qty", Number(e.target.value) || 0)} placeholder="Qty" className="w-full bg-transparent text-[10px] text-viton-navy dark:text-white placeholder:text-[#8892a8]/60 dark:placeholder:text-gray-600/60 focus:outline-none border-b border-transparent focus:border-viton-red dark:focus:border-orange-500 transition-colors" />
+                      </div>
+                      <div className="w-20">
+                        <input type="text" value={String(item.delivery ?? "")} onChange={(e) => updateItem(idx, "delivery", e.target.value)} placeholder="Delivery" className="w-full bg-transparent text-[10px] text-viton-navy dark:text-white placeholder:text-[#8892a8]/60 dark:placeholder:text-gray-600/60 focus:outline-none border-b border-transparent focus:border-viton-red dark:focus:border-orange-500 transition-colors" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 pt-1">
+                    <button
+                      onClick={() => toggleExpand(idx)}
+                      className="p-1 rounded hover:bg-[#e8eaf2] dark:hover:bg-gray-800 text-[#8892a8] dark:text-gray-500 transition-colors"
+                      title="Toggle details"
+                    >
+                      {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    </button>
                     <button
                       onClick={() => removeRow(idx)}
-                      className="p-0.5 rounded hover:bg-red-50 dark:hover:bg-red-500/10 text-red-400 hover:text-red-600 transition-colors"
+                      className="p-1 rounded hover:bg-red-50 dark:hover:bg-red-500/10 text-red-400 hover:text-red-600 transition-colors"
                       title="Remove row"
                     >
-                      <Trash2 size={11} />
+                      <Trash2 size={12} />
                     </button>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
+
+                {/* Expanded Detail — Material Specs */}
+                {isExpanded && (
+                  <div className="px-3 py-2 bg-[#f6f8fc] dark:bg-gray-950/50 border-t border-[#dde1ea] dark:border-gray-700">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                      {SPEC_FIELDS.map((col) => (
+                        <div key={col.key} className={col.width}>
+                          <label className="block text-[9px] font-semibold text-[#8892a8] dark:text-gray-500 mb-0.5 uppercase tracking-wider">
+                            {col.label}
+                          </label>
+                          <input
+                            type="text"
+                            value={String(item[col.key] ?? "")}
+                            onChange={(e) => updateItem(idx, col.key, e.target.value)}
+                            placeholder={col.placeholder}
+                            className="w-full bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-700 rounded-md px-2 py-1 text-[10px] text-viton-navy dark:text-white placeholder:text-[#8892a8]/50 dark:placeholder:text-gray-600/50 focus:outline-none focus:ring-1 focus:ring-viton-red/20 dark:focus:ring-orange-500/20 focus:border-viton-red dark:focus:border-orange-500 transition-all"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {items.length === 0 && (
-          <div className="text-center py-6 text-[#8892a8] dark:text-gray-500 text-sm">
+          <div className="text-center py-6 text-[#8892a8] dark:text-gray-500 text-xs">
             No items yet. Click "Add Row" to start.
           </div>
         )}
@@ -394,7 +425,7 @@ export default function NewWOPage() {
                 {savedId && (
                   <PDFDownloadLink
                     document={<WOPdfDocument wo={woForPdf} />}
-                    fileName={`WO-${woNumber.replace(/\//g, "-")}.pdf`}
+                    fileName={`WO-${woNumber.replace(/\/g, "-")}.pdf`}
                     className="flex items-center gap-2 bg-viton-red hover:bg-viton-red-hover text-white font-semibold px-4 py-2 rounded-xl text-sm transition-all"
                   >
                     <Printer size={15} /> Download PDF
