@@ -526,29 +526,40 @@ export default function NewWOPage() {
           {[
             { label: "WO Number", value: woNumber, setter: setWoNumber, placeholder: "e.g. 1092", required: true, isWoNumber: true },
             { label: "Customer", value: customerName, setter: setCustomerName, placeholder: "INDIA GLYCOLS LTD - GORAKHPUR", required: true, wide: true },
-            { label: "Delivery Date", value: deliveryDate, setter: setDeliveryDate, placeholder: "DD.MM.YY", formatHint: "DD.MM.YY" },
+            { label: "Delivery Date", value: deliveryDate, setter: setDeliveryDate, isDate: true },
             { label: "P.O. No.", value: poNo, setter: setPoNo, placeholder: "4500061886" },
-            { label: "PO Date", value: poDate, setter: setPoDate, placeholder: "DD.MM.YY", formatHint: "DD.MM.YY" },
+            { label: "PO Date", value: poDate, setter: setPoDate, isDate: true },
             { label: "Inspection By", value: inspectionBy, setter: setInspectionBy, placeholder: "NO" },
             { label: "QAP No.", value: qapNo, setter: setQapNo, placeholder: "—" },
           ].map((f) => (
             <div key={f.label} className={(f as any).wide ? "col-span-2 sm:col-span-3 lg:col-span-2" : ""}>
-              <label className="block text-[10px] font-semibold text-[#4a5578] dark:text-gray-400 mb-1.5 uppercase tracking-wide">
-                {f.label}
-                {f.required && <span className="text-red-500 ml-0.5">*</span>}
-              </label>
-              <input
-                type="text"
-                value={f.value}
-                onChange={(e) => f.setter(e.target.value)}
-                placeholder={f.placeholder}
-                className={`w-full bg-[#f6f8fc] dark:bg-gray-950 border border-[#dde1ea] dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-viton-navy dark:text-white placeholder:text-[#8892a8] dark:placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red/20 dark:focus:ring-orange-500/20 focus:border-viton-red dark:focus:border-orange-500 transition-all ${(f as any).isWoNumber && woExists ? "border-red-300 dark:border-red-500/40 focus:border-red-500" : ""}`}
-              />
-              {(f as any).formatHint && (
-                <p className="text-[10px] text-[#8892a8] dark:text-gray-500 mt-0.5">Format: {(f as any).formatHint}</p>
-              )}
-              {(f as any).isWoNumber && woExists && (
-                <p className="text-[10px] text-red-500 mt-0.5 font-medium">This WO number already exists.</p>
+              {(f as any).isDate ? (
+                <DateInput
+                  label={f.label}
+                  value={f.value}
+                  onChange={(val) => f.setter(val)}
+                  required={f.required}
+                />
+              ) : (
+                <>
+                  <label className="block text-[10px] font-semibold text-[#4a5578] dark:text-gray-400 mb-1.5 uppercase tracking-wide">
+                    {f.label}
+                    {f.required && <span className="text-red-500 ml-0.5">*</span>}
+                  </label>
+                  <input
+                    type="text"
+                    value={f.value}
+                    onChange={(e) => f.setter(e.target.value)}
+                    placeholder={f.placeholder}
+                    className={`w-full bg-[#f6f8fc] dark:bg-gray-950 border border-[#dde1ea] dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-viton-navy dark:text-white placeholder:text-[#8892a8] dark:placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red/20 dark:focus:ring-orange-500/20 focus:border-viton-red dark:focus:border-orange-500 transition-all ${(f as any).isWoNumber && typeof woExists !== "undefined" && woExists ? "border-red-300 dark:border-red-500/40 focus:border-red-500" : ""}`}
+                  />
+                  {(f as any).formatHint && (
+                    <p className="text-[10px] text-[#8892a8] dark:text-gray-500 mt-0.5">Format: {(f as any).formatHint}</p>
+                  )}
+                  {(f as any).isWoNumber && typeof woExists !== "undefined" && woExists && (
+                    <p className="text-[10px] text-red-500 mt-0.5 font-medium">This WO number already exists.</p>
+                  )}
+                </>
               )}
             </div>
           ))}
