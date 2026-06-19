@@ -753,7 +753,7 @@ function WOScreenPreview({ wo }: { wo: WorkOrder & { items: WorkOrderItem[] } })
         </div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "4px 16px", marginBottom: "8px", fontSize: "9px" }}>
-        {[["Party Name", wo.party_name], ["Delivery", wo.delivery_date], ["P.O. No.", wo.po_no], ["PO Date", wo.po_date], ["Inspection By", wo.inspection_by], ["QAP No.", wo.qap_no]].map(([label, val]) => (
+        {[["Customer", wo.party_name], ["Delivery", wo.delivery_date], ["P.O. No.", wo.po_no], ["PO Date", wo.po_date], ["Inspection By", wo.inspection_by], ["QAP No.", wo.qap_no]].map(([label, val]) => (
           <div key={label as string} style={{ display: "flex" }}>
             <span style={{ fontWeight: 700, color: "#c41e3a", width: "90px", textTransform: "uppercase" }}>{label}:</span>
             <span style={{ fontWeight: 600 }}>{val || "—"}</span>
