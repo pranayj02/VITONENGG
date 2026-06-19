@@ -1,9 +1,13 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, ChevronDown, X } from "lucide-react";
 
 const WEEK_DAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
 
 function parseStoredDate(value: string): Date | null {
   if (!value) return null;
@@ -72,6 +76,7 @@ export function DateInput({
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [pickerMode, setPickerMode] = useState<"days" | "month-year">("days");
   const [textValue, setTextValue] = useState(value || "");
   const selectedDate = useMemo(() => parseStoredDate(textValue) ?? parseStoredDate(value), [textValue, value]);
   const [viewMonth, setViewMonth] = useState<Date>(selectedDate ?? new Date());
@@ -102,6 +107,10 @@ export function DateInput({
 
   const days = useMemo(() => buildCalendarDays(viewMonth), [viewMonth]);
   const today = new Date();
+  const yearOptions = useMemo(() => {
+    const current = new Date().getFullYear();
+    return Array.from({ length: 41 }, (_, i) => current - 20 + i);
+  }, []);
 
   const commitTextValue = (next: string) => {
     setTextValue(next);
@@ -142,7 +151,10 @@ export function DateInput({
         />
         <button
           type="button"
-          onClick={() => setOpen((v) => !v)}
+          onClick={() => {
+            setOpen((v) => !v);
+            setPickerMode("days");
+          }}
           className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-lg border border-transparent text-[#8892a8] dark:text-gray-500 hover:bg-[#eef2f8] dark:hover:bg-gray-900 hover:text-viton-red dark:hover:text-orange-400 transition-all flex items-center justify-center"
         >
           <CalendarDays size={16} />
@@ -152,23 +164,36 @@ export function DateInput({
       <p className="text-[10px] text-[#8892a8] dark:text-gray-500 mt-0.5">Format: DD.MM.YY</p>
 
       {open && (
-        <div className="absolute z-50 mt-2 w-[290px] rounded-2xl border border-[#dde1ea] dark:border-gray-700 bg-white/96 dark:bg-[#0f1724]/96 backdrop-blur-md shadow-[0_20px_50px_rgba(15,23,36,0.14)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.45)] overflow-hidden">
+        <div className="absolute z-50 mt-2 w-[300px] rounded-2xl border border-[#dde1ea] dark:border-gray-700 bg-white/96 dark:bg-[#0f1724]/96 backdrop-blur-md shadow-[0_20px_50px_rgba(15,23,36,0.14)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.45)] overflow-hidden">
           <div className="px-3 py-3 border-b border-[#eef1f6] dark:border-gray-800 bg-gradient-to-r from-white to-[#f7f9fd] dark:from-[#0f1724] dark:to-[#121b2a]">
             <div className="flex items-center justify-between gap-2">
               <button
                 type="button"
-                onClick={() => setViewMonth((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
+                onClick={() =>
+                  setViewMonth((d) => new Date(d.getFullYear(), d.getMonth() + (pickerMode === "days" ? -1 : -12), 1))
+                }
                 className="h-8 w-8 rounded-lg border border-[#dde1ea] dark:border-gray-700 bg-white dark:bg-gray-900 text-[#4a5578] dark:text-gray-300 hover:border-viton-red/40 dark:hover:border-orange-500/40 transition-all flex items-center justify-center"
               >
                 <ChevronLeft size={15} />
               </button>
-              <div className="text-center">
-                <p className="text-[11px] uppercase tracking-[0.18em] text-[#8892a8] dark:text-gray-500">Choose date</p>
-                <p className="text-sm font-semibold text-viton-navy dark:text-white">{monthLabel(viewMonth)}</p>
-              </div>
               <button
                 type="button"
-                onClick={() => setViewMonth((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
+                onClick={() => setPickerMode((m) => (m === "days" ? "month-year" : "days"))}
+                className="min-w-0 flex-1 px-2 py-1.5 rounded-xl hover:bg-[#eef2f8] dark:hover:bg-gray-900 transition-all"
+              >
+                <p className="text-[11px] uppercase tracking-[0.18em] text-[#8892a8] dark:text-gray-500">
+                  {pickerMode === "days" ? "Choose date" : "Jump to month"}
+                </p>
+                <div className="flex items-center justify-center gap-1 text-sm font-semibold text-viton-navy dark:text-white">
+                  <span>{monthLabel(viewMonth)}</span>
+                  <ChevronDown size={14} className={`transition-transform ${pickerMode === "month-year" ? "rotate-180" : ""}`} />
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setViewMonth((d) => new Date(d.getFullYear(), d.getMonth() + (pickerMode === "days" ? 1 : 12), 1))
+                }
                 className="h-8 w-8 rounded-lg border border-[#dde1ea] dark:border-gray-700 bg-white dark:bg-gray-900 text-[#4a5578] dark:text-gray-300 hover:border-viton-red/40 dark:hover:border-orange-500/40 transition-all flex items-center justify-center"
               >
                 <ChevronRight size={15} />
@@ -176,47 +201,105 @@ export function DateInput({
             </div>
           </div>
 
-          <div className="p-3">
-            <div className="grid grid-cols-7 gap-1 mb-2">
-              {WEEK_DAYS.map((day) => (
-                <div key={day} className="h-8 flex items-center justify-center text-[10px] font-semibold uppercase tracking-wide text-[#8892a8] dark:text-gray-500">
-                  {day}
-                </div>
-              ))}
-            </div>
+          {pickerMode === "days" ? (
+            <div className="p-3">
+              <div className="grid grid-cols-7 gap-1 mb-2">
+                {WEEK_DAYS.map((day) => (
+                  <div key={day} className="h-8 flex items-center justify-center text-[10px] font-semibold uppercase tracking-wide text-[#8892a8] dark:text-gray-500">
+                    {day}
+                  </div>
+                ))}
+              </div>
 
-            <div className="grid grid-cols-7 gap-1">
-              {days.map((day) => {
-                const inMonth = day.getMonth() === viewMonth.getMonth();
-                const selected = isSameDay(day, selectedDate);
-                const isToday = isSameDay(day, today);
-                return (
-                  <button
-                    key={day.toISOString()}
-                    type="button"
-                    onClick={() => {
-                      const formatted = formatStoredDate(day);
-                      setTextValue(formatted);
-                      onChange(formatted);
-                      setOpen(false);
-                    }}
-                    className={[
-                      "h-9 rounded-xl text-sm transition-all flex items-center justify-center border",
-                      selected
-                        ? "bg-viton-red text-white border-viton-red shadow-sm dark:bg-orange-500 dark:border-orange-500"
-                        : isToday
-                        ? "border-viton-red/40 dark:border-orange-500/50 text-viton-navy dark:text-white bg-viton-red/[0.06] dark:bg-orange-500/[0.10]"
-                        : inMonth
-                        ? "border-transparent text-viton-navy dark:text-gray-200 hover:bg-[#f3f6fb] dark:hover:bg-gray-900"
-                        : "border-transparent text-[#b0b8c8] dark:text-gray-600 hover:bg-[#f3f6fb] dark:hover:bg-gray-900",
-                    ].join(" ")}
-                  >
-                    {day.getDate()}
-                  </button>
-                );
-              })}
+              <div className="grid grid-cols-7 gap-1">
+                {days.map((day) => {
+                  const inMonth = day.getMonth() === viewMonth.getMonth();
+                  const selected = isSameDay(day, selectedDate);
+                  const isToday = isSameDay(day, today);
+                  return (
+                    <button
+                      key={day.toISOString()}
+                      type="button"
+                      onClick={() => {
+                        const formatted = formatStoredDate(day);
+                        setTextValue(formatted);
+                        onChange(formatted);
+                        setOpen(false);
+                      }}
+                      className={[
+                        "h-9 rounded-xl text-sm transition-all flex items-center justify-center border",
+                        selected
+                          ? "bg-viton-red text-white border-viton-red shadow-sm dark:bg-orange-500 dark:border-orange-500"
+                          : isToday
+                          ? "border-viton-red/40 dark:border-orange-500/50 text-viton-navy dark:text-white bg-viton-red/[0.06] dark:bg-orange-500/[0.10]"
+                          : inMonth
+                          ? "border-transparent text-viton-navy dark:text-gray-200 hover:bg-[#f3f6fb] dark:hover:bg-gray-900"
+                          : "border-transparent text-[#b0b8c8] dark:text-gray-600 hover:bg-[#f3f6fb] dark:hover:bg-gray-900",
+                      ].join(" ")}
+                    >
+                      {day.getDate()}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="p-3 space-y-3">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#8892a8] dark:text-gray-500 mb-2">Month</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {MONTHS.map((month, index) => {
+                    const active = index === viewMonth.getMonth();
+                    return (
+                      <button
+                        key={month}
+                        type="button"
+                        onClick={() => {
+                          setViewMonth((d) => new Date(d.getFullYear(), index, 1));
+                          setPickerMode("days");
+                        }}
+                        className={[
+                          "h-9 rounded-xl text-xs font-medium border transition-all",
+                          active
+                            ? "bg-viton-red text-white border-viton-red dark:bg-orange-500 dark:border-orange-500"
+                            : "bg-[#f7f9fd] dark:bg-gray-900 border-[#e7ebf3] dark:border-gray-800 text-viton-navy dark:text-gray-200 hover:border-viton-red/30 dark:hover:border-orange-500/40",
+                        ].join(" ")}
+                      >
+                        {month.slice(0, 3)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#8892a8] dark:text-gray-500 mb-2">Year</p>
+                <div className="max-h-44 overflow-y-auto pr-1 grid grid-cols-3 gap-2">
+                  {yearOptions.map((year) => {
+                    const active = year === viewMonth.getFullYear();
+                    return (
+                      <button
+                        key={year}
+                        type="button"
+                        onClick={() => {
+                          setViewMonth((d) => new Date(year, d.getMonth(), 1));
+                          setPickerMode("days");
+                        }}
+                        className={[
+                          "h-9 rounded-xl text-xs font-medium border transition-all",
+                          active
+                            ? "bg-viton-navy text-white border-viton-navy dark:bg-white dark:text-gray-900 dark:border-white"
+                            : "bg-[#f7f9fd] dark:bg-gray-900 border-[#e7ebf3] dark:border-gray-800 text-viton-navy dark:text-gray-200 hover:border-viton-red/30 dark:hover:border-orange-500/40",
+                        ].join(" ")}
+                      >
+                        {year}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="px-3 py-3 border-t border-[#eef1f6] dark:border-gray-800 bg-[#fbfcff] dark:bg-[#0d1520] flex items-center justify-between gap-2">
             <button
@@ -227,6 +310,7 @@ export function DateInput({
                 setViewMonth(now);
                 setTextValue(formatted);
                 onChange(formatted);
+                setPickerMode("days");
                 setOpen(false);
               }}
               className="text-xs font-semibold text-viton-red dark:text-orange-400 hover:opacity-80 transition-opacity"
