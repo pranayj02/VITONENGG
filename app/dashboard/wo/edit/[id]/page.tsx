@@ -6,6 +6,7 @@ import { audit } from "@/lib/audit";
 import { useRouter, useParams } from "next/navigation";
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import { WOPdfDocument } from "@/components/WOPdf";
+import { DateInput } from "@/components/DateInput";
 import type { WorkOrderItem, WorkOrder } from "@/lib/types";
 import {
   Plus, Trash2, Save, Printer, X, Eye, ArrowLeft,
