@@ -11,7 +11,6 @@ import {
   Filter, Eye, EyeOff, FileText,
 } from "lucide-react";
 import { PDFDownloadLink } from "@react-pdf/renderer";
-import { WOPdfDocument } from "@/components/WOPdf";
 import { WOPdfListDocument } from "@/components/WOPdfList";
 
 // ── Types ───────────────────────────────────────────────────────────────────
@@ -773,15 +772,7 @@ export default function WOListPage() {
                               >
                                 <Pencil size={14} />
                               </button>
-                              <PDFDownloadLink
-                                document={<WOPdfDocument wo={wo} />}
-                                fileName={`WO-${wo.wo_number.replace(/\//g, "-")}.pdf`}
-                                title="Export PDF"
-                                className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-500/10 text-[#8892a8] hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                              >
-                                <FileText size={14} />
-                              </PDFDownloadLink>
-                              <button
+                                                            <button
                                 onClick={() => router.push(`/dashboard/wo/print/${wo.id}`)}
                                 title="Preview / PDF"
                                 className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-500/10 text-[#8892a8] hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
