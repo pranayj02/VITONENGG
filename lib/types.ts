@@ -205,6 +205,7 @@ export interface WorkOrderItem {
   drawing_no: string;
   qty: string;
   delivery: string;
+  is_completed?: boolean;
 }
 
 export interface WorkOrder {
@@ -220,6 +221,7 @@ export interface WorkOrder {
   created_by_name: string | null;
   created_at: string;
   updated_at?: string | null;
+  is_completed?: boolean;
   items?: WorkOrderItem[];
 }
 
