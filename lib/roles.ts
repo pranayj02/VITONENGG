@@ -44,7 +44,11 @@ export const PERMISSIONS = {
   convert_requisition: ["admin", "purchase_manager"],
 
   // Work Orders
-  create_work_order: ["admin", "purchase_manager", "engineer"],
+  view_work_orders: ["admin", "purchase_manager", "quality_assurance"],
+  create_work_order: ["admin", "purchase_manager"],
+  edit_work_order: ["admin", "purchase_manager"],
+  delete_work_order: ["admin"],
+  complete_work_order: ["admin"],
 
   // GRN / Stock
   create_grn: ["quality_assurance"],
