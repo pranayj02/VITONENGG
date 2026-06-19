@@ -76,7 +76,7 @@ const FIELD_GROUPS = [
       { key: "bore", label: "Bore", placeholder: "STD", span: 1 },
       { key: "size_mm", label: "Size (MM)", placeholder: "600", span: 1, required: true },
       { key: "rating", label: "Rating", placeholder: "150#", span: 1, required: true },
-      { key: "end_connection", label: "End Connection", placeholder: "FE’ RF", span: 1, required: true },
+      { key: "end_connection", label: "End Connection", placeholder: "FE' RF", span: 1, required: true },
     ],
   },
   {
@@ -88,6 +88,11 @@ const FIELD_GROUPS = [
     fields: [
       { key: "body_bonnet", label: "Body / Bonnet", placeholder: "ASTM A 216 GR. WCB", span: 2, required: true },
       { key: "wedge_disc_plug_ball", label: "Wedge / Disc / Plug / Ball", placeholder: "ASTM A 216 GR. WCB + 13% Cr. SS O/L", span: 2, required: true },
+      { key: "stem_hinge", label: "Stem / Hinge", placeholder: "SS 410", span: 1 },
+      { key: "seat", label: "Seat", placeholder: "ASTM A 216 GR. WCB + 13% Cr.", span: 2 },
+      { key: "gasket", label: "Gasket", placeholder: "SPW SS 316 + GRAPHITE", span: 2 },
+      { key: "gl_pkng", label: "Gland Packing", placeholder: "GRAPHITE", span: 1 },
+      { key: "fasteners", label: "Fasteners", placeholder: "B7/2H", span: 1 },
     ],
   },
   {
@@ -674,6 +679,11 @@ function WOScreenPreview({ wo }: { wo: WorkOrder & { items: WorkOrderItem[] } })
     { key: "end_connection", label: "End Conn.", width: 36 },
     { key: "body_bonnet", label: "Body / Bonnet", width: 50 },
     { key: "wedge_disc_plug_ball", label: "Wedge / Disc / Plug / Ball", width: 60 },
+    { key: "stem_hinge", label: "Stem / Hinge", width: 40 },
+    { key: "seat", label: "Seat", width: 50 },
+    { key: "gasket", label: "Gasket", width: 50 },
+    { key: "gl_pkng", label: "Gland Packing", width: 40 },
+    { key: "fasteners", label: "Fasteners", width: 36 },
     { key: "operation", label: "Operation", width: 36 },
     { key: "special_requirements", label: "Special Req.", width: 48 },
     { key: "remarks", label: "Remarks", width: 60 },
