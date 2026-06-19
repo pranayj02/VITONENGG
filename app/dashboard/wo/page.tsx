@@ -1,15 +1,17 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import { createClient } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import type { WorkOrder, WorkOrderItem } from "@/lib/types";
 import { useRole, can } from "@/lib/roles";
 import {
-  Plus, Search, Printer, Download, Trash2, X,
+  Plus, Search, Printer, Download, Trash2, X, Pencil,
   CheckCircle2, Circle, ArrowLeft, ChevronDown, ChevronUp,
-  Filter, Eye, EyeOff,
+  Filter, Eye, EyeOff, FileText,
 } from "lucide-react";
+import { PDFDownloadLink } from "@react-pdf/renderer";
+import { WOPdfDocument } from "@/components/WOPdf";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 type WOWithItems = WorkOrder & { items: WorkOrderItem[] };
@@ -48,7 +50,7 @@ function getDueDateStyle(dateStr: string | null, isCompleted: boolean): string {
 // ── CSV Export ────────────────────────────────────────────────────────────────
 function exportAllCSV(orders: WOWithItems[]) {
   const headers = [
-    "WO NO.", "Party Name", "PO SR NO", "Size", "Class", "Valve Type",
+    "WO NO.", "Customer", "PO SR NO", "Size", "Class", "Valve Type",
     "Description", "Qty", "Due Date", "Inspection", "P.O. NO.", "Item Status", "WO Status",
   ];
   const rows: string[][] = [headers];
@@ -257,7 +259,6 @@ export default function WOListPage() {
       .from("work_order_items")
       .update({ is_completed: newVal })
       .eq("id", item.id);
-    // Check if all items are now complete, auto-complete WO
     const updatedItems = orders.find((o) => o.id === wo.id)?.items ?? [];
     const allItems = updatedItems.map((it, i) =>
       i === itemIdx ? { ...it, is_completed: newVal } : it
@@ -333,7 +334,6 @@ export default function WOListPage() {
     return orders.filter((o) => {
       if (!showCompleted && o.is_completed) return false;
       if (filterParty && o.party_name !== filterParty) return false;
-      // Check if any item matches the class/size/valve filter
       const items = o.items ?? [];
       if (filterClass && !items.some((it) => it.rating === filterClass)) return false;
       if (filterSize && !items.some((it) => it.size_mm === filterSize)) return false;
@@ -447,7 +447,7 @@ export default function WOListPage() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search WO #, party, PO..."
+              placeholder="Search WO #, customer, PO..."
               className="w-full bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-lg pl-9 pr-8 py-2 text-viton-navy dark:text-white text-sm placeholder-[#8892a8] dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red/20 dark:focus:ring-orange-500/20 focus:border-viton-red dark:focus:border-orange-500"
             />
             {search && (
@@ -458,7 +458,7 @@ export default function WOListPage() {
           </div>
 
           <FilterDropdown
-            label="Party"
+            label="Customer"
             options={partyOptions}
             value={filterParty}
             onChange={setFilterParty}
@@ -532,8 +532,9 @@ export default function WOListPage() {
                   <tr className="bg-[#1a2744] dark:bg-gray-800">
                     {[
                       { label: "Done", w: 52 },
+                      { label: "Item", w: 52 },
                       { label: "WO NO.", w: 72 },
-                      { label: "Party Name", w: 160 },
+                      { label: "Customer", w: 160 },
                       { label: "PO SR NO", w: 72 },
                       { label: "Size", w: 60 },
                       { label: "Class", w: 60 },
@@ -543,7 +544,6 @@ export default function WOListPage() {
                       { label: "Due Date", w: 100 },
                       { label: "Inspection", w: 110 },
                       { label: "P.O. NO.", w: 180 },
-                      { label: "Item Done", w: 52 },
                       { label: "", w: 80 },
                     ].map((col) => (
                       <th
@@ -603,6 +603,25 @@ export default function WOListPage() {
                           </td>
                         )}
 
+                        {/* Item-level Done */}
+                        <td className="text-center align-middle px-2 border-r border-[#eef1f6] dark:border-gray-800/60">
+                          {itemIdx >= 0 ? (
+                            <button
+                              onClick={() => toggleItemCompleted(wo, itemIdx)}
+                              title={item.is_completed ? "Item done" : "Mark item done"}
+                              className={`p-1 rounded-full transition-all ${
+                                item.is_completed
+                                  ? "text-emerald-500 hover:text-emerald-600"
+                                  : "text-[#c0c8db] dark:text-gray-600 hover:text-emerald-500"
+                              }`}
+                            >
+                              {item.is_completed ? <CheckCircle2 size={14} /> : <Circle size={14} />}
+                            </button>
+                          ) : (
+                            <span className="text-[#c0c8db] dark:text-gray-600 text-xs">—</span>
+                          )}
+                        </td>
+
                         {/* WO Number */}
                         {isFirstInWO && (
                           <td
@@ -617,7 +636,7 @@ export default function WOListPage() {
                           </td>
                         )}
 
-                        {/* Party Name */}
+                        {/* Customer */}
                         {isFirstInWO && (
                           <td
                             rowSpan={woRowSpan}
@@ -715,30 +734,11 @@ export default function WOListPage() {
                               isCompleted ? "text-[#8892a8]" : "text-[#4a5578] dark:text-gray-300"
                             }`}>
                               {wo.po_no
-                                ? `${wo.po_no}${wo.po_date ? ` dt. ${wo.po_date}` : ""}`
+                                ? `${wo.po_no}${wo.po_date ? ` / ${wo.po_date}` : ""}`
                                 : "—"}
                             </span>
                           </td>
                         )}
-
-                        {/* Item-level Done */}
-                        <td className="text-center align-middle px-2 border-r border-[#eef1f6] dark:border-gray-800/60">
-                          {itemIdx >= 0 ? (
-                            <button
-                              onClick={() => toggleItemCompleted(wo, itemIdx)}
-                              title={item.is_completed ? "Item done" : "Mark item done"}
-                              className={`p-1 rounded-full transition-all ${
-                                item.is_completed
-                                  ? "text-emerald-500 hover:text-emerald-600"
-                                  : "text-[#c0c8db] dark:text-gray-600 hover:text-emerald-500"
-                              }`}
-                            >
-                              {item.is_completed ? <CheckCircle2 size={14} /> : <Circle size={14} />}
-                            </button>
-                          ) : (
-                            <span className="text-[#c0c8db] dark:text-gray-600 text-xs">—</span>
-                          )}
-                        </td>
 
                         {/* Actions */}
                         {isFirstInWO && (
@@ -747,6 +747,21 @@ export default function WOListPage() {
                             className="px-2 py-2 text-center align-middle"
                           >
                             <div className="flex flex-col items-center gap-1.5">
+                              <button
+                                onClick={() => router.push(`/dashboard/wo/edit/${wo.id}`)}
+                                title="Edit"
+                                className="p-1.5 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-500/10 text-[#8892a8] hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
+                              >
+                                <Pencil size={14} />
+                              </button>
+                              <PDFDownloadLink
+                                document={<WOPdfDocument wo={wo} />}
+                                fileName={`WO-${wo.wo_number.replace(/\//g, "-")}.pdf`}
+                                title="Export PDF"
+                                className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-500/10 text-[#8892a8] hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                              >
+                                <FileText size={14} />
+                              </PDFDownloadLink>
                               <button
                                 onClick={() => router.push(`/dashboard/wo/print/${wo.id}`)}
                                 title="Preview / PDF"
