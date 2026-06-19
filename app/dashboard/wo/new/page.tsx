@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { createClient } from "@/lib/supabase";
 import { audit } from "@/lib/audit";
 import { useRouter } from "next/navigation";
@@ -276,7 +276,7 @@ function ItemCard({
 export default function NewWOPage() {
   const router = useRouter();
   const [woNumber, setWoNumber] = useState("");
-  const [partyName, setPartyName] = useState("");
+  const [customerName, setCustomerName] = useState("");
   const [deliveryDate, setDeliveryDate] = useState("");
   const [poNo, setPoNo] = useState("");
   const [poDate, setPoDate] = useState("");
@@ -285,7 +285,22 @@ export default function NewWOPage() {
   const [items, setItems] = useState<WorkOrderItem[]>([{ ...EMPTY_ITEM(), sr_no: 1 }]);
   const [saving, setSaving] = useState(false);
   const [savedId, setSavedId] = useState<string | null>(null);
+  const [woExists, setWoExists] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+
+  useEffect(() => {
+    if (!woNumber.trim()) { setWoExists(false); return; }
+    const timer = setTimeout(async () => {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("work_orders")
+        .select("id")
+        .eq("wo_number", woNumber.trim())
+        .maybeSingle();
+      setWoExists(!!data);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [woNumber]);
   const [error, setError] = useState("");
 
   const addRow = useCallback(() => {
@@ -332,7 +347,7 @@ export default function NewWOPage() {
   const buildWOPayload = useCallback(() => {
     return {
       wo_number: woNumber,
-      party_name: partyName,
+      party_name: customerName,
       delivery_date: deliveryDate || null,
       po_no: poNo || null,
       po_date: poDate || null,
@@ -340,11 +355,12 @@ export default function NewWOPage() {
       qap_no: qapNo || null,
       items: items.map((it) => ({ ...it, delivery: "" })),
     };
-  }, [woNumber, partyName, deliveryDate, poNo, poDate, inspectionBy, qapNo, items]);
+  }, [woNumber, customerName, deliveryDate, poNo, poDate, inspectionBy, qapNo, items]);
 
   async function handleSave() {
     if (!woNumber.trim()) { setError("WO Number is required."); return; }
-    if (!partyName.trim()) { setError("Party Name is required."); return; }
+    if (woExists) { setError("A work order with this number already exists."); return; }
+    if (!customerName.trim()) { setError("Customer is required."); return; }
     if (items.length === 0) { setError("Add at least one item."); return; }
 
     const firstInvalidIndex = items.findIndex((item) => getMissingRequiredFields(item).length > 0);
@@ -366,7 +382,7 @@ export default function NewWOPage() {
         .from("work_orders")
         .insert({
           wo_number: woNumber.trim(),
-          party_name: partyName.trim(),
+          party_name: customerName.trim(),
           delivery_date: deliveryDate || null,
           po_no: poNo || null,
           po_date: poDate || null,
@@ -507,11 +523,11 @@ export default function NewWOPage() {
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {[
-            { label: "WO Number", value: woNumber, setter: setWoNumber, placeholder: "e.g. 1092", required: true },
-            { label: "Party Name", value: partyName, setter: setPartyName, placeholder: "INDIA GLYCOLS LTD - GORAKHPUR", required: true, wide: true },
-            { label: "Delivery Date", value: deliveryDate, setter: setDeliveryDate, placeholder: "30.06.2026" },
+            { label: "WO Number", value: woNumber, setter: setWoNumber, placeholder: "e.g. 1092", required: true, isWoNumber: true },
+            { label: "Customer", value: customerName, setter: setCustomerName, placeholder: "INDIA GLYCOLS LTD - GORAKHPUR", required: true, wide: true },
+            { label: "Delivery Date", value: deliveryDate, setter: setDeliveryDate, placeholder: "DD.MM.YY", formatHint: "DD.MM.YY" },
             { label: "P.O. No.", value: poNo, setter: setPoNo, placeholder: "4500061886" },
-            { label: "PO Date", value: poDate, setter: setPoDate, placeholder: "26.05.2026" },
+            { label: "PO Date", value: poDate, setter: setPoDate, placeholder: "DD.MM.YY", formatHint: "DD.MM.YY" },
             { label: "Inspection By", value: inspectionBy, setter: setInspectionBy, placeholder: "NO" },
             { label: "QAP No.", value: qapNo, setter: setQapNo, placeholder: "—" },
           ].map((f) => (
@@ -525,8 +541,14 @@ export default function NewWOPage() {
                 value={f.value}
                 onChange={(e) => f.setter(e.target.value)}
                 placeholder={f.placeholder}
-                className="w-full bg-[#f6f8fc] dark:bg-gray-950 border border-[#dde1ea] dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-viton-navy dark:text-white placeholder:text-[#8892a8] dark:placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red/20 dark:focus:ring-orange-500/20 focus:border-viton-red dark:focus:border-orange-500 transition-all"
+                className={`w-full bg-[#f6f8fc] dark:bg-gray-950 border border-[#dde1ea] dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-viton-navy dark:text-white placeholder:text-[#8892a8] dark:placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red/20 dark:focus:ring-orange-500/20 focus:border-viton-red dark:focus:border-orange-500 transition-all ${(f as any).isWoNumber && woExists ? "border-red-300 dark:border-red-500/40 focus:border-red-500" : ""}`}
               />
+              {(f as any).formatHint && (
+                <p className="text-[10px] text-[#8892a8] dark:text-gray-500 mt-0.5">Format: {(f as any).formatHint}</p>
+              )}
+              {(f as any).isWoNumber && woExists && (
+                <p className="text-[10px] text-red-500 mt-0.5 font-medium">This WO number already exists.</p>
+              )}
             </div>
           ))}
         </div>
@@ -715,7 +737,7 @@ function WOScreenPreview({ wo }: { wo: WorkOrder & { items: WorkOrderItem[] } })
         </div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "4px 16px", marginBottom: "8px", fontSize: "9px" }}>
-        {[["Party Name", wo.party_name], ["Delivery", wo.delivery_date], ["P.O. No.", wo.po_no], ["PO Date", wo.po_date], ["Inspection By", wo.inspection_by], ["QAP No.", wo.qap_no]].map(([label, val]) => (
+        {[["Customer", wo.party_name], ["Delivery", wo.delivery_date], ["P.O. No.", wo.po_no], ["PO Date", wo.po_date], ["Inspection By", wo.inspection_by], ["QAP No.", wo.qap_no]].map(([label, val]) => (
           <div key={label as string} style={{ display: "flex" }}>
             <span style={{ fontWeight: 700, color: "#c41e3a", width: "90px", textTransform: "uppercase" }}>{label}:</span>
             <span style={{ fontWeight: 600 }}>{val || "—"}</span>
