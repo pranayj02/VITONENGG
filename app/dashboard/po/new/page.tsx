@@ -11,6 +11,7 @@ import {
 import type { Item, Vendor, LineItem } from "@/lib/types";
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import { POPdfDocument } from "@/components/POPdf";
+import { DateInput } from "@/components/DateInput";
 import { useSearchParams } from "next/navigation";
 
 interface LineItemWithNote extends LineItem {
@@ -789,12 +790,10 @@ export default function NewPOPage() {
               />
             </div>
             <div>
-              <label className="block text-gray-400 text-xs font-semibold uppercase tracking-wider mb-2">Vendor Quot. Date (optional)</label>
-              <input
-                type="date"
+              <DateInput
+                label="Vendor Quot. Date (optional)"
                 value={quotDate}
-                onChange={(e) => setQuotDate(e.target.value)}
-                className="w-full bg-[#f7f8fb] dark:bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-viton-navy dark:text-viton-navy dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500"
+                onChange={setQuotDate}
               />
             </div>
           </div>
