@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import { WOPdfDocument } from "@/components/WOPdf";
+import { WOPdfListDocument } from "@/components/WOPdfList";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 type WOWithItems = WorkOrder & { items: WorkOrderItem[] };
@@ -428,6 +429,24 @@ export default function WOListPage() {
               >
                 <Download size={13} /> Export CSV
               </button>
+              <PDFDownloadLink
+                document={
+                  <WOPdfListDocument
+                    orders={filtered}
+                    generatedAt={new Date().toLocaleDateString("en-GB", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  />
+                }
+                fileName={`WorkOrders-List-${new Date().toISOString().slice(0, 10)}.pdf`}
+                className="flex items-center gap-2 bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-700 text-[#4a5578] dark:text-gray-300 hover:border-red-400 hover:text-red-700 dark:hover:text-red-400 font-semibold px-3 py-2 rounded-lg text-xs transition-all"
+              >
+                <FileText size={13} /> Export PDF
+              </PDFDownloadLink>
               {canCreate && (
                 <button
                   onClick={() => router.push("/dashboard/wo/new")}
@@ -794,12 +813,32 @@ export default function WOListPage() {
                 Showing <strong className="text-viton-navy dark:text-white">{filtered.length}</strong> work order{filtered.length !== 1 ? "s" : ""} ·{" "}
                 <strong className="text-viton-navy dark:text-white">{flatRows.filter((r) => r.item.qty).length}</strong> line items
               </span>
-              <button
-                onClick={() => exportAllCSV(filtered)}
-                className="flex items-center gap-1.5 text-xs font-semibold text-[#8892a8] hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors"
-              >
-                <Download size={12} /> Export current view as CSV
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => exportAllCSV(filtered)}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-[#8892a8] hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors"
+                >
+                  <Download size={12} /> Export current view as CSV
+                </button>
+                <PDFDownloadLink
+                  document={
+                    <WOPdfListDocument
+                      orders={filtered}
+                      generatedAt={new Date().toLocaleDateString("en-GB", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    />
+                  }
+                  fileName={`WorkOrders-List-${new Date().toISOString().slice(0, 10)}.pdf`}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-[#8892a8] hover:text-red-700 dark:hover:text-red-400 transition-colors"
+                >
+                  <FileText size={12} /> Export current view as PDF
+                </PDFDownloadLink>
+              </div>
             </div>
           </div>
         )}
