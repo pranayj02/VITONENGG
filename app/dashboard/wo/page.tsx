@@ -207,8 +207,10 @@ function FilterDropdown({
 export default function WOListPage() {
   const router = useRouter();
   const { role } = useRole();
-  const canCreate = can(role, "create_work_order");
-  const canDelete = role === "admin";
+  const canCreate   = can(role, "create_work_order");
+  const canEdit     = can(role, "edit_work_order");
+  const canDelete   = can(role, "delete_work_order");
+  const canComplete = can(role, "complete_work_order");
 
   const [orders, setOrders] = useState<WOWithItems[]>([]);
   const [loading, setLoading] = useState(true);
@@ -606,35 +608,47 @@ export default function WOListPage() {
                             rowSpan={woRowSpan}
                             className="text-center align-middle px-2 border-r border-[#eef1f6] dark:border-gray-800/60"
                           >
-                            <button
-                              onClick={() => toggleWOCompleted(wo)}
-                              disabled={togglingId === wo.id}
-                              title={isCompleted ? "Mark as Active" : "Mark as Completed"}
-                              className={`p-1.5 rounded-full transition-all ${
-                                isCompleted
-                                  ? "text-emerald-500 hover:text-emerald-600"
-                                  : "text-[#c0c8db] dark:text-gray-600 hover:text-emerald-500"
-                              } disabled:opacity-40`}
-                            >
-                              {isCompleted ? <CheckCircle2 size={18} /> : <Circle size={18} />}
-                            </button>
+                            {canComplete ? (
+                              <button
+                                onClick={() => toggleWOCompleted(wo)}
+                                disabled={togglingId === wo.id}
+                                title={isCompleted ? "Mark as Active" : "Mark as Completed"}
+                                className={`p-1.5 rounded-full transition-all ${
+                                  isCompleted
+                                    ? "text-emerald-500 hover:text-emerald-600"
+                                    : "text-[#c0c8db] dark:text-gray-600 hover:text-emerald-500"
+                                } disabled:opacity-40`}
+                              >
+                                {isCompleted ? <CheckCircle2 size={18} /> : <Circle size={18} />}
+                              </button>
+                            ) : (
+                              isCompleted
+                                ? <CheckCircle2 size={18} className="text-emerald-500" />
+                                : <Circle size={18} className="text-[#c0c8db] dark:text-gray-600" />
+                            )}
                           </td>
                         )}
 
                         {/* Item-level Done */}
                         <td className="text-center align-middle px-2 border-r border-[#eef1f6] dark:border-gray-800/60">
                           {itemIdx >= 0 ? (
-                            <button
-                              onClick={() => toggleItemCompleted(wo, itemIdx)}
-                              title={item.is_completed ? "Item done" : "Mark item done"}
-                              className={`p-1 rounded-full transition-all ${
-                                item.is_completed
-                                  ? "text-emerald-500 hover:text-emerald-600"
-                                  : "text-[#c0c8db] dark:text-gray-600 hover:text-emerald-500"
-                              }`}
-                            >
-                              {item.is_completed ? <CheckCircle2 size={14} /> : <Circle size={14} />}
-                            </button>
+                            canComplete ? (
+                              <button
+                                onClick={() => toggleItemCompleted(wo, itemIdx)}
+                                title={item.is_completed ? "Item done" : "Mark item done"}
+                                className={`p-1 rounded-full transition-all ${
+                                  item.is_completed
+                                    ? "text-emerald-500 hover:text-emerald-600"
+                                    : "text-[#c0c8db] dark:text-gray-600 hover:text-emerald-500"
+                                }`}
+                              >
+                                {item.is_completed ? <CheckCircle2 size={14} /> : <Circle size={14} />}
+                              </button>
+                            ) : (
+                              item.is_completed
+                                ? <CheckCircle2 size={14} className="text-emerald-500" />
+                                : <Circle size={14} className="text-[#c0c8db] dark:text-gray-600" />
+                            )
                           ) : (
                             <span className="text-[#c0c8db] dark:text-gray-600 text-xs">—</span>
                           )}
@@ -765,13 +779,15 @@ export default function WOListPage() {
                             className="px-2 py-2 text-center align-middle"
                           >
                             <div className="flex flex-col items-center gap-1.5">
-                              <button
-                                onClick={() => router.push(`/dashboard/wo/edit/${wo.id}`)}
-                                title="Edit"
-                                className="p-1.5 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-500/10 text-[#8892a8] hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
-                              >
-                                <Pencil size={14} />
-                              </button>
+                              {canEdit && (
+                                <button
+                                  onClick={() => router.push(`/dashboard/wo/edit/${wo.id}`)}
+                                  title="Edit"
+                                  className="p-1.5 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-500/10 text-[#8892a8] hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
+                                >
+                                  <Pencil size={14} />
+                                </button>
+                              )}
                                                             <button
                                 onClick={() => router.push(`/dashboard/wo/print/${wo.id}`)}
                                 title="Preview / PDF"
