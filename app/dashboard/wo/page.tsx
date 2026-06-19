@@ -43,8 +43,8 @@ function getDueDateStyle(dateStr: string | null, isCompleted: boolean): string {
   if (isCompleted || !dateStr) return "";
   const date = parseDateDDMMYYYY(dateStr);
   if (!date) return "";
-  if (isPastDate(date)) return "bg-red-50 text-red-700 font-bold";
-  if (isSameMonth(date)) return "bg-amber-50 text-amber-700 font-bold";
+  if (isPastDate(date)) return "bg-red-50 text-red-700 font-bold dark:bg-red-500/10 dark:text-red-300";
+  if (isSameMonth(date)) return "bg-amber-50 text-amber-700 font-bold dark:bg-amber-500/10 dark:text-amber-200";
   return "";
 }
 
