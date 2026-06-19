@@ -9,11 +9,13 @@ function parseStoredDate(value: string): Date | null {
   if (!value) return null;
   const parts = value.split(/[./-]/);
   if (parts.length !== 3) return null;
-  const [d, m, y] = parts.map((p) => Number(p));
+  const [dRaw, mRaw, yRaw] = parts;
+  const d = Number(dRaw);
+  const m = Number(mRaw);
+  const y = Number(yRaw.length === 2 ? `20${yRaw}` : yRaw);
   if (!d || !m || !y) return null;
-  const year = y < 100 ? 2000 + y : y;
-  const date = new Date(year, m - 1, d);
-  if (date.getFullYear() !== year || date.getMonth() !== m - 1 || date.getDate() !== d) return null;
+  const date = new Date(y, m - 1, d);
+  if (date.getFullYear() !== y || date.getMonth() !== m - 1 || date.getDate() !== d) return null;
   return date;
 }
 
@@ -49,6 +51,13 @@ function buildCalendarDays(viewMonth: Date): Date[] {
   });
 }
 
+function maskDateInput(raw: string): string {
+  const digits = raw.replace(/\D/g, "").slice(0, 6);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}.${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}.${digits.slice(2, 4)}.${digits.slice(4)}`;
+}
+
 export function DateInput({
   value,
   onChange,
@@ -62,10 +71,15 @@ export function DateInput({
   required?: boolean;
   className?: string;
 }) {
-  const selectedDate = useMemo(() => parseStoredDate(value), [value]);
   const [open, setOpen] = useState(false);
+  const [textValue, setTextValue] = useState(value || "");
+  const selectedDate = useMemo(() => parseStoredDate(textValue) ?? parseStoredDate(value), [textValue, value]);
   const [viewMonth, setViewMonth] = useState<Date>(selectedDate ?? new Date());
   const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setTextValue(value || "");
+  }, [value]);
 
   useEffect(() => {
     if (selectedDate) setViewMonth(selectedDate);
@@ -89,8 +103,18 @@ export function DateInput({
   const days = useMemo(() => buildCalendarDays(viewMonth), [viewMonth]);
   const today = new Date();
 
+  const commitTextValue = (next: string) => {
+    setTextValue(next);
+    if (next.length === 0) {
+      onChange("");
+      return;
+    }
+    const parsed = parseStoredDate(next);
+    if (parsed) onChange(formatStoredDate(parsed));
+  };
+
   return (
-    <div className={className} ref={wrapRef}>
+    <div className={`relative ${className ?? ""}`} ref={wrapRef}>
       {label && (
         <label className="block text-[10px] font-semibold text-[#4a5578] dark:text-gray-400 mb-1.5 uppercase tracking-wide">
           {label}
@@ -98,16 +122,32 @@ export function DateInput({
         </label>
       )}
 
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className="w-full h-[42px] bg-[#f6f8fc] dark:bg-gray-950 border border-[#dde1ea] dark:border-gray-700 rounded-lg px-3 flex items-center justify-between text-sm text-left text-viton-navy dark:text-white hover:border-viton-red/40 dark:hover:border-orange-500/40 focus:outline-none focus:ring-2 focus:ring-viton-red/20 dark:focus:ring-orange-500/20 focus:border-viton-red dark:focus:border-orange-500 transition-all"
-      >
-        <span className={selectedDate ? "text-viton-navy dark:text-white" : "text-[#8892a8] dark:text-gray-500"}>
-          {selectedDate ? formatStoredDate(selectedDate) : "Select a date"}
-        </span>
-        <CalendarDays size={16} className="text-[#8892a8] dark:text-gray-500" />
-      </button>
+      <div className="relative">
+        <input
+          type="text"
+          inputMode="numeric"
+          value={textValue}
+          placeholder="DD.MM.YY"
+          onChange={(e) => {
+            const masked = maskDateInput(e.target.value);
+            setTextValue(masked);
+            if (masked.length === 0) onChange("");
+            if (masked.length === 8) {
+              const parsed = parseStoredDate(masked);
+              if (parsed) onChange(formatStoredDate(parsed));
+            }
+          }}
+          onBlur={() => commitTextValue(textValue)}
+          className="w-full h-[42px] bg-[#f6f8fc] dark:bg-gray-950 border border-[#dde1ea] dark:border-gray-700 rounded-lg px-3 pr-11 text-sm text-viton-navy dark:text-white placeholder:text-[#8892a8] dark:placeholder:text-gray-500 hover:border-viton-red/40 dark:hover:border-orange-500/40 focus:outline-none focus:ring-2 focus:ring-viton-red/20 dark:focus:ring-orange-500/20 focus:border-viton-red dark:focus:border-orange-500 transition-all"
+        />
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-lg border border-transparent text-[#8892a8] dark:text-gray-500 hover:bg-[#eef2f8] dark:hover:bg-gray-900 hover:text-viton-red dark:hover:text-orange-400 transition-all flex items-center justify-center"
+        >
+          <CalendarDays size={16} />
+        </button>
+      </div>
 
       <p className="text-[10px] text-[#8892a8] dark:text-gray-500 mt-0.5">Format: DD.MM.YY</p>
 
@@ -155,7 +195,9 @@ export function DateInput({
                     key={day.toISOString()}
                     type="button"
                     onClick={() => {
-                      onChange(formatStoredDate(day));
+                      const formatted = formatStoredDate(day);
+                      setTextValue(formatted);
+                      onChange(formatted);
                       setOpen(false);
                     }}
                     className={[
@@ -181,8 +223,10 @@ export function DateInput({
               type="button"
               onClick={() => {
                 const now = new Date();
+                const formatted = formatStoredDate(now);
                 setViewMonth(now);
-                onChange(formatStoredDate(now));
+                setTextValue(formatted);
+                onChange(formatted);
                 setOpen(false);
               }}
               className="text-xs font-semibold text-viton-red dark:text-orange-400 hover:opacity-80 transition-opacity"
@@ -190,10 +234,13 @@ export function DateInput({
               Today
             </button>
             <div className="flex items-center gap-2">
-              {selectedDate && (
+              {textValue && (
                 <button
                   type="button"
-                  onClick={() => onChange("")}
+                  onClick={() => {
+                    setTextValue("");
+                    onChange("");
+                  }}
                   className="h-8 px-2 rounded-lg border border-[#dde1ea] dark:border-gray-700 text-[#6f7891] dark:text-gray-400 hover:border-viton-red/40 dark:hover:border-orange-500/40 text-xs font-medium flex items-center gap-1"
                 >
                   <X size={12} /> Clear
