@@ -7,16 +7,49 @@ import type { WorkOrder, WorkOrderItem } from "@/lib/types";
 import { useRole, can } from "@/lib/roles";
 import {
   Plus, Search, Printer, Download, Trash2, X,
-  CheckCircle2, Circle, ArrowLeft, Filter, Eye, EyeOff,
+  CheckCircle2, Circle, ArrowLeft, ChevronDown, ChevronUp,
+  Filter, Eye, EyeOff,
 } from "lucide-react";
 
-type WOWithItems = WorkOrder & { items: WorkOrderItem[]; is_completed?: boolean };
+// ── Types ───────────────────────────────────────────────────────────────────
+type WOWithItems = WorkOrder & { items: WorkOrderItem[] };
+
+// ── Date Helpers ──────────────────────────────────────────────────────────────
+function parseDateDDMMYYYY(str: string | null): Date | null {
+  if (!str) return null;
+  const parts = str.split(/[.\/\-]/);
+  if (parts.length !== 3) return null;
+  const [d, m, y] = parts.map(Number);
+  const year = y < 100 ? 2000 + y : y;
+  const date = new Date(year, m - 1, d);
+  return date.getDate() === d && date.getMonth() === m - 1 ? date : null;
+}
+
+function isSameMonth(date: Date): boolean {
+  const now = new Date();
+  return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
+}
+
+function isPastDate(date: Date): boolean {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  return date.getTime() < now.getTime();
+}
+
+function getDueDateStyle(dateStr: string | null, isCompleted: boolean): string {
+  if (isCompleted || !dateStr) return "";
+  const date = parseDateDDMMYYYY(dateStr);
+  if (!date) return "";
+  if (isPastDate(date)) return "bg-red-50 text-red-700 font-bold";
+  if (isSameMonth(date)) return "bg-amber-50 text-amber-700 font-bold";
+  return "";
+}
 
 // ── CSV Export ────────────────────────────────────────────────────────────────
 function exportAllCSV(orders: WOWithItems[]) {
   const headers = [
     "WO NO.", "Party Name", "PO SR NO", "Size", "Class", "Valve Type",
-    "Description", "Qty", "Due Date", "Inspection", "P.O. NO.", "Status",
+    "Description", "Qty", "Due Date", "Inspection", "P.O. NO.", "Item Status", "WO Status",
   ];
   const rows: string[][] = [headers];
   for (const wo of orders) {
@@ -38,6 +71,7 @@ function exportAllCSV(orders: WOWithItems[]) {
         wo.delivery_date ?? "",
         wo.inspection_by ?? "",
         wo.po_no ?? "",
+        item.is_completed ? "Completed" : "Active",
         wo.is_completed ? "Completed" : "Active",
       ]);
     }
@@ -106,6 +140,67 @@ function DeleteModal({
   );
 }
 
+// ── Filter Dropdown ───────────────────────────────────────────────────────────
+function FilterDropdown({
+  label,
+  options,
+  value,
+  onChange,
+  icon,
+}: {
+  label: string;
+  options: string[];
+  value: string;
+  onChange: (v: string) => void;
+  icon: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className={`flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-lg border transition-all ${
+          value
+            ? "bg-viton-red/5 border-viton-red/30 text-viton-red dark:bg-orange-500/10 dark:border-orange-500/30 dark:text-orange-400"
+            : "bg-white dark:bg-gray-900 border-[#dde1ea] dark:border-gray-700 text-[#8892a8] dark:text-gray-400 hover:border-[#c0c8db]"
+        }`}
+      >
+        {icon}
+        {value ? `${label}: ${value}` : label}
+        <ChevronDown size={12} />
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-xl shadow-xl z-30 min-w-[180px] max-w-[280px] max-h-[300px] overflow-y-auto">
+          <div className="p-2">
+            <button
+              onClick={() => { onChange(""); setOpen(false); }}
+              className={`w-full text-left px-3 py-2 text-xs rounded-lg transition-colors ${
+                !value ? "bg-viton-red/10 text-viton-red dark:bg-orange-500/10 dark:text-orange-400 font-bold" : "text-[#4a5578] dark:text-gray-300 hover:bg-[#f7f8fb] dark:hover:bg-gray-800"
+              }`}
+            >
+              All {label}
+            </button>
+            {options.map((opt) => (
+              <button
+                key={opt}
+                onClick={() => { onChange(opt); setOpen(false); }}
+                className={`w-full text-left px-3 py-2 text-xs rounded-lg transition-colors ${
+                  value === opt ? "bg-viton-red/10 text-viton-red dark:bg-orange-500/10 dark:text-orange-400 font-bold" : "text-[#4a5578] dark:text-gray-300 hover:bg-[#f7f8fb] dark:hover:bg-gray-800"
+                }`}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {open && (
+        <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
+      )}
+    </div>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function WOListPage() {
   const router = useRouter();
@@ -120,6 +215,12 @@ export default function WOListPage() {
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [deleteWO, setDeleteWO] = useState<WorkOrder | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Filters
+  const [filterParty, setFilterParty] = useState("");
+  const [filterClass, setFilterClass] = useState("");
+  const [filterSize, setFilterSize] = useState("");
+  const [filterValveType, setFilterValveType] = useState("");
 
   useEffect(() => {
     load();
@@ -137,18 +238,58 @@ export default function WOListPage() {
     setLoading(false);
   }
 
-  async function toggleCompleted(wo: WOWithItems) {
-    setTogglingId(wo.id);
-    const newVal = !wo.is_completed;
-    // Optimistic update
+  async function toggleItemCompleted(wo: WOWithItems, itemIdx: number) {
+    const item = wo.items[itemIdx];
+    if (!item.id) return;
+    const newVal = !item.is_completed;
+    const supabase = createClient();
     setOrders((prev) =>
-      prev.map((o) => (o.id === wo.id ? { ...o, is_completed: newVal } : o))
+      prev.map((o) => {
+        if (o.id !== wo.id) return o;
+        const newItems = o.items.map((it, i) =>
+          i === itemIdx ? { ...it, is_completed: newVal } : it
+        );
+        const allDone = newItems.length > 0 && newItems.every((it) => it.is_completed);
+        return { ...o, items: newItems, is_completed: allDone };
+      })
+    );
+    await supabase
+      .from("work_order_items")
+      .update({ is_completed: newVal })
+      .eq("id", item.id);
+    // Check if all items are now complete, auto-complete WO
+    const updatedItems = orders.find((o) => o.id === wo.id)?.items ?? [];
+    const allItems = updatedItems.map((it, i) =>
+      i === itemIdx ? { ...it, is_completed: newVal } : it
+    );
+    const allDone = allItems.length > 0 && allItems.every((it) => it.is_completed);
+    if (allDone !== wo.is_completed) {
+      await supabase
+        .from("work_orders")
+        .update({ is_completed: allDone })
+        .eq("id", wo.id);
+      setOrders((prev) =>
+        prev.map((o) => (o.id === wo.id ? { ...o, is_completed: allDone } : o))
+      );
+    }
+  }
+
+  async function toggleWOCompleted(wo: WOWithItems) {
+    const newVal = !wo.is_completed;
+    setTogglingId(wo.id);
+    setOrders((prev) =>
+      prev.map((o) => {
+        if (o.id !== wo.id) return o;
+        const newItems = o.items.map((it) => ({ ...it, is_completed: newVal }));
+        return { ...o, items: newItems, is_completed: newVal };
+      })
     );
     const supabase = createClient();
+    await supabase.from("work_orders").update({ is_completed: newVal }).eq("id", wo.id);
     await supabase
-      .from("work_orders")
+      .from("work_order_items")
       .update({ is_completed: newVal })
-      .eq("id", wo.id);
+      .eq("work_order_id", wo.id);
     setTogglingId(null);
   }
 
@@ -165,10 +306,38 @@ export default function WOListPage() {
     }
   }
 
+  // Extract unique filter options
+  const { partyOptions, classOptions, sizeOptions, valveOptions } = useMemo(() => {
+    const parties = new Set<string>();
+    const classes = new Set<string>();
+    const sizes = new Set<string>();
+    const valves = new Set<string>();
+    for (const o of orders) {
+      if (o.party_name) parties.add(o.party_name);
+      for (const it of o.items ?? []) {
+        if (it.rating) classes.add(it.rating);
+        if (it.size_mm) sizes.add(it.size_mm);
+        if (it.valve) valves.add(it.valve);
+      }
+    }
+    return {
+      partyOptions: Array.from(parties).sort(),
+      classOptions: Array.from(classes).sort(),
+      sizeOptions: Array.from(sizes).sort(),
+      valveOptions: Array.from(valves).sort(),
+    };
+  }, [orders]);
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return orders.filter((o) => {
       if (!showCompleted && o.is_completed) return false;
+      if (filterParty && o.party_name !== filterParty) return false;
+      // Check if any item matches the class/size/valve filter
+      const items = o.items ?? [];
+      if (filterClass && !items.some((it) => it.rating === filterClass)) return false;
+      if (filterSize && !items.some((it) => it.size_mm === filterSize)) return false;
+      if (filterValveType && !items.some((it) => it.valve === filterValveType)) return false;
       if (!q) return true;
       return (
         o.wo_number.toLowerCase().includes(q) ||
@@ -176,15 +345,15 @@ export default function WOListPage() {
         (o.po_no || "").toLowerCase().includes(q)
       );
     });
-  }, [orders, search, showCompleted]);
+  }, [orders, search, showCompleted, filterParty, filterClass, filterSize, filterValveType]);
 
   const activeCount = orders.filter((o) => !o.is_completed).length;
   const completedCount = orders.filter((o) => o.is_completed).length;
 
-  // Flatten to rows: one row per line item, with WO context
   type FlatRow = {
     wo: WOWithItems;
     item: WorkOrderItem;
+    itemIdx: number;
     isFirstInWO: boolean;
     woRowSpan: number;
   };
@@ -194,13 +363,19 @@ export default function WOListPage() {
     for (const wo of filtered) {
       const items = wo.items ?? [];
       if (items.length === 0) {
-        // Show WO even with no items
-        rows.push({ wo, item: {} as WorkOrderItem, isFirstInWO: true, woRowSpan: 1 });
+        rows.push({
+          wo,
+          item: {} as WorkOrderItem,
+          itemIdx: -1,
+          isFirstInWO: true,
+          woRowSpan: 1,
+        });
       } else {
         items.forEach((item, idx) => {
           rows.push({
             wo,
             item,
+            itemIdx: idx,
             isFirstInWO: idx === 0,
             woRowSpan: items.length,
           });
@@ -221,7 +396,7 @@ export default function WOListPage() {
         />
       )}
 
-      <div className="p-6 lg:p-8 max-w-[1400px] mx-auto">
+      <div className="p-6 lg:p-8 max-w-[1500px] mx-auto">
         {/* Header */}
         <div className="mb-5">
           <button
@@ -232,7 +407,9 @@ export default function WOListPage() {
           </button>
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
-              <h1 className="text-viton-navy dark:text-white text-2xl font-bold tracking-tight">Work Orders</h1>
+              <h1 className="text-viton-navy dark:text-white text-2xl font-bold tracking-tight">
+                Work Orders
+              </h1>
               <div className="flex items-center gap-3 mt-1">
                 <span className="text-[#8892a8] dark:text-gray-500 text-sm">
                   <span className="font-semibold text-viton-navy dark:text-white">{activeCount}</span> active
@@ -280,9 +457,52 @@ export default function WOListPage() {
             )}
           </div>
 
+          <FilterDropdown
+            label="Party"
+            options={partyOptions}
+            value={filterParty}
+            onChange={setFilterParty}
+            icon={<Filter size={12} />}
+          />
+          <FilterDropdown
+            label="Class"
+            options={classOptions}
+            value={filterClass}
+            onChange={setFilterClass}
+            icon={<Filter size={12} />}
+          />
+          <FilterDropdown
+            label="Size"
+            options={sizeOptions}
+            value={filterSize}
+            onChange={setFilterSize}
+            icon={<Filter size={12} />}
+          />
+          <FilterDropdown
+            label="Valve Type"
+            options={valveOptions}
+            value={filterValveType}
+            onChange={setFilterValveType}
+            icon={<Filter size={12} />}
+          />
+
+          {(filterParty || filterClass || filterSize || filterValveType) && (
+            <button
+              onClick={() => {
+                setFilterParty("");
+                setFilterClass("");
+                setFilterSize("");
+                setFilterValveType("");
+              }}
+              className="flex items-center gap-1 text-xs font-semibold text-[#8892a8] hover:text-viton-red dark:hover:text-orange-400 transition-colors"
+            >
+              <X size={12} /> Clear
+            </button>
+          )}
+
           <button
             onClick={() => setShowCompleted((v) => !v)}
-            className={`flex items-center gap-2 font-semibold px-3 py-2 rounded-lg text-xs border transition-all ${
+            className={`flex items-center gap-2 font-semibold px-3 py-2 rounded-lg text-xs border transition-all ml-auto ${
               showCompleted
                 ? "bg-emerald-50 border-emerald-300 text-emerald-700 dark:bg-emerald-500/10 dark:border-emerald-500/30 dark:text-emerald-400"
                 : "bg-white dark:bg-gray-900 border-[#dde1ea] dark:border-gray-700 text-[#8892a8] dark:text-gray-400 hover:border-[#c0c8db]"
@@ -300,12 +520,14 @@ export default function WOListPage() {
           </div>
         ) : flatRows.length === 0 ? (
           <div className="text-center py-20 text-[#8892a8] dark:text-gray-600 text-sm">
-            {search ? "No work orders match your search." : "No work orders yet. Create your first one."}
+            {search || filterParty || filterClass || filterSize || filterValveType
+              ? "No work orders match your filters."
+              : "No work orders yet. Create your first one."}
           </div>
         ) : (
           <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-sm" style={{ minWidth: 1100 }}>
+              <table className="w-full border-collapse text-sm" style={{ minWidth: 1200 }}>
                 <thead>
                   <tr className="bg-[#1a2744] dark:bg-gray-800">
                     {[
@@ -321,6 +543,7 @@ export default function WOListPage() {
                       { label: "Due Date", w: 100 },
                       { label: "Inspection", w: 110 },
                       { label: "P.O. NO.", w: 180 },
+                      { label: "Item Done", w: 52 },
                       { label: "", w: 80 },
                     ].map((col) => (
                       <th
@@ -335,7 +558,7 @@ export default function WOListPage() {
                 </thead>
                 <tbody>
                   {flatRows.map((row, rowIdx) => {
-                    const { wo, item, isFirstInWO, woRowSpan } = row;
+                    const { wo, item, itemIdx, isFirstInWO, woRowSpan } = row;
                     const isCompleted = !!wo.is_completed;
                     const isEvenWO = filtered.indexOf(wo) % 2 === 0;
                     const rowBg = isCompleted
@@ -343,9 +566,6 @@ export default function WOListPage() {
                       : isEvenWO
                       ? "bg-white dark:bg-gray-900"
                       : "bg-[#fafbfd] dark:bg-gray-900/60";
-                    const textClass = isCompleted
-                      ? "text-[#8892a8] dark:text-gray-500 line-through"
-                      : "text-[#2d3748] dark:text-gray-200";
 
                     const desc = [
                       item.body_bonnet,
@@ -355,20 +575,21 @@ export default function WOListPage() {
                       .filter(Boolean)
                       .join(", ");
 
+                    const dueStyle = getDueDateStyle(wo.delivery_date, isCompleted);
                     const borderTop = isFirstInWO && rowIdx !== 0
                       ? "border-t-2 border-[#dde1ea] dark:border-gray-700"
                       : "border-t border-[#eef1f6] dark:border-gray-800/60";
 
                     return (
-                      <tr key={`${wo.id}-${rowIdx}`} className={`${rowBg} ${borderTop} transition-colors hover:bg-blue-50/30 dark:hover:bg-blue-500/5`}>
-                        {/* Completed toggle — only on first row of WO */}
+                      <tr key={`${wo.id}-${itemIdx}`} className={`${rowBg} ${borderTop} transition-colors hover:bg-blue-50/30 dark:hover:bg-blue-500/5`}>
+                        {/* WO-level Done toggle */}
                         {isFirstInWO && (
                           <td
                             rowSpan={woRowSpan}
                             className="text-center align-middle px-2 border-r border-[#eef1f6] dark:border-gray-800/60"
                           >
                             <button
-                              onClick={() => toggleCompleted(wo)}
+                              onClick={() => toggleWOCompleted(wo)}
                               disabled={togglingId === wo.id}
                               title={isCompleted ? "Mark as Active" : "Mark as Completed"}
                               className={`p-1.5 rounded-full transition-all ${
@@ -382,11 +603,11 @@ export default function WOListPage() {
                           </td>
                         )}
 
-                        {/* WO Number — rowspan */}
+                        {/* WO Number */}
                         {isFirstInWO && (
                           <td
                             rowSpan={woRowSpan}
-                            className={`px-3 py-2.5 text-center align-middle border-r border-[#eef1f6] dark:border-gray-800/60`}
+                            className="px-3 py-2.5 text-center align-middle border-r border-[#eef1f6] dark:border-gray-800/60"
                           >
                             <span className={`font-bold font-mono text-xs ${
                               isCompleted ? "text-[#8892a8] line-through" : "text-viton-navy dark:text-white"
@@ -396,11 +617,11 @@ export default function WOListPage() {
                           </td>
                         )}
 
-                        {/* Party Name — rowspan */}
+                        {/* Party Name */}
                         {isFirstInWO && (
                           <td
                             rowSpan={woRowSpan}
-                            className={`px-3 py-2.5 align-middle border-r border-[#eef1f6] dark:border-gray-800/60 max-w-[160px]`}
+                            className="px-3 py-2.5 align-middle border-r border-[#eef1f6] dark:border-gray-800/60 max-w-[160px]"
                           >
                             <span className={`text-xs font-semibold leading-tight block ${
                               isCompleted ? "text-[#8892a8] line-through" : "text-viton-navy dark:text-white"
@@ -411,17 +632,23 @@ export default function WOListPage() {
                         )}
 
                         {/* PO SR NO */}
-                        <td className={`px-3 py-2.5 text-center border-r border-[#eef1f6] dark:border-gray-800/60 text-xs font-mono ${textClass}`}>
+                        <td className={`px-3 py-2.5 text-center border-r border-[#eef1f6] dark:border-gray-800/60 text-xs font-mono ${
+                          isCompleted ? "text-[#8892a8] line-through" : "text-[#2d3748] dark:text-gray-200"
+                        }`}>
                           {item.po_sr_no || "—"}
                         </td>
 
                         {/* Size */}
-                        <td className={`px-3 py-2.5 text-center border-r border-[#eef1f6] dark:border-gray-800/60 text-xs font-semibold ${textClass}`}>
+                        <td className={`px-3 py-2.5 text-center border-r border-[#eef1f6] dark:border-gray-800/60 text-xs font-semibold ${
+                          isCompleted ? "text-[#8892a8] line-through" : "text-[#2d3748] dark:text-gray-200"
+                        }`}>
                           {item.size_mm ? `${item.size_mm}"` : "—"}
                         </td>
 
-                        {/* Class / Rating */}
-                        <td className={`px-3 py-2.5 text-center border-r border-[#eef1f6] dark:border-gray-800/60 text-xs font-semibold ${textClass}`}>
+                        {/* Class */}
+                        <td className={`px-3 py-2.5 text-center border-r border-[#eef1f6] dark:border-gray-800/60 text-xs font-semibold ${
+                          isCompleted ? "text-[#8892a8] line-through" : "text-[#2d3748] dark:text-gray-200"
+                        }`}>
                           {item.rating || "—"}
                         </td>
 
@@ -435,38 +662,36 @@ export default function WOListPage() {
                         </td>
 
                         {/* Description */}
-                        <td className={`px-3 py-2.5 border-r border-[#eef1f6] dark:border-gray-800/60 text-xs leading-snug max-w-xs ${textClass}`}>
+                        <td className={`px-3 py-2.5 border-r border-[#eef1f6] dark:border-gray-800/60 text-xs leading-snug max-w-xs ${
+                          isCompleted ? "text-[#8892a8] line-through" : "text-[#2d3748] dark:text-gray-200"
+                        }`}>
                           {desc || "—"}
                         </td>
 
                         {/* Qty */}
-                        <td className={`px-3 py-2.5 text-center border-r border-[#eef1f6] dark:border-gray-800/60 text-xs font-bold ${textClass}`}>
+                        <td className={`px-3 py-2.5 text-center border-r border-[#eef1f6] dark:border-gray-800/60 text-xs font-bold ${
+                          isCompleted ? "text-[#8892a8] line-through" : "text-[#2d3748] dark:text-gray-200"
+                        }`}>
                           {item.qty || "—"}
                         </td>
 
-                        {/* Due Date — rowspan */}
+                        {/* Due Date — with color coding */}
                         {isFirstInWO && (
                           <td
                             rowSpan={woRowSpan}
-                            className={`px-3 py-2.5 text-center align-middle border-r border-[#eef1f6] dark:border-gray-800/60`}
+                            className={`px-3 py-2.5 text-center align-middle border-r border-[#eef1f6] dark:border-gray-800/60 ${dueStyle}`}
                           >
-                            <span className={`text-xs font-semibold ${
-                              isCompleted
-                                ? "text-[#8892a8]"
-                                : wo.delivery_date
-                                ? "text-viton-navy dark:text-white"
-                                : "text-[#8892a8]"
-                            }`}>
+                            <span className="text-xs font-semibold">
                               {wo.delivery_date || "—"}
                             </span>
                           </td>
                         )}
 
-                        {/* Inspection — rowspan */}
+                        {/* Inspection */}
                         {isFirstInWO && (
                           <td
                             rowSpan={woRowSpan}
-                            className={`px-3 py-2.5 text-center align-middle border-r border-[#eef1f6] dark:border-gray-800/60`}
+                            className="px-3 py-2.5 text-center align-middle border-r border-[#eef1f6] dark:border-gray-800/60"
                           >
                             {wo.inspection_by && wo.inspection_by !== "NO" && wo.inspection_by !== "-" ? (
                               <span className={`text-[10px] font-semibold leading-snug block ${
@@ -480,11 +705,11 @@ export default function WOListPage() {
                           </td>
                         )}
 
-                        {/* P.O. NO. — rowspan */}
+                        {/* P.O. NO. */}
                         {isFirstInWO && (
                           <td
                             rowSpan={woRowSpan}
-                            className={`px-3 py-2.5 align-middle border-r border-[#eef1f6] dark:border-gray-800/60`}
+                            className="px-3 py-2.5 align-middle border-r border-[#eef1f6] dark:border-gray-800/60"
                           >
                             <span className={`text-xs font-mono leading-snug block ${
                               isCompleted ? "text-[#8892a8]" : "text-[#4a5578] dark:text-gray-300"
@@ -496,7 +721,26 @@ export default function WOListPage() {
                           </td>
                         )}
 
-                        {/* Actions — rowspan */}
+                        {/* Item-level Done */}
+                        <td className="text-center align-middle px-2 border-r border-[#eef1f6] dark:border-gray-800/60">
+                          {itemIdx >= 0 ? (
+                            <button
+                              onClick={() => toggleItemCompleted(wo, itemIdx)}
+                              title={item.is_completed ? "Item done" : "Mark item done"}
+                              className={`p-1 rounded-full transition-all ${
+                                item.is_completed
+                                  ? "text-emerald-500 hover:text-emerald-600"
+                                  : "text-[#c0c8db] dark:text-gray-600 hover:text-emerald-500"
+                              }`}
+                            >
+                              {item.is_completed ? <CheckCircle2 size={14} /> : <Circle size={14} />}
+                            </button>
+                          ) : (
+                            <span className="text-[#c0c8db] dark:text-gray-600 text-xs">—</span>
+                          )}
+                        </td>
+
+                        {/* Actions */}
                         {isFirstInWO && (
                           <td
                             rowSpan={woRowSpan}
@@ -529,7 +773,7 @@ export default function WOListPage() {
               </table>
             </div>
 
-            {/* Footer summary */}
+            {/* Footer */}
             <div className="px-5 py-3 border-t border-[#dde1ea] dark:border-gray-800 bg-[#f7f8fb] dark:bg-gray-800/30 flex items-center justify-between flex-wrap gap-3">
               <span className="text-xs text-[#8892a8] dark:text-gray-500">
                 Showing <strong className="text-viton-navy dark:text-white">{filtered.length}</strong> work order{filtered.length !== 1 ? "s" : ""} ·{" "}
