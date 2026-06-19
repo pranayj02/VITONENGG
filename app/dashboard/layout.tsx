@@ -79,7 +79,7 @@ function buildNavSections(role: UserRole | null, pendingReqs: number, pendingIte
       title: "Work Orders",
       items: [
         { href: "/dashboard/wo/new", label: "New WO", icon: Wrench, permission: "create_work_order" },
-        { href: "/dashboard/wo", label: "WO History", icon: History, permission: "create_work_order" },
+        { href: "/dashboard/wo", label: "WO History", icon: History, permission: "view_work_orders" },
       ],
     },
     // INVOICES SECTION — hidden from all users (e-invoicing handled externally)
