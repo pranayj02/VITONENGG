@@ -102,7 +102,7 @@ function Cell({
   left,
   completed,
 }: {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   width: number;
   last?: boolean;
   left?: boolean;
@@ -231,14 +231,14 @@ export function WOPdfListDocument({
                       {wo.wo_number}
                     </Cell>
                   ) : (
-                    <Cell width={COLS.wo} />
+                    <Cell width={COLS.wo}>{""}</Cell>
                   )}
                   {idx === 0 ? (
                     <Cell width={COLS.customer} completed={isCompleted}>
                       {wo.party_name || "—"}
                     </Cell>
                   ) : (
-                    <Cell width={COLS.customer} />
+                    <Cell width={COLS.customer}>{""}</Cell>
                   )}
                   <Cell width={COLS.poSr}>{item.po_sr_no || "—"}</Cell>
                   <Cell width={COLS.size}>{item.size_mm ? `${item.size_mm}"` : "—"}</Cell>
@@ -257,21 +257,21 @@ export function WOPdfListDocument({
                       {wo.delivery_date || "—"}
                     </Cell>
                   ) : (
-                    <Cell width={COLS.dueDate} />
+                    <Cell width={COLS.dueDate}>{""}</Cell>
                   )}
                   {idx === 0 ? (
                     <Cell width={COLS.inspection} completed={isCompleted}>
                       {wo.inspection_by || "—"}
                     </Cell>
                   ) : (
-                    <Cell width={COLS.inspection} />
+                    <Cell width={COLS.inspection}>{""}</Cell>
                   )}
                   {idx === 0 ? (
                     <Cell width={COLS.poNo} last completed={isCompleted}>
                       {wo.po_no ? `${wo.po_no}${wo.po_date ? ` / ${wo.po_date}` : ""}` : "—"}
                     </Cell>
                   ) : (
-                    <Cell width={COLS.poNo} last />
+                    <Cell width={COLS.poNo} last>{""}</Cell>
                   )}
                 </View>
               ))
