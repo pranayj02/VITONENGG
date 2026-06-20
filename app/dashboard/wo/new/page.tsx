@@ -223,7 +223,7 @@ function ItemCard({
             if (group.id !== activeGroup) return null;
             return (
               <div key={group.id} className="p-4">
-                <div className="grid grid-cols-3 lg:grid-cols-6 gap-3">
+                <div className={group.id === "identity" ? "grid grid-cols-2 lg:grid-cols-4 gap-3" : "grid grid-cols-3 lg:grid-cols-6 gap-3"}>
                   {group.fields.map((f) => {
                     const val = item[f.key as keyof WorkOrderItem] ?? "";
                     const isTextarea = (f as any).textarea;
