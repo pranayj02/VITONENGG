@@ -401,8 +401,7 @@ export default function EditWOPage() {
 
     const supabase = createClient();
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      const user = userData.user;
+      await supabase.auth.getUser();
 
       // Update work order
       const { error: woErr } = await supabase
@@ -415,8 +414,6 @@ export default function EditWOPage() {
           po_date: poDate || null,
           inspection_by: inspectionBy || null,
           qap_no: qapNo || null,
-          updated_by: user?.id ?? null,
-          updated_by_name: user?.email ?? null,
         })
         .eq("id", woId);
 
