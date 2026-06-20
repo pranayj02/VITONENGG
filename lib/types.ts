@@ -184,7 +184,6 @@ export interface WorkOrderItem {
   work_order_id?: string;
   sr_no: number;
   po_sr_no: string;
-  valve_sr_no: string;
   material_no: string;
   valve: string;
   type: string;
