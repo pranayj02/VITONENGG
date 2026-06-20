@@ -8,139 +8,131 @@ import {
 } from "@react-pdf/renderer";
 import type { WorkOrder, WorkOrderItem } from "@/lib/types";
 
-const BRAND = "#1a2744";
+const BRAND  = "#1a2744";
 const ACCENT = "#c41e3a";
-const TEXT_DARK = "#111111";
-const COL_BORDER = "#b8b8b8";
+const DARK   = "#111111";
+const BORDER = "#cccccc";
+
+// A4 landscape usable width ≈ 801pt (841 - 40 padding)
+// Column widths must sum to exactly this.
+const COLS = {
+  wo:         52,
+  customer:   80,
+  poSr:       28,
+  size:       28,
+  cls:        28,
+  valve:      45,
+  desc:      170,
+  qty:        22,
+  dueDate:    42,
+  inspection: 50,
+  poNo:      156,
+};
 
 const S = StyleSheet.create({
   page: {
     fontFamily: "Helvetica",
     fontSize: 7,
-    color: TEXT_DARK,
-    padding: 20,
+    color: DARK,
+    paddingHorizontal: 20,
+    paddingVertical: 18,
     backgroundColor: "#ffffff",
   },
   header: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: "Helvetica-Bold",
     color: BRAND,
-    marginBottom: 10,
+    marginBottom: 4,
+    paddingBottom: 6,
     borderBottomWidth: 2,
     borderBottomColor: ACCENT,
-    paddingBottom: 6,
   },
   subHeader: {
-    fontSize: 9,
+    fontSize: 7.5,
     color: "#555",
     marginBottom: 10,
   },
   table: {
     width: "100%",
     borderWidth: 0.5,
-    borderColor: COL_BORDER,
+    borderColor: BORDER,
   },
-  tableHeader: {
+  tableHeaderRow: {
     flexDirection: "row",
     backgroundColor: BRAND,
-    minHeight: 20,
-    alignItems: "center",
-  },
-  tableHeaderCell: {
-    fontSize: 6,
-    fontFamily: "Helvetica-Bold",
-    color: "#ffffff",
-    textAlign: "center",
-    paddingHorizontal: 2,
-    paddingVertical: 3,
-    borderRightWidth: 0.5,
-    borderRightColor: "rgba(255,255,255,0.15)",
+    alignItems: "stretch",
   },
   tableRow: {
     flexDirection: "row",
     borderTopWidth: 0.5,
-    borderTopColor: COL_BORDER,
+    borderTopColor: BORDER,
+    alignItems: "stretch",
     minHeight: 16,
-    alignItems: "center",
   },
-  tableCell: {
-    fontSize: 5,
-    color: TEXT_DARK,
+  woFirstRow: {
+    borderTopWidth: 1.5,
+    borderTopColor: "#888",
+    backgroundColor: "#f8f9fa",
+  },
+  completedRow: { backgroundColor: "#f0f9f0" },
+  hCell: {
+    fontSize: 6,
+    fontFamily: "Helvetica-Bold",
+    color: "#ffffff",
+    paddingHorizontal: 2,
+    paddingVertical: 3,
+    textAlign: "center",
+    borderRightWidth: 0.5,
+    borderRightColor: "rgba(255,255,255,0.2)",
+  },
+  cell: {
+    fontSize: 6,
+    color: DARK,
     paddingHorizontal: 2,
     paddingVertical: 2,
     textAlign: "center",
     borderRightWidth: 0.5,
-    borderRightColor: COL_BORDER,
+    borderRightColor: BORDER,
   },
-  cellLeft: {
-    textAlign: "left",
-  },
-  woSeparator: {
-    borderTopWidth: 1.5,
-    borderTopColor: COL_BORDER,
-    backgroundColor: "#f8f9fa",
-  },
-  completedRow: {
-    backgroundColor: "#f0f9f0",
-  },
-  completedText: {
-    color: "#888",
-    textDecoration: "line-through",
-  },
+  cellLeft:      { textAlign: "left" },
+  cellCompleted: { color: "#999", textDecoration: "line-through" },
+  cellLast:      { borderRightWidth: 0 },
   footer: {
     marginTop: 10,
-    fontSize: 7,
-    color: "#888",
+    fontSize: 6.5,
+    color: "#999",
     textAlign: "center",
   },
 });
 
-function Cell({
-  children,
-  width,
-  last,
-  left,
-  completed,
-}: {
-  children?: React.ReactNode;
-  width: number;
-  last?: boolean;
-  left?: boolean;
-  completed?: boolean;
-}) {
+function HC({ children, w, last }: { children: string; w: number; last?: boolean }) {
   return (
-    <Text
-      style={[
-        S.tableCell,
-        left ? S.cellLeft : {},
-        completed ? S.completedText : {},
-        last ? { borderRightWidth: 0 } : {},
-      ]}
-      wrap
-    >
+    <Text style={[S.hCell, { width: w }, last ? S.cellLast : {}]}>
       {children}
     </Text>
   );
 }
 
-function HeaderCell({
-  children,
-  width,
-  last,
+function C({
+  children, w, last, left, done,
 }: {
-  children: React.ReactNode;
-  width: number;
+  children?: React.ReactNode;
+  w: number;
   last?: boolean;
+  left?: boolean;
+  done?: boolean;
 }) {
   return (
     <Text
       style={[
-        S.tableHeaderCell,
-        { width },
-        last ? { borderRightWidth: 0 } : {},
+        S.cell,
+        { width: w },
+        left  ? S.cellLeft      : {},
+        done  ? S.cellCompleted : {},
+        last  ? S.cellLast      : {},
       ]}
     >
-      {children}
+      {children ?? ""}
     </Text>
   );
 }
@@ -152,136 +144,88 @@ export function WOPdfListDocument({
   orders: (WorkOrder & { items: WorkOrderItem[] })[];
   generatedAt: string;
 }) {
-  const COLS = {
-    wo: 50,
-    customer: 70,
-    poSr: 35,
-    size: 30,
-    class: 30,
-    valve: 40,
-    desc: 110,
-    qty: 25,
-    dueDate: 40,
-    inspection: 45,
-    poNo: 70,
-  };
-
   return (
     <Document>
       <Page size="A4" orientation="landscape" style={S.page}>
         <Text style={S.header}>Work Orders Summary</Text>
         <Text style={S.subHeader}>
-          Generated on {generatedAt} · {orders.length} work orders
+          Generated on {generatedAt} · {orders.length} work order{orders.length !== 1 ? "s" : ""}
         </Text>
 
         <View style={S.table}>
-          <View style={S.tableHeader}>
-            <HeaderCell width={COLS.wo}>WO NO.</HeaderCell>
-            <HeaderCell width={COLS.customer}>Customer</HeaderCell>
-            <HeaderCell width={COLS.poSr}>PO SR</HeaderCell>
-            <HeaderCell width={COLS.size}>Size</HeaderCell>
-            <HeaderCell width={COLS.class}>Class</HeaderCell>
-            <HeaderCell width={COLS.valve}>Valve</HeaderCell>
-            <HeaderCell width={COLS.desc}>Description</HeaderCell>
-            <HeaderCell width={COLS.qty}>Qty</HeaderCell>
-            <HeaderCell width={COLS.dueDate}>Due Date</HeaderCell>
-            <HeaderCell width={COLS.inspection}>Inspection</HeaderCell>
-            <HeaderCell width={COLS.poNo} last>P.O. NO.</HeaderCell>
+          {/* Header */}
+          <View style={S.tableHeaderRow}>
+            <HC w={COLS.wo}>WO NO.</HC>
+            <HC w={COLS.customer}>Customer</HC>
+            <HC w={COLS.poSr}>PO SR</HC>
+            <HC w={COLS.size}>Size</HC>
+            <HC w={COLS.cls}>Class</HC>
+            <HC w={COLS.valve}>Valve</HC>
+            <HC w={COLS.desc}>Description</HC>
+            <HC w={COLS.qty}>Qty</HC>
+            <HC w={COLS.dueDate}>Due Date</HC>
+            <HC w={COLS.inspection}>Inspection</HC>
+            <HC w={COLS.poNo} last>P.O. NO.</HC>
           </View>
 
+          {/* Rows */}
           {orders.map((wo) => {
             const items = wo.items ?? [];
-            const isCompleted = !!wo.is_completed;
-            return items.length === 0 ? (
-              <View key={wo.id} style={[S.tableRow, S.woSeparator]}>
-                <Cell width={COLS.wo} completed={isCompleted}>
-                  {wo.wo_number}
-                </Cell>
-                <Cell width={COLS.customer} completed={isCompleted}>
-                  {wo.party_name || "—"}
-                </Cell>
-                <Cell width={COLS.poSr}>-</Cell>
-                <Cell width={COLS.size}>-</Cell>
-                <Cell width={COLS.class}>-</Cell>
-                <Cell width={COLS.valve}>-</Cell>
-                <Cell width={COLS.desc}>-</Cell>
-                <Cell width={COLS.qty}>-</Cell>
-                <Cell width={COLS.dueDate} completed={isCompleted}>
-                  {wo.delivery_date || "—"}
-                </Cell>
-                <Cell width={COLS.inspection} completed={isCompleted}>
-                  {wo.inspection_by || "—"}
-                </Cell>
-                <Cell width={COLS.poNo} last completed={isCompleted}>
-                  {wo.po_no ? `${wo.po_no}${wo.po_date ? ` / ${wo.po_date}` : ""}` : "—"}
-                </Cell>
-              </View>
-            ) : (
-              items.map((item, idx) => (
+            const done  = !!wo.is_completed;
+            const poStr = wo.po_no
+              ? `${wo.po_no}${wo.po_date ? ` / ${wo.po_date}` : ""}`
+              : "—";
+
+            if (items.length === 0) {
+              return (
+                <View key={wo.id} style={[S.tableRow, S.woFirstRow, done ? S.completedRow : {}]}>
+                  <C w={COLS.wo}         done={done}>{wo.wo_number}</C>
+                  <C w={COLS.customer}   done={done} left>{wo.party_name || "—"}</C>
+                  <C w={COLS.poSr}>—</C>
+                  <C w={COLS.size}>—</C>
+                  <C w={COLS.cls}>—</C>
+                  <C w={COLS.valve}>—</C>
+                  <C w={COLS.desc}>—</C>
+                  <C w={COLS.qty}>—</C>
+                  <C w={COLS.dueDate}    done={done}>{wo.delivery_date || "—"}</C>
+                  <C w={COLS.inspection} done={done}>{wo.inspection_by || "—"}</C>
+                  <C w={COLS.poNo} last  done={done} left>{poStr}</C>
+                </View>
+              );
+            }
+
+            return items.map((item, idx) => {
+              const isFirst = idx === 0;
+              const desc = [item.body_bonnet, item.wedge_disc_plug_ball, item.special_requirements]
+                .filter(Boolean)
+                .join(", ") || "—";
+              return (
                 <View
                   key={`${wo.id}-${idx}`}
                   style={[
                     S.tableRow,
-                    idx === 0 ? S.woSeparator : {},
-                    isCompleted ? S.completedRow : {},
+                    isFirst ? S.woFirstRow : {},
+                    done ? S.completedRow : {},
                   ]}
                 >
-                  {idx === 0 ? (
-                    <Cell width={COLS.wo} completed={isCompleted}>
-                      {wo.wo_number}
-                    </Cell>
-                  ) : (
-                    <Cell width={COLS.wo}>{""}</Cell>
-                  )}
-                  {idx === 0 ? (
-                    <Cell width={COLS.customer} completed={isCompleted}>
-                      {wo.party_name || "—"}
-                    </Cell>
-                  ) : (
-                    <Cell width={COLS.customer}>{""}</Cell>
-                  )}
-                  <Cell width={COLS.poSr}>{item.po_sr_no || "—"}</Cell>
-                  <Cell width={COLS.size}>{item.size_mm ? `${item.size_mm}"` : "—"}</Cell>
-                  <Cell width={COLS.class}>{item.rating || "—"}</Cell>
-                  <Cell width={COLS.valve}>{item.valve || "—"}</Cell>
-                  <Cell width={COLS.desc} left>
-                    {[
-                      item.body_bonnet,
-                      item.wedge_disc_plug_ball,
-                      item.special_requirements,
-                    ].filter(Boolean).join(", ") || "—"}
-                  </Cell>
-                  <Cell width={COLS.qty}>{item.qty || "—"}</Cell>
-                  {idx === 0 ? (
-                    <Cell width={COLS.dueDate} completed={isCompleted}>
-                      {wo.delivery_date || "—"}
-                    </Cell>
-                  ) : (
-                    <Cell width={COLS.dueDate}>{""}</Cell>
-                  )}
-                  {idx === 0 ? (
-                    <Cell width={COLS.inspection} completed={isCompleted}>
-                      {wo.inspection_by || "—"}
-                    </Cell>
-                  ) : (
-                    <Cell width={COLS.inspection}>{""}</Cell>
-                  )}
-                  {idx === 0 ? (
-                    <Cell width={COLS.poNo} last completed={isCompleted}>
-                      {wo.po_no ? `${wo.po_no}${wo.po_date ? ` / ${wo.po_date}` : ""}` : "—"}
-                    </Cell>
-                  ) : (
-                    <Cell width={COLS.poNo} last>{""}</Cell>
-                  )}
+                  <C w={COLS.wo}         done={isFirst && done}>{isFirst ? wo.wo_number : ""}</C>
+                  <C w={COLS.customer}   done={isFirst && done} left>{isFirst ? (wo.party_name || "—") : ""}</C>
+                  <C w={COLS.poSr}>{item.po_sr_no || "—"}</C>
+                  <C w={COLS.size}>{item.size_mm ? `${item.size_mm}"` : "—"}</C>
+                  <C w={COLS.cls}>{item.rating || "—"}</C>
+                  <C w={COLS.valve}>{item.valve || "—"}</C>
+                  <C w={COLS.desc} left>{desc}</C>
+                  <C w={COLS.qty}>{item.qty != null ? String(item.qty) : "—"}</C>
+                  <C w={COLS.dueDate}    done={isFirst && done}>{isFirst ? (wo.delivery_date || "—") : ""}</C>
+                  <C w={COLS.inspection} done={isFirst && done}>{isFirst ? (wo.inspection_by || "—") : ""}</C>
+                  <C w={COLS.poNo} last  done={isFirst && done} left>{isFirst ? poStr : ""}</C>
                 </View>
-              ))
-            );
+              );
+            });
           })}
         </View>
 
-        <Text style={S.footer}>
-          This is a computer-generated report from VITON ERP.
-        </Text>
+        <Text style={S.footer}>This is a computer-generated report from VITON ERP.</Text>
       </Page>
     </Document>
   );
