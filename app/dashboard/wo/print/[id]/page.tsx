@@ -113,7 +113,6 @@ function WOScreenRender({ wo }: { wo: WorkOrder & { items: WorkOrderItem[] } }) 
   const COLS_RENDER = [
     { key: "sr_no", label: "Sr. No.", width: 20 },
     { key: "po_sr_no", label: "P.O. SR. NO.", width: 26 },
-    { key: "valve_sr_no", label: "VALVE SR.NO.", width: 52 },
     { key: "material_no", label: "Material No.", width: 44 },
     { key: "valve", label: "Valve", width: 30 },
     { key: "type", label: "Type", width: 44 },
