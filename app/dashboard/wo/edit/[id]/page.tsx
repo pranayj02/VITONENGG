@@ -17,7 +17,6 @@ import {
 const EMPTY_ITEM = (): WorkOrderItem => ({
   sr_no: 1,
   po_sr_no: "",
-  valve_sr_no: "",
   material_no: "",
   valve: "",
   type: "",
@@ -60,7 +59,6 @@ const FIELD_GROUPS = [
     bg: "bg-blue-50 dark:bg-blue-500/10",
     fields: [
       { key: "po_sr_no", label: "P.O. Sr. No.", placeholder: "1", span: 1 },
-      { key: "valve_sr_no", label: "Valve Sr. No.", placeholder: "V123-1 TO V123-2", span: 2 },
       { key: "material_no", label: "Material No.", placeholder: "300905132", span: 1 },
       { key: "valve", label: "Valve Type", placeholder: "GATE VALVE", span: 1, required: true },
       { key: "drawing_no", label: "Drawing No.", placeholder: "DWG-001", span: 1 },
@@ -358,8 +356,7 @@ export default function EditWOPage() {
         {
           ...last,
           sr_no: prev.length + 1,
-          valve_sr_no: "",
-          po_sr_no: "",
+                  po_sr_no: "",
           delivery: "",
         },
       ];
@@ -426,7 +423,6 @@ export default function EditWOPage() {
         work_order_id: woId,
         sr_no: it.sr_no,
         po_sr_no: it.po_sr_no || null,
-        valve_sr_no: it.valve_sr_no || null,
         material_no: it.material_no || null,
         valve: it.valve || null,
         type: it.type || null,
