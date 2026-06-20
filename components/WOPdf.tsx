@@ -112,13 +112,13 @@ const S = StyleSheet.create({
   metaItem: {
     flexDirection: "row",
     alignItems: "center",
-    minWidth: 180,
+    minWidth: 165,
   },
   metaLabel: {
     fontSize: 6,
     fontFamily: "Helvetica-Bold",
     color: ACCENT,
-    width: 80,
+    width: 56,
     textTransform: "uppercase",
     letterSpacing: 0.3,
   },
@@ -126,7 +126,7 @@ const S = StyleSheet.create({
     fontSize: 6,
     fontFamily: "Helvetica-Bold",
     color: ACCENT,
-    width: 8,
+    width: 4,
   },
   metaValue: {
     fontSize: 6,
@@ -262,7 +262,7 @@ export function WOPdfDocument({
         {/* Meta */}
         <View style={S.metaGrid}>
           <View style={S.metaItem}>
-            <Text style={S.metaLabel}>Party Name</Text>
+            <Text style={S.metaLabel}>Customer</Text>
             <Text style={S.metaColon}>:</Text>
             <Text style={S.metaValueBold}>{wo.party_name || "\u2014"}</Text>
           </View>
