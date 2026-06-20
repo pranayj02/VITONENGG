@@ -165,7 +165,7 @@ function WOScreenRender({ wo }: { wo: WorkOrder & { items: WorkOrderItem[] } }) 
       {/* Meta */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "3px 12px", marginBottom: "6px", fontSize: "8px" }}>
         {[
-          ["Party Name", wo.party_name],
+          ["Customer", wo.party_name],
           ["Delivery", wo.delivery_date],
           ["P.O. No.", wo.po_no],
           ["PO Date", wo.po_date],
@@ -173,7 +173,7 @@ function WOScreenRender({ wo }: { wo: WorkOrder & { items: WorkOrderItem[] } }) 
           ["QAP No.", wo.qap_no],
         ].map(([label, val]) => (
           <div key={label as string} style={{ display: "flex" }}>
-            <span style={{ fontWeight: 700, color: "#c41e3a", width: "80px", textTransform: "uppercase" }}>{label}:</span>
+            <span style={{ fontWeight: 700, color: "#c41e3a", minWidth: "58px", marginRight: "4px", textTransform: "uppercase" }}>{label}:</span>
             <span style={{ fontWeight: 600 }}>{val || "—"}</span>
           </div>
         ))}
@@ -206,15 +206,6 @@ function WOScreenRender({ wo }: { wo: WorkOrder & { items: WorkOrderItem[] } }) 
           ))}
         </tbody>
       </table>
-
-      {/* Footer */}
-      <div style={{ marginTop: "10px", display: "flex", justifyContent: "space-between", borderTop: "1px solid #bbb", paddingTop: "4px" }}>
-        {["Prepared By", "Checked By", "Approved By"].map((label) => (
-          <div key={label} style={{ width: "28%", minHeight: "36px", borderTop: "1px solid #999", paddingTop: "2px" }}>
-            <div style={{ fontSize: "7.5px", fontWeight: 700, color: "#555", textAlign: "center" }}>{label}</div>
-          </div>
-        ))}
-      </div>
 
       <div style={{ marginTop: "6px", textAlign: "center", fontSize: "7px", color: "#888" }}>
         This is a computer generated Work Order and does not require a signature.
