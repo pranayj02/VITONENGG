@@ -297,7 +297,6 @@ export function WOPdfDocument({
           <View style={S.tableHeader}>
             <HeaderCell width={COLS.sr}>{"Sr.\nNo."}</HeaderCell>
             <HeaderCell width={COLS.poSr}>{"P.O.\nSR.NO."}</HeaderCell>
-            <HeaderCell width={COLS.valveSr}>{"VALVE\nSR.NO."}</HeaderCell>
             <HeaderCell width={COLS.material}>{"Material\nNo."}</HeaderCell>
             <HeaderCell width={COLS.valve}>Valve</HeaderCell>
             <HeaderCell width={COLS.type}>Type</HeaderCell>
