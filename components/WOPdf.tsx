@@ -324,7 +324,6 @@ export function WOPdfDocument({
             <View key={i} style={[S.tableRow, i % 2 !== 0 ? S.tableRowAlt : {}]}>
               <Cell width={COLS.sr}>{item.sr_no}</Cell>
               <Cell width={COLS.poSr}>{item.po_sr_no}</Cell>
-              <Cell width={COLS.valveSr} mono>{item.valve_sr_no}</Cell>
               <Cell width={COLS.material} mono>{item.material_no}</Cell>
               <Cell width={COLS.valve}>{item.valve}</Cell>
               <Cell width={COLS.type}>{item.type}</Cell>
