@@ -135,7 +135,7 @@ function ItemCard({
   const [expanded, setExpanded] = useState(idx === 0);
   const [activeGroup, setActiveGroup] = useState<string>("identity");
 
-  const hasContent = item.valve || item.valve_sr_no || item.material_no || item.type;
+  const hasContent = item.valve || item.material_no || item.type;
   const missingRequired = getMissingRequiredFields(item);
   const isComplete = missingRequired.length === 0;
 
@@ -173,11 +173,6 @@ function ItemCard({
               )}
             </div>
             <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-              {item.valve_sr_no && (
-                <div className="text-[11px] text-[#8892a8] dark:text-gray-500 truncate">
-                  Sr. {item.valve_sr_no}
-                </div>
-              )}
               {hasContent && !isComplete && (
                 <div className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
                   {missingRequired.length} required field{missingRequired.length > 1 ? "s" : ""} missing
@@ -450,7 +445,7 @@ export default function NewWOPage() {
     items: woPayload.items,
   };
 
-  const filledItems = items.filter((i) => i.valve || i.valve_sr_no || i.material_no).length;
+  const filledItems = items.filter((i) => i.valve || i.material_no).length;
 
   return (
     <div className="p-4 lg:p-6 max-w-[920px] mx-auto">
@@ -699,7 +694,6 @@ function WOScreenPreview({ wo }: { wo: WorkOrder & { items: WorkOrderItem[] } })
   const COLS_PREVIEW = [
     { key: "sr_no", label: "Sr. No.", width: 22 },
     { key: "po_sr_no", label: "P.O. SR. NO.", width: 30 },
-    { key: "valve_sr_no", label: "VALVE SR.NO.", width: 60 },
     { key: "material_no", label: "Material No.", width: 50 },
     { key: "valve", label: "Valve", width: 35 },
     { key: "type", label: "Type", width: 50 },
