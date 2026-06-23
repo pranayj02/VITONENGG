@@ -343,7 +343,7 @@ export function MRPdfDocument({ req }: { req: Requisition }) {
             </View>
             <View style={S.metaRow}>
               <Text style={S.metaLabel}>Rev Date</Text>
-              <Text style={S.metaValue}>{revDate}</Text>
+              <Text style={S.metaValue}>01/06/2026</Text>
               <Text style={S.metaLabel}>Req No.</Text>
               <Text style={[S.metaValueLast, { fontFamily: "Helvetica-Bold" }]}>
                 {req.req_number}
