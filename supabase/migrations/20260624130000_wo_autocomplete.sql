@@ -30,3 +30,7 @@ create policy "Authenticated users can insert autocomplete"
 create policy "Authenticated users can update autocomplete"
   on wo_autocomplete for update
   using (true);
+
+create policy "Authenticated users can delete autocomplete"
+  on wo_autocomplete for delete
+  using (true);

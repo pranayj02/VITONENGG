@@ -248,8 +248,10 @@ function AutocompleteInput({
                   e.preventDefault();
                   e.stopPropagation();
                   const supabase = createClient();
-                  await supabase.from("wo_autocomplete").delete().eq("field_key", storageKey).eq("value", s);
-                  setSaved((prev) => prev.filter((x) => x !== s));
+                  const { error } = await supabase.from("wo_autocomplete").delete().eq("field_key", storageKey).eq("value", s);
+                  if (!error) {
+                    setSaved((prev) => prev.filter((x) => x !== s));
+                  }
                 }}
                 className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-red-100 dark:hover:bg-red-500/20 text-[#8892a8] hover:text-red-500 transition-all"
                 title="Remove this suggestion"
