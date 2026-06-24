@@ -269,7 +269,7 @@ function AutocompleteInput({
 const AUTOCOMPLETE_FIELDS = new Set([
   "valve", "type", "bore", "size_mm", "rating", "end_connection",
   "body_bonnet", "wedge_disc_plug_ball", "stem_hinge", "seat",
-  "gasket", "gl_pkng", "fasteners",
+  "gasket", "gl_pkng", "fasteners", "material_no",
 ]);
 
 // ── Item Card ───────────────────────────────────────────────────────────────
@@ -440,6 +440,8 @@ export default function NewWOPage() {
   const [savedId, setSavedId] = useState<string | null>(null);
   const [woExists, setWoExists] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [materialCodeUpdates, setMaterialCodeUpdates] = useState<{ material_no: string; changes: Record<string, string> }[]>([]);
+  const [showMaterialModal, setShowMaterialModal] = useState(false);
 
   useEffect(() => {
     if (!woNumber.trim()) { setWoExists(false); return; }
@@ -488,7 +490,44 @@ export default function NewWOPage() {
   }, []);
 
   const updateItem = useCallback(
-    (idx: number, key: keyof WorkOrderItem, value: string | number) => {
+    async (idx: number, key: keyof WorkOrderItem, value: string | number) => {
+      // When material_no changes, look up stored material code and auto-fill 12 fields
+      if (key === "material_no" && String(value).trim()) {
+        const supabase = createClient();
+        const { data } = await supabase
+          .from("material_codes")
+          .select("*")
+          .eq("material_no", String(value).trim())
+          .maybeSingle();
+
+        if (data) {
+          const mc = data as any;
+          setItems((prev) =>
+            prev.map((item, i) =>
+              i === idx
+                ? {
+                    ...item,
+                    material_no: String(value),
+                    valve: mc.valve ?? item.valve,
+                    type: mc.type ?? item.type,
+                    bore: mc.bore ?? item.bore,
+                    rating: mc.rating ?? item.rating,
+                    end_connection: mc.end_connection ?? item.end_connection,
+                    body_bonnet: mc.body_bonnet ?? item.body_bonnet,
+                    wedge_disc_plug_ball: mc.wedge_disc_plug_ball ?? item.wedge_disc_plug_ball,
+                    stem_hinge: mc.stem_hinge ?? item.stem_hinge,
+                    seat: mc.seat ?? item.seat,
+                    gasket: mc.gasket ?? item.gasket,
+                    gl_pkng: mc.gl_pkng ?? item.gl_pkng,
+                    fasteners: mc.fasteners ?? item.fasteners,
+                  }
+                : item
+            )
+          );
+          return;
+        }
+      }
+      // Default: just update the single field
       setItems((prev) =>
         prev.map((item, i) => (i === idx ? { ...item, [key]: value } : item))
       );
@@ -582,7 +621,7 @@ export default function NewWOPage() {
       // Save all autocomplete field values for future suggestions across devices
       const autoFields = ["valve", "type", "bore", "size_mm", "rating", "end_connection",
         "body_bonnet", "wedge_disc_plug_ball", "stem_hinge", "seat",
-        "gasket", "gl_pkng", "fasteners"];
+        "gasket", "gl_pkng", "fasteners", "material_no"];
       for (const item of items) {
         for (const fieldKey of autoFields) {
           const val = String(item[fieldKey as keyof WorkOrderItem] ?? "").trim();
@@ -604,6 +643,38 @@ export default function NewWOPage() {
         }
       }
 
+      // Check if any material codes were modified and offer to update
+      const materialFields = ["valve", "type", "bore", "rating", "end_connection",
+        "body_bonnet", "wedge_disc_plug_ball", "stem_hinge", "seat",
+        "gasket", "gl_pkng", "fasteners"] as const;
+      const updates: { material_no: string; changes: Record<string, string> }[] = [];
+      for (const item of items) {
+        const matNo = String(item.material_no ?? "").trim();
+        if (!matNo) continue;
+        const { data: stored } = await supabase
+          .from("material_codes")
+          .select("*")
+          .eq("material_no", matNo)
+          .maybeSingle();
+        if (!stored) continue;
+        const changes: Record<string, string> = {};
+        for (const fk of materialFields) {
+          const newVal = String(item[fk as keyof WorkOrderItem] ?? "").trim();
+          const oldVal = String((stored as any)[fk] ?? "").trim();
+          if (newVal && newVal !== oldVal) {
+            changes[fk] = newVal;
+          }
+        }
+        if (Object.keys(changes).length > 0) {
+          updates.push({ material_no: matNo, changes });
+        }
+      }
+
+      if (updates.length > 0) {
+        setMaterialCodeUpdates(updates);
+        setShowMaterialModal(true);
+      }
+
       setSavedId(woId as string);
       await audit({ action: "created", entity_type: "work_order", entity_id: woId as string, entity_code: woNumber.trim() });
     } catch (e: any) {
@@ -611,6 +682,19 @@ export default function NewWOPage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  async function handleMaterialUpdate(overwrite: boolean) {
+    if (!overwrite) { setShowMaterialModal(false); return; }
+    const supabase = createClient();
+    for (const { material_no, changes } of materialCodeUpdates) {
+      await supabase
+        .from("material_codes")
+        .update({ ...changes, updated_at: new Date().toISOString() })
+        .eq("material_no", material_no);
+    }
+    setShowMaterialModal(false);
+    setMaterialCodeUpdates([]);
   }
 
   const woPayload = buildWOPayload();
@@ -819,6 +903,46 @@ export default function NewWOPage() {
           </button>
         </div>
       </div>
+
+      {/* Material Code Update Modal */}
+      {showMaterialModal && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-2xl w-full max-w-lg p-6">
+            <h3 className="text-viton-navy dark:text-white font-bold text-lg mb-2">Update Material Code?</h3>
+            <p className="text-[#8892a8] dark:text-gray-500 text-sm mb-4">
+              The following material numbers have field changes that differ from their stored specification.
+              Would you like to update the stored material code with these new values?
+            </p>
+            <div className="space-y-4 max-h-60 overflow-y-auto mb-4">
+              {materialCodeUpdates.map(({ material_no, changes }) => (
+                <div key={material_no} className="bg-[#f7f8fb] dark:bg-gray-800/50 border border-[#dde1ea] dark:border-gray-700 rounded-xl p-3">
+                  <p className="text-viton-navy dark:text-white font-bold text-sm mb-2">{material_no}</p>
+                  {Object.entries(changes).map(([field, val]) => (
+                    <div key={field} className="flex items-center gap-2 text-xs">
+                      <span className="text-[#4a5578] dark:text-gray-400 capitalize min-w-[100px]">{field.replace(/_/g, ' ')}</span>
+                      <span className="text-viton-red dark:text-orange-400 font-semibold">{String(val)}</span>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => handleMaterialUpdate(false)}
+                className="flex-1 bg-[#f1f3f8] dark:bg-gray-800 hover:bg-[#e8eaf2] dark:hover:bg-gray-700 text-[#4a5578] dark:text-gray-300 font-semibold py-3 rounded-xl text-sm transition-all"
+              >
+                Don't Update
+              </button>
+              <button
+                onClick={() => handleMaterialUpdate(true)}
+                className="flex-1 bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 text-white font-semibold py-3 rounded-xl text-sm transition-all"
+              >
+                Update Material Code
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showPreview && (
         <div className="fixed inset-0 z-50 flex items-start justify-center p-4 overflow-y-auto bg-black/80">

@@ -449,12 +449,20 @@ export default function WOListPage() {
                 <FileText size={13} /> Export PDF
               </PDFDownloadLink>
               {canCreate && (
-                <button
-                  onClick={() => router.push("/dashboard/wo/new")}
-                  className="flex items-center gap-2 bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-all"
-                >
-                  <Plus size={15} /> New Work Order
-                </button>
+                <>
+                  <a
+                    href="/dashboard/wo/material-codes"
+                    className="flex items-center gap-2 bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-700 text-viton-navy dark:text-white font-semibold px-4 py-2 rounded-lg text-sm hover:bg-[#f6f8fc] dark:hover:bg-gray-800 transition-all"
+                  >
+                    <FileText size={14} /> Material Codes
+                  </a>
+                  <button
+                    onClick={() => router.push("/dashboard/wo/new")}
+                    className="flex items-center gap-2 bg-viton-red hover:bg-viton-red-hover dark:bg-orange-500 dark:hover:bg-orange-600 text-white font-semibold px-4 py-2 rounded-lg text-sm transition-all"
+                  >
+                    <Plus size={15} /> New Work Order
+                  </button>
+                </>
               )}
             </div>
           </div>
