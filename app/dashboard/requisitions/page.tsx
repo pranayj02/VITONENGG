@@ -310,23 +310,6 @@ export default function RequisitionsPage() {
           )}
         </div>
 
-        <div className="relative">
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="appearance-none bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-xl px-4 py-3 pr-10 text-sm text-viton-navy dark:text-white focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500 cursor-pointer"
-          >
-            <option value="">All Statuses</option>
-            <option value="pending">Pending</option>
-            <option value="under_review">Under Review</option>
-            <option value="approved">Approved</option>
-            <option value="awaiting_procurement">Awaiting Procurement</option>
-            <option value="converted_to_po">PO Raised</option>
-            <option value="partially_fulfilled">Partially Fulfilled</option>
-            <option value="rejected">Rejected</option>
-          </select>
-          <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8892a8] dark:text-gray-500 pointer-events-none" />
-        </div>
         <button
           onClick={() => {
             setShowFulfilled(!showFulfilled);
