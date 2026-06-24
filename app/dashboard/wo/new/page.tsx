@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { createClient } from "@/lib/supabase";
 import { audit } from "@/lib/audit";
 import { useRouter } from "next/navigation";
@@ -73,7 +73,7 @@ const FIELD_GROUPS = [
     fields: [
       { key: "type", label: "Type", placeholder: "RISING STEM, OS&Y", span: 2 },
       { key: "bore", label: "Bore", placeholder: "STD", span: 1 },
-      { key: "size_mm", label: "Size (MM)", placeholder: "600", span: 1, required: true },
+      { key: "size_mm", label: "Size (in)", placeholder: "24", span: 1, required: true },
       { key: "rating", label: "Rating", placeholder: "150#", span: 1, required: true },
       { key: "end_connection", label: "End Connection", placeholder: "FE' RF", span: 1, required: true },
     ],
@@ -120,6 +120,113 @@ function getMissingRequiredFields(item: WorkOrderItem) {
   return REQUIRED_ITEM_FIELDS.filter(({ key }) => !String(item[key] ?? "").trim());
 }
 
+function AutocompleteInput({
+  value,
+  onChange,
+  placeholder,
+  storageKey,
+}: {
+  value: string;
+  onChange: (val: string | number) => void;
+  placeholder?: string;
+  storageKey: string;
+}) {
+  const [inputValue, setInputValue] = useState(value);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [saved, setSaved] = useState<string[]>([]);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Load suggestions from Supabase on mount
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from("wo_autocomplete")
+      .select("value")
+      .eq("field_key", storageKey)
+      .order("use_count", { ascending: false })
+      .order("value", { ascending: true })
+      .limit(50)
+      .then(({ data }) => {
+        if (data) setSaved(data.map((r: any) => r.value));
+      });
+  }, [storageKey]);
+
+  const save = async (val: string) => {
+    if (!val.trim()) return;
+    const supabase = createClient();
+    // Upsert: increment use_count if exists, insert if new
+    const { data: existing } = await supabase
+      .from("wo_autocomplete")
+      .select("id, use_count")
+      .eq("field_key", storageKey)
+      .eq("value", val.trim())
+      .maybeSingle();
+
+    if (existing) {
+      await supabase
+        .from("wo_autocomplete")
+        .update({ use_count: (existing as any).use_count + 1, updated_at: new Date().toISOString() })
+        .eq("id", (existing as any).id);
+    } else {
+      await supabase.from("wo_autocomplete").insert({
+        field_key: storageKey,
+        value: val.trim(),
+      });
+    }
+
+    // Update local list without re-fetch
+    setSaved((prev) => {
+      const next = [val.trim(), ...prev.filter((s) => s.toLowerCase() !== val.trim().toLowerCase())].slice(0, 50);
+      return next;
+    });
+  };
+
+  const suggestions = inputValue.trim()
+    ? saved.filter((s) => s.toLowerCase().includes(inputValue.toLowerCase())).slice(0, 10)
+    : [];
+
+  return (
+    <div className="relative">
+      <input
+        ref={inputRef}
+        type="text"
+        value={inputValue}
+        onChange={(e) => {
+          setInputValue(e.target.value);
+          onChange(e.target.value);
+          setShowDropdown(true);
+        }}
+        onFocus={() => inputValue.trim() && setShowDropdown(true)}
+        onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") { save(inputValue); setShowDropdown(false); }
+        }}
+        placeholder={placeholder}
+        className="w-full bg-[#f6f8fc] dark:bg-gray-950 border border-[#dde1ea] dark:border-gray-700 rounded-lg px-3 py-2 text-xs text-viton-navy dark:text-white placeholder:text-[#8892a8] dark:placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red/20 dark:focus:ring-orange-500/20 focus:border-viton-red dark:focus:border-orange-500 transition-all"
+      />
+      {showDropdown && suggestions.length > 0 && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-0.5 bg-white dark:bg-gray-950 border border-[#dde1ea] dark:border-gray-700 rounded-lg shadow-xl max-h-36 overflow-y-auto">
+          {suggestions.map((s, i) => (
+            <button
+              key={i}
+              onMouseDown={(e) => { e.preventDefault(); setInputValue(s); onChange(s); save(s); setShowDropdown(false); }}
+              className="w-full text-left px-3 py-1.5 text-xs text-viton-navy dark:text-white hover:bg-[#f1f3f8] dark:hover:bg-gray-800 transition-colors"
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const AUTOCOMPLETE_FIELDS = new Set([
+  "valve", "type", "bore", "size_mm", "rating", "end_connection",
+  "body_bonnet", "wedge_disc_plug_ball", "stem_hinge", "seat",
+  "gasket", "gl_pkng", "fasteners",
+]);
+
 // ── Item Card ───────────────────────────────────────────────────────────────
 function ItemCard({
   item,
@@ -158,7 +265,7 @@ function ItemCard({
               )}
               {item.size_mm && (
                 <span className="text-[11px] bg-[#f1f3f8] dark:bg-gray-700 text-[#4a5578] dark:text-gray-300 px-1.5 py-0.5 rounded font-medium">
-                  {item.size_mm} MM
+                  {item.size_mm} in
                 </span>
               )}
               {item.rating && (
@@ -244,6 +351,13 @@ function ItemCard({
                             placeholder={f.placeholder}
                             rows={2}
                             className="w-full bg-[#f6f8fc] dark:bg-gray-950 border border-[#dde1ea] dark:border-gray-700 rounded-lg px-3 py-2 text-xs text-viton-navy dark:text-white placeholder:text-[#8892a8] dark:placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red/20 dark:focus:ring-orange-500/20 focus:border-viton-red dark:focus:border-orange-500 transition-all resize-none"
+                          />
+                        ) : AUTOCOMPLETE_FIELDS.has(f.key) ? (
+                          <AutocompleteInput
+                            value={String(val)}
+                            onChange={(v) => onUpdate(f.key as keyof WorkOrderItem, v)}
+                            placeholder={f.placeholder}
+                            storageKey={f.key}
                           />
                         ) : (
                           <input
@@ -698,7 +812,7 @@ function WOScreenPreview({ wo }: { wo: WorkOrder & { items: WorkOrderItem[] } })
     { key: "valve", label: "Valve", width: 35 },
     { key: "type", label: "Type", width: 50 },
     { key: "bore", label: "Bore", width: 22 },
-    { key: "size_mm", label: "Size MM", width: 26 },
+    { key: "size_mm", label: "Size (in)", width: 26 },
     { key: "rating", label: "Rating", width: 26 },
     { key: "end_connection", label: "End Conn.", width: 36 },
     { key: "body_bonnet", label: "Body / Bonnet", width: 50 },
