@@ -223,7 +223,7 @@ function AutocompleteInput({
           positionDropdown();
         }}
         onFocus={() => { inputValue.trim() && setShowDropdown(true); positionDropdown(); }}
-        onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+        onBlur={() => { save(inputValue); setTimeout(() => setShowDropdown(false), 200); }}
         onKeyDown={(e) => {
           if (e.key === "Enter") { save(inputValue); setShowDropdown(false); }
         }}
@@ -578,6 +578,31 @@ export default function NewWOPage() {
 
       const { error: itemsErr } = await supabase.from("work_order_items").insert(itemRows);
       if (itemsErr) throw itemsErr;
+
+      // Save all autocomplete field values for future suggestions across devices
+      const autoFields = ["valve", "type", "bore", "size_mm", "rating", "end_connection",
+        "body_bonnet", "wedge_disc_plug_ball", "stem_hinge", "seat",
+        "gasket", "gl_pkng", "fasteners"];
+      for (const item of items) {
+        for (const fieldKey of autoFields) {
+          const val = String(item[fieldKey as keyof WorkOrderItem] ?? "").trim();
+          if (!val) continue;
+          const { data: existing } = await supabase
+            .from("wo_autocomplete")
+            .select("id, use_count")
+            .eq("field_key", fieldKey)
+            .eq("value", val)
+            .maybeSingle();
+          if (existing) {
+            await supabase
+              .from("wo_autocomplete")
+              .update({ use_count: (existing as any).use_count + 1, updated_at: new Date().toISOString() })
+              .eq("id", (existing as any).id);
+          } else {
+            await supabase.from("wo_autocomplete").insert({ field_key: fieldKey, value: val });
+          }
+        }
+      }
 
       setSavedId(woId as string);
       await audit({ action: "created", entity_type: "work_order", entity_id: woId as string, entity_code: woNumber.trim() });
