@@ -1032,7 +1032,7 @@ export default function GRNPage() {
   return (
     <div className="p-6 lg:p-8 max-w-6xl mx-auto">
       {approvalAnim && (
-        <div className="fixed inset-0 z-[100] flex items-start justify-center pt-24 pointer-events-none px-4">
+        <div className="fixed top-0 left-0 right-0 bottom-0 md:left-72 z-[100] flex items-start justify-center pt-24 pointer-events-none px-4">
           <div
             className={`grn-success-pop pointer-events-auto flex items-center gap-3 rounded-2xl shadow-lg border px-5 py-4 ${
               approvalAnim.type === "approved"
