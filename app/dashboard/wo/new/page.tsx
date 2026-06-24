@@ -223,7 +223,7 @@ function AutocompleteInput({
           positionDropdown();
         }}
         onFocus={() => { inputValue.trim() && setShowDropdown(true); positionDropdown(); }}
-        onBlur={() => { save(inputValue); setTimeout(() => setShowDropdown(false), 200); }}
+        onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
         onKeyDown={(e) => {
           if (e.key === "Enter") { save(inputValue); setShowDropdown(false); }
         }}
