@@ -80,6 +80,7 @@ function buildNavSections(role: UserRole | null, pendingReqs: number, pendingIte
       items: [
         { href: "/dashboard/wo/new", label: "New WO", icon: Wrench, permission: "create_work_order" },
         { href: "/dashboard/wo", label: "WO History", icon: History, permission: "view_work_orders" },
+        { href: "/dashboard/wo/material-codes", label: "Material Codes", icon: FileText },
       ],
     },
     // INVOICES SECTION — hidden from all users (e-invoicing handled externally)
@@ -128,6 +129,7 @@ function isRouteActive(pathname: string, href: string) {
   if (href === "/dashboard/stock/adjustments") return pathname === "/dashboard/stock/adjustments";
   // WO History: only the list page itself, NOT /wo/new or /wo/print/...
   if (href === "/dashboard/wo") return pathname === "/dashboard/wo";
+  if (href === "/dashboard/wo/material-codes") return pathname === "/dashboard/wo/material-codes";
   // "New *" and other leaf pages: exact match only
   if (href.endsWith("/new")) return pathname === href;
   // Fallback: exact match OR sub-path (e.g. /dashboard/catalog/[id])
