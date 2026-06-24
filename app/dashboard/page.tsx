@@ -154,7 +154,7 @@ function buildPOYearInsights(rows: PurchaseOrderRow[]) {
 }
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState({ items: 0, vendors: 0, pos: 0, grns: 0 });
+  const [stats, setStats] = useState({ items: 0, workOrders: 0, pos: 0, grns: 0 });
   const [statsLoading, setStatsLoading] = useState(true);
   const [poYearInsights, setPoYearInsights] = useState({
     fyLabel: getCurrentFY().label,
@@ -194,7 +194,7 @@ export default function DashboardPage() {
 
         const [a, b, c, d, poRowsResponse, reqRes, activityRes, stockRpc] = await Promise.all([
           supabase.from("items").select("id", { count: "exact", head: true }),
-          supabase.from("vendors").select("id", { count: "exact", head: true }),
+          supabase.from("work_orders").select("id", { count: "exact", head: true }),
           supabase.from("purchase_orders").select("id", { count: "exact", head: true }),
           supabase.from("grn").select("id", { count: "exact", head: true }),
           supabase.from("purchase_orders").select("*"),
@@ -203,7 +203,7 @@ export default function DashboardPage() {
           supabase.rpc("get_stock_summary"),
         ]);
 
-        setStats({ items: a.count ?? 0, vendors: b.count ?? 0, pos: c.count ?? 0, grns: d.count ?? 0 });
+        setStats({ items: a.count ?? 0, workOrders: b.count ?? 0, pos: c.count ?? 0, grns: d.count ?? 0 });
         setStatsLoading(false);
 
         const poRows = poRowsResponse.data ?? [];
@@ -270,7 +270,7 @@ export default function DashboardPage() {
 
   const statCards = [
     { label: "Items", value: stats.items, icon: Package, href: "/dashboard/catalog", accent: "orange" },
-    { label: "Vendors", value: stats.vendors, icon: Users, href: "/dashboard/vendors", accent: "blue" },
+    { label: "Work Orders Raised", value: stats.workOrders, icon: FileText, href: "/dashboard/wo", accent: "blue" },
     ...(canAccessPO ? [{ label: "POs", value: stats.pos, icon: FileText, href: "/dashboard/history", accent: "green" }] : []),
     { label: "GRNs", value: stats.grns, icon: Receipt, href: "/dashboard/grn", accent: "purple" },
   ];
