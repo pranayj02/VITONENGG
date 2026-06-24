@@ -648,8 +648,6 @@ export default function StockPage() {
                     <th className="text-left text-[#8892a8] dark:text-gray-500 font-semibold text-xs uppercase tracking-wider px-5 py-3">Serial ID</th>
                     <th className="text-left text-[#8892a8] dark:text-gray-500 font-semibold text-xs uppercase tracking-wider px-5 py-3">Name</th>
                     <th className="text-left text-[#8892a8] dark:text-gray-500 font-semibold text-xs uppercase tracking-wider px-5 py-3">Category</th>
-                    <th className="text-right text-[#8892a8] dark:text-gray-500 font-semibold text-xs uppercase tracking-wider px-5 py-3">In</th>
-                    <th className="text-right text-[#8892a8] dark:text-gray-500 font-semibold text-xs uppercase tracking-wider px-5 py-3">Out</th>
                     <th className="text-right text-[#8892a8] dark:text-gray-500 font-semibold text-xs uppercase tracking-wider px-5 py-3">Balance</th>
                     <th className="px-5 py-3"></th>
                   </tr>
@@ -674,8 +672,6 @@ export default function StockPage() {
                           <td className="px-5 py-3.5">
                             <span className="text-xs text-[#4a5578] dark:text-gray-400 bg-[#f1f3f8] dark:bg-gray-800 px-2 py-1 rounded-lg">{item.category ?? "—"}</span>
                           </td>
-                          <td className="px-5 py-3.5 text-right text-[#4a5578] dark:text-gray-400 tabular-nums">{item.total_in}</td>
-                          <td className="px-5 py-3.5 text-right text-[#4a5578] dark:text-gray-400 tabular-nums">{item.total_out}</td>
                           <td className="px-5 py-3.5 text-right">
                             <span className={`font-bold tabular-nums ${
                               zero ? "text-red-500" : low ? "text-orange-500" : "text-green-600 dark:text-green-400"
@@ -700,7 +696,7 @@ export default function StockPage() {
                         </tr>
                         {isOpen && (
                           <tr className="bg-[#f7f8fb] dark:bg-gray-800/30">
-                            <td colSpan={7} className="px-5 py-4">
+                            <td colSpan={5} className="px-5 py-4">
                               <p className="text-[#8892a8] dark:text-gray-500 text-xs font-semibold uppercase tracking-wider mb-3">Recent Transactions</p>
                               {ledger.length === 0 ? (
                                 <p className="text-[#8892a8] dark:text-gray-600 text-sm">No transactions yet.</p>
