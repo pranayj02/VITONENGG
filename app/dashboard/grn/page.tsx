@@ -791,7 +791,6 @@ export default function GRNPage() {
     if (newStatus === "approved" || newStatus === "partial") {
       updatePayload.approved_by = user?.id ?? null;
       updatePayload.approved_by_name = actorName;
-      updatePayload.approved_at = new Date().toISOString();
     } else if (newStatus === "inspected") {
       updatePayload.inspected_by = user?.id ?? null;
       updatePayload.inspected_by_name = actorName;
