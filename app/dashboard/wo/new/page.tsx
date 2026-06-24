@@ -207,13 +207,30 @@ function AutocompleteInput({
       {showDropdown && suggestions.length > 0 && (
         <div className="absolute z-50 top-full left-0 right-0 mt-0.5 bg-white dark:bg-gray-950 border border-[#dde1ea] dark:border-gray-700 rounded-lg shadow-xl max-h-36 overflow-y-auto">
           {suggestions.map((s, i) => (
-            <button
+            <div
               key={i}
-              onMouseDown={(e) => { e.preventDefault(); setInputValue(s); onChange(s); save(s); setShowDropdown(false); }}
-              className="w-full text-left px-3 py-1.5 text-xs text-viton-navy dark:text-white hover:bg-[#f1f3f8] dark:hover:bg-gray-800 transition-colors"
+              className="group flex items-center justify-between px-3 py-1.5 text-xs text-viton-navy dark:text-white hover:bg-[#f1f3f8] dark:hover:bg-gray-800 transition-colors"
             >
-              {s}
-            </button>
+              <button
+                onMouseDown={(e) => { e.preventDefault(); setInputValue(s); onChange(s); save(s); setShowDropdown(false); }}
+                className="flex-1 text-left"
+              >
+                {s}
+              </button>
+              <button
+                onMouseDown={async (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const supabase = createClient();
+                  await supabase.from("wo_autocomplete").delete().eq("field_key", storageKey).eq("value", s);
+                  setSaved((prev) => prev.filter((x) => x !== s));
+                }}
+                className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-red-100 dark:hover:bg-red-500/20 text-[#8892a8] hover:text-red-500 transition-all"
+                title="Remove this suggestion"
+              >
+                <X size={11} />
+              </button>
+            </div>
           ))}
         </div>
       )}
