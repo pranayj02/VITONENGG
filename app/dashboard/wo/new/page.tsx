@@ -134,6 +134,7 @@ function AutocompleteInput({
   const [inputValue, setInputValue] = useState(value);
   const [showDropdown, setShowDropdown] = useState(false);
   const [saved, setSaved] = useState<string[]>([]);
+  const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Load suggestions from Supabase on mount
@@ -185,6 +186,30 @@ function AutocompleteInput({
     ? saved.filter((s) => s.toLowerCase().includes(inputValue.toLowerCase())).slice(0, 10)
     : [];
 
+  const positionDropdown = useCallback(() => {
+    if (inputRef.current) {
+      const rect = inputRef.current.getBoundingClientRect();
+      setDropdownStyle({
+        position: "fixed",
+        top: rect.bottom + 4,
+        left: rect.left,
+        width: rect.width,
+        zIndex: 9999,
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!showDropdown) return;
+    const handle = () => positionDropdown();
+    window.addEventListener("scroll", handle, true);
+    window.addEventListener("resize", handle);
+    return () => {
+      window.removeEventListener("scroll", handle, true);
+      window.removeEventListener("resize", handle);
+    };
+  }, [showDropdown, positionDropdown]);
+
   return (
     <div className="relative">
       <input
@@ -195,8 +220,9 @@ function AutocompleteInput({
           setInputValue(e.target.value);
           onChange(e.target.value);
           setShowDropdown(true);
+          positionDropdown();
         }}
-        onFocus={() => inputValue.trim() && setShowDropdown(true)}
+        onFocus={() => { inputValue.trim() && setShowDropdown(true); positionDropdown(); }}
         onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
         onKeyDown={(e) => {
           if (e.key === "Enter") { save(inputValue); setShowDropdown(false); }
@@ -205,7 +231,7 @@ function AutocompleteInput({
         className="w-full bg-[#f6f8fc] dark:bg-gray-950 border border-[#dde1ea] dark:border-gray-700 rounded-lg px-3 py-2 text-xs text-viton-navy dark:text-white placeholder:text-[#8892a8] dark:placeholder:text-gray-600 focus:outline-none focus:ring-2 focus:ring-viton-red/20 dark:focus:ring-orange-500/20 focus:border-viton-red dark:focus:border-orange-500 transition-all"
       />
       {showDropdown && suggestions.length > 0 && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-0.5 bg-white dark:bg-gray-950 border border-[#dde1ea] dark:border-gray-700 rounded-lg shadow-xl max-h-36 overflow-y-auto">
+        <div style={dropdownStyle} className="bg-white dark:bg-gray-950 border border-[#dde1ea] dark:border-gray-700 rounded-lg shadow-xl max-h-36 overflow-y-auto">
           {suggestions.map((s, i) => (
             <div
               key={i}
