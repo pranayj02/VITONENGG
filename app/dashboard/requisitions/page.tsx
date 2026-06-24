@@ -62,6 +62,7 @@ export default function RequisitionsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [showFulfilled, setShowFulfilled] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [actionId, setActionId] = useState<string | null>(null);
   const [actionType, setActionType] = useState<"approve" | "reject" | "convert" | "fulfil" | "raise_po">("approve");
@@ -113,11 +114,13 @@ export default function RequisitionsPage() {
     }
     if (statusFilter) {
       out = out.filter((r) => r.status === statusFilter);
+    } else if (!showFulfilled) {
+      // Auto-hide fulfilled items by default
+      out = out.filter((r) => r.status !== "fulfilled");
     }
 
-
     setFiltered(out);
-  }, [search, statusFilter, reqs]);
+  }, [search, statusFilter, showFulfilled, reqs]);
 
   async function handleAction() {
     if (!actionId) return;
@@ -310,7 +313,10 @@ export default function RequisitionsPage() {
         <div className="relative">
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              if (e.target.value === "fulfilled") setShowFulfilled(true);
+            }}
             className="appearance-none bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-xl px-4 py-3 pr-10 text-sm text-viton-navy dark:text-white focus:outline-none focus:ring-2 focus:ring-viton-red dark:focus:ring-orange-500 cursor-pointer"
           >
             <option value="">All Statuses</option>
@@ -325,6 +331,19 @@ export default function RequisitionsPage() {
           </select>
           <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#8892a8] dark:text-gray-500 pointer-events-none" />
         </div>
+        <button
+          onClick={() => {
+            setShowFulfilled(!showFulfilled);
+            if (statusFilter === "fulfilled") setStatusFilter("");
+          }}
+          className={`px-4 py-3 text-sm font-semibold rounded-xl border transition-all ${
+            showFulfilled
+              ? "bg-viton-red text-white border-viton-red dark:bg-orange-500 dark:border-orange-500"
+              : "bg-white dark:bg-gray-900 text-[#4a5578] dark:text-gray-400 border-[#dde1ea] dark:border-gray-800 hover:bg-[#f1f3f8] dark:hover:bg-gray-800"
+          }`}
+        >
+          {showFulfilled ? "Hide Fulfilled" : "Show Fulfilled"}
+        </button>
       </div>
 
       {/* Delete Modal */}
