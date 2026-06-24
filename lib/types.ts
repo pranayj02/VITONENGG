@@ -135,7 +135,10 @@ export interface GRN {
   approved_by_name?: string | null;
   approved_at?: string | null;
   line_items: GRNLineItem[];
-  status: "pending" | "inspected" | "approved" | "rejected" | "partial";
+  // Approval sequence: pending -> under_review (sent for inspection) -> inspected -> approved
+  // "rejected" and "partial" can be reached from under_review/inspected. "partial" is a partial-acceptance
+  // outcome of the approve step (kept for compatibility with existing audit/stock logic).
+  status: "pending" | "under_review" | "inspected" | "approved" | "rejected" | "partial";
   inspection_notes?: string | null;
   challan_no?: string | null;
   challan_date?: string | null;

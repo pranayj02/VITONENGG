@@ -162,8 +162,8 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
             <td style={labelCell}>Revision Date</td>
             <td style={valueCell}>{grn.revision_date ?? "01/10/2025"}</td>
             <td style={labelCell}>Status</td>
-            <td style={{ ...valueCell, fontWeight: "700", color: grn.status === "approved" ? "#006400" : grn.status === "rejected" ? "#cc0000" : "#000" }}>
-              {grn.status.toUpperCase()}
+            <td style={{ ...valueCell, fontWeight: "700", color: grn.status === "approved" ? "#006400" : grn.status === "rejected" ? "#cc0000" : grn.status === "partial" ? "#b45309" : "#000" }}>
+              {grn.status.replace(/_/g, " ").toUpperCase()}
             </td>
           </tr>
         </tbody>
@@ -236,8 +236,15 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
           <tr>
             <td style={labelCell}>Inspected By</td>
             <td colSpan={2} style={valueCell}>{grn.inspected_by_name ?? "—"}</td>
-            <td style={labelCell}>Approved At</td>
-            <td style={valueCell}>{grn.approved_at ? new Date(grn.approved_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—"}</td>
+            <td style={labelCell}>Approved By</td>
+            <td style={valueCell}>
+              {grn.approved_by_name ?? "—"}
+              {grn.approved_at && (
+                <span style={{ display: "block", fontSize: "7pt", color: "#444", marginTop: "2px" }}>
+                  {new Date(grn.approved_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                </span>
+              )}
+            </td>
           </tr>
         </tbody>
       </table>
@@ -332,7 +339,7 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
       <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "32px" }}>
         <tbody>
           <tr>
-            <td style={{ width: "50%", paddingRight: "16px", verticalAlign: "bottom" }}>
+            <td style={{ width: "34%", paddingRight: "12px", verticalAlign: "bottom" }}>
               <div style={{ borderTop: "1.5px solid #000", paddingTop: "6px" }}>
                 <div style={{ fontWeight: "700", fontSize: "9pt" }}>Prepared By</div>
                 <div style={{ fontSize: "8pt", color: "#444", marginTop: "4px" }}>
@@ -340,11 +347,19 @@ export default function GRNPrintPage({ params }: { params: { id: string } }) {
                 </div>
               </div>
             </td>
-            <td style={{ width: "50%", paddingLeft: "16px", verticalAlign: "bottom" }}>
+            <td style={{ width: "33%", paddingLeft: "12px", paddingRight: "12px", verticalAlign: "bottom" }}>
               <div style={{ borderTop: "1.5px solid #000", paddingTop: "6px" }}>
                 <div style={{ fontWeight: "700", fontSize: "9pt" }}>Inspected By</div>
                 <div style={{ fontSize: "8pt", color: "#444", marginTop: "4px" }}>
                   {grn.inspected_by_name ?? ""}
+                </div>
+              </div>
+            </td>
+            <td style={{ width: "33%", paddingLeft: "12px", verticalAlign: "bottom" }}>
+              <div style={{ borderTop: "1.5px solid #000", paddingTop: "6px" }}>
+                <div style={{ fontWeight: "700", fontSize: "9pt" }}>Approved By</div>
+                <div style={{ fontSize: "8pt", color: "#444", marginTop: "4px" }}>
+                  {grn.approved_by_name ?? ""}
                 </div>
               </div>
             </td>

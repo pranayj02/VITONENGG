@@ -29,6 +29,24 @@ body {
   --viton-text-faint: #8892a8;
 }
 
+/* ── GRN approval success animation ────────────────────────────────────── */
+@keyframes grn-success-pop-in {
+  0% { opacity: 0; transform: translateY(-8px) scale(0.92); }
+  60% { opacity: 1; transform: translateY(0) scale(1.02); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes grn-success-check-pop {
+  0% { transform: scale(0.4); opacity: 0; }
+  50% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.grn-success-pop {
+  animation: grn-success-pop-in 220ms ease-out;
+}
+.grn-success-check {
+  animation: grn-success-check-pop 320ms ease-out;
+}
+
 /* ── Mobile UX improvements ────────────────────────────────────────────── */
 @media (max-width: 639px) {
   /* Prevent iOS zoom on input focus */

@@ -242,7 +242,7 @@ const S = StyleSheet.create({
     paddingTop: 6,
   },
   signatureBlock: {
-    width: "50%",
+    width: "33%",
     paddingHorizontal: 8,
   },
   signatureLabel: {
@@ -313,7 +313,7 @@ export function GRNPdfDocument({
             <View style={{ width: "40%" }} />
             <Text style={S.headerLabel}>Status</Text>
             <Text style={[S.headerValue, { fontFamily: "Helvetica-Bold" }]}>
-              {grn.status.toUpperCase()}
+              {grn.status.replace(/_/g, " ").toUpperCase()}
             </Text>
           </View>
         </View>
@@ -464,6 +464,10 @@ export function GRNPdfDocument({
           <View style={S.signatureBlock}>
             <Text style={S.signatureLabel}>Inspected By</Text>
             <Text style={S.signatureName}>{grn.inspected_by_name ?? ""}</Text>
+          </View>
+          <View style={S.signatureBlock}>
+            <Text style={S.signatureLabel}>Approved By</Text>
+            <Text style={S.signatureName}>{grn.approved_by_name ?? ""}</Text>
           </View>
         </View>
 

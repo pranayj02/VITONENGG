@@ -143,11 +143,16 @@ function getTodayDisplayDate() {
 
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-50 text-yellow-700 dark:bg-yellow-500/10 dark:text-yellow-400",
+  under_review: "bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400",
   inspected: "bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400",
   approved: "bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400",
   rejected: "bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400",
   partial: "bg-orange-50 text-orange-700 dark:bg-orange-500/10 dark:text-orange-400",
 };
+
+function formatStatusLabel(status: string) {
+  return status.replace(/_/g, " ").toUpperCase();
+}
 
 function getNextGRNNumber(existingGrns: GRN[]) {
   const fy = getCurrentFY();
@@ -168,6 +173,8 @@ export default function GRNPage() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
+  // Short-lived success animation shown after Approve (green) / Partial approve (amber)
+  const [approvalAnim, setApprovalAnim] = useState<{ type: "approved" | "partial"; grnNumber: string } | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createMode, setCreateMode] = useState<"against_po" | "without_po" | null>(null);
@@ -216,6 +223,13 @@ export default function GRNPage() {
       setCatalogItems((data ?? []) as unknown as Item[]);
     });
   }, []);
+
+  // Auto-dismiss the approval success animation after ~1.5s
+  useEffect(() => {
+    if (!approvalAnim) return;
+    const t = setTimeout(() => setApprovalAnim(null), 1500);
+    return () => clearTimeout(t);
+  }, [approvalAnim]);
 
 
   const [itemSearch, setItemSearch] = useState("");
@@ -764,7 +778,7 @@ export default function GRNPage() {
   }
 
 
-  async function updateStatus(grn: GRN, newStatus: "inspected" | "approved" | "rejected" | "partial") {
+  async function updateStatus(grn: GRN, newStatus: "under_review" | "inspected" | "approved" | "rejected" | "partial") {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     const { data: profile } = user
@@ -786,11 +800,15 @@ export default function GRNPage() {
       });
     }
 
-    // Build update payload — set approver/inspector fields
+    // Build update payload — set inspector/approver fields at the stage they actually happen:
+    // under_review = sent for inspection (no actor field yet — QAQC hasn't inspected it)
+    // inspected = QAQC has inspected it
+    // approved/partial = approver has signed off
     const updatePayload: Record<string, any> = { status: newStatus, line_items: nextLines };
     if (newStatus === "approved" || newStatus === "partial") {
       updatePayload.approved_by = user?.id ?? null;
       updatePayload.approved_by_name = actorName;
+      updatePayload.approved_at = new Date().toISOString();
     } else if (newStatus === "inspected") {
       updatePayload.inspected_by = user?.id ?? null;
       updatePayload.inspected_by_name = actorName;
@@ -819,7 +837,8 @@ export default function GRNPage() {
       return;
     }
 
-    const actionMap: Record<"inspected" | "approved" | "rejected" | "partial", string> = {
+    const actionMap: Record<"under_review" | "inspected" | "approved" | "rejected" | "partial", string> = {
+      under_review: "grn_sent_for_inspection",
       inspected: "grn_inspected",
       approved: "grn_approved",
       rejected: "grn_rejected",
@@ -852,6 +871,10 @@ export default function GRNPage() {
           accepted_qty: nextLines.reduce((sum, line) => sum + Number(line.accepted_qty ?? 0), 0),
         },
       });
+    }
+
+    if (newStatus === "approved" || newStatus === "partial") {
+      setApprovalAnim({ type: newStatus, grnNumber: grn.grn_number });
     }
 
     await load();
@@ -1008,6 +1031,32 @@ export default function GRNPage() {
 
   return (
     <div className="p-6 lg:p-8 max-w-6xl mx-auto">
+      {approvalAnim && (
+        <div className="fixed inset-0 z-[100] flex items-start justify-center pt-24 pointer-events-none px-4">
+          <div
+            className={`grn-success-pop pointer-events-auto flex items-center gap-3 rounded-2xl shadow-lg border px-5 py-4 ${
+              approvalAnim.type === "approved"
+                ? "bg-green-50 dark:bg-green-500/10 border-green-200 dark:border-green-500/30"
+                : "bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/30"
+            }`}
+          >
+            <span
+              className={`grn-success-check inline-flex h-9 w-9 items-center justify-center rounded-full ${
+                approvalAnim.type === "approved" ? "bg-green-500" : "bg-amber-500"
+              }`}
+            >
+              <CheckCircle size={20} className="text-white" />
+            </span>
+            <div>
+              <p className={`text-sm font-bold ${approvalAnim.type === "approved" ? "text-green-700 dark:text-green-400" : "text-amber-700 dark:text-amber-400"}`}>
+                {approvalAnim.type === "approved" ? "GRN Approved" : "GRN Partially Approved"}
+              </p>
+              <p className="text-xs text-[#8892a8] dark:text-gray-500 font-mono">{approvalAnim.grnNumber}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {error && (
         <div className="mb-4 flex items-start gap-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-700 dark:text-red-400 text-sm px-4 py-3 rounded-xl">
           <AlertCircle size={16} className="mt-0.5 shrink-0" />
@@ -1714,7 +1763,7 @@ export default function GRNPage() {
                         <td className="px-3 py-5 align-middle">
                           <div className="flex justify-center">
                             <span className={`inline-flex w-[132px] justify-center text-[10px] font-semibold px-2.5 py-1.5 rounded-md border ${statusColors[g.status] ?? "bg-gray-50 text-gray-700 dark:bg-gray-500/10 dark:text-gray-400"}`}>
-                              {g.status.toUpperCase()}
+                              {formatStatusLabel(g.status)}
                             </span>
                           </div>
                         </td>
@@ -1790,11 +1839,17 @@ export default function GRNPage() {
                             <div className="mt-4 flex items-center gap-3 flex-wrap">
                               {g.status === "pending" && canSendForInspection && (
                                 <>
-                                  <button onClick={() => updateStatus(g, "inspected")} className="bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 text-xs font-semibold px-3 py-1.5 rounded-md border border-blue-100 dark:border-blue-500/20">Send for Inspection</button>
+                                  <button onClick={() => updateStatus(g, "under_review")} className="bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 text-xs font-semibold px-3 py-1.5 rounded-md border border-blue-100 dark:border-blue-500/20">Send for Inspection</button>
                                   <button onClick={() => updateStatus(g, "rejected")} className="bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400 text-xs font-semibold px-3 py-1.5 rounded-md border border-red-100 dark:border-red-500/20">Reject</button>
                                 </>
                               )}
-                              {g.status === "inspected" && canInspect && (
+                              {g.status === "under_review" && canInspect && (
+                                <>
+                                  <button onClick={() => updateStatus(g, "inspected")} className="bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400 text-xs font-semibold px-3 py-1.5 rounded-md border border-indigo-100 dark:border-indigo-500/20">Inspect</button>
+                                  <button onClick={() => updateStatus(g, "rejected")} className="bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400 text-xs font-semibold px-3 py-1.5 rounded-md border border-red-100 dark:border-red-500/20">Reject</button>
+                                </>
+                              )}
+                              {g.status === "inspected" && canApprove && (
                                 <>
                                   <button onClick={() => updateStatus(g, "approved")} className="bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400 text-xs font-semibold px-3 py-1.5 rounded-md border border-green-100 dark:border-green-500/20">Approve</button>
                                   <button onClick={() => updateStatus(g, "rejected")} className="bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400 text-xs font-semibold px-3 py-1.5 rounded-md border border-red-100 dark:border-red-500/20">Reject</button>
@@ -1838,7 +1893,7 @@ export default function GRNPage() {
                           <p className="text-[#8892a8] dark:text-gray-500 text-xs mt-1">{lines.length} item{lines.length !== 1 ? "s" : ""} · {new Date(g.created_at).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</p>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
-                          <span className={`text-xs font-bold px-2 py-1 rounded-lg ${statusColors[g.status] ?? "bg-gray-50 text-gray-600 dark:bg-gray-500/10 dark:text-gray-400"}`}>{g.status.toUpperCase()}</span>
+                          <span className={`text-xs font-bold px-2 py-1 rounded-lg ${statusColors[g.status] ?? "bg-gray-50 text-gray-600 dark:bg-gray-500/10 dark:text-gray-400"}`}>{formatStatusLabel(g.status)}</span>
                           <PDFDownloadLink
                             document={<GRNPdfDocument grn={g} po={pos.find(p => p.id === g.po_id) ? { po_number: (pos.find(p => p.id === g.po_id) as POWithVendor).po_number, created_at: (pos.find(p => p.id === g.po_id) as POWithVendor).created_at } : null} vendor={vendors.find(v => v.id === g.vendor_id) ?? null} />}
                             fileName={`${g.grn_number.replace(/\//g, "-")}.pdf`}
@@ -1877,11 +1932,17 @@ export default function GRNPage() {
                         <div className="flex flex-wrap gap-2 pt-2 border-t border-[#eef1f6] dark:border-gray-800/50">
                           {g.status === "pending" && canSendForInspection && (
                             <>
-                              <button onClick={() => updateStatus(g, "inspected")} className="bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 text-[10px] font-semibold px-2 py-1 rounded border border-blue-100 dark:border-blue-500/20">Inspect</button>
+                              <button onClick={() => updateStatus(g, "under_review")} className="bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 text-[10px] font-semibold px-2 py-1 rounded border border-blue-100 dark:border-blue-500/20">Send for Inspection</button>
                               <button onClick={() => updateStatus(g, "rejected")} className="bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400 text-[10px] font-semibold px-2 py-1 rounded border border-red-100 dark:border-red-500/20">Reject</button>
                             </>
                           )}
-                          {g.status === "inspected" && canInspect && (
+                          {g.status === "under_review" && canInspect && (
+                            <>
+                              <button onClick={() => updateStatus(g, "inspected")} className="bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400 text-[10px] font-semibold px-2 py-1 rounded border border-indigo-100 dark:border-indigo-500/20">Inspect</button>
+                              <button onClick={() => updateStatus(g, "rejected")} className="bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400 text-[10px] font-semibold px-2 py-1 rounded border border-red-100 dark:border-red-500/20">Reject</button>
+                            </>
+                          )}
+                          {g.status === "inspected" && canApprove && (
                             <>
                               <button onClick={() => updateStatus(g, "approved")} className="bg-green-50 text-green-700 dark:bg-green-500/10 dark:text-green-400 text-[10px] font-semibold px-2 py-1 rounded border border-green-100 dark:border-green-500/20">Approve</button>
                               <button onClick={() => updateStatus(g, "rejected")} className="bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400 text-[10px] font-semibold px-2 py-1 rounded border border-red-100 dark:border-red-500/20">Reject</button>
