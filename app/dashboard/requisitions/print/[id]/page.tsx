@@ -42,9 +42,6 @@ export default function MRPrintPage({ params }: { params: { id: string } }) {
   const date = new Date(req.created_at).toLocaleDateString("en-IN", {
     day: "2-digit", month: "2-digit", year: "numeric",
   });
-  const revDate = new Date(req.created_at).toLocaleDateString("en-IN", {
-    day: "2-digit", month: "2-digit", year: "2-digit",
-  });
 
   const MIN_ROWS = 8;
   const paddedLines: (ReqLineItem | null)[] = [
@@ -111,7 +108,7 @@ export default function MRPrintPage({ params }: { params: { id: string } }) {
                   </tr>
                   <tr style={{ borderTop: "1px solid #000" }}>
                     <td style={{ padding: "3px 6px", fontSize: "7.5pt", fontWeight: "700", borderRight: "1px solid #000", whiteSpace: "nowrap" }}>Rev Date</td>
-                    <td style={{ padding: "3px 6px", fontSize: "7.5pt", borderRight: "1px solid #000" }}>{revDate}</td>
+                    <td style={{ padding: "3px 6px", fontSize: "7.5pt", borderRight: "1px solid #000" }}>01/06/26</td>
                     <td style={{ padding: "3px 6px", fontSize: "7.5pt", fontWeight: "700", borderRight: "1px solid #000", whiteSpace: "nowrap" }}>Req No.</td>
                     <td style={{ padding: "3px 6px", fontSize: "7.5pt", fontWeight: "700" }}>{req.req_number}</td>
                   </tr>
