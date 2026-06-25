@@ -373,6 +373,12 @@ const S = StyleSheet.create({
   },
 });
 
+const DATE_FMT: Intl.DateTimeFormatOptions = {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+};
+
 export function POPdfDocument({ po }: { po: POData }) {
   const vendor = po.vendors ?? null;
   const rawDispatch = po.dispatch_meta as Partial<DispatchMeta> | null | undefined;
@@ -401,11 +407,7 @@ export function POPdfDocument({ po }: { po: POData }) {
   // ← updated: prefer per-PO override in dispatch_meta, fall back to vendor default
   const paymentTerms = dispatch.payment_terms ?? vendor?.payment_terms ?? "60 Days";
 
-  const date = new Date(po.created_at).toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
+  const date = new Date(po.created_at).toLocaleDateString("en-IN", DATE_FMT);
 
   const pfDisplay =
     dispatch.pf_mode === "nil"
@@ -496,7 +498,7 @@ export function POPdfDocument({ po }: { po: POData }) {
               <View style={S.metaTableRow}>
                 <Text style={S.metaTableLabel}>Your Quot. Date</Text>
                 <Text style={S.metaTableValue}>
-                  {new Date(po.quot_date).toLocaleDateString("en-IN")}
+                  {new Date(po.quot_date).toLocaleDateString("en-IN", DATE_FMT)}
                 </Text>
               </View>
             ) : null}
