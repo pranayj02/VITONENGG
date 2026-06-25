@@ -42,13 +42,19 @@ const DEFAULT_DISPATCH: DispatchMeta = {
   pf_value: 0,
 };
 
+const DATE_FMT: Intl.DateTimeFormatOptions = {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+};
+
 function computePF(subtotal: number, meta: DispatchMeta): number {
   if (meta.pf_mode === "nil" || meta.pf_value <= 0) return 0;
   if (meta.pf_mode === "percent") return Math.round((subtotal * meta.pf_value) / 100);
   return meta.pf_value;
 }
 
-// ── PODocument (screen preview) ──────────────────────────────────────────────
+// ── PODocument (screen preview) ────────────────────────────────────────────────
 function PODocument({
   poNumber, vendor, lineItems, subtotal, pfAmount, grandTotal,
   notes, dispatch, date, quotNo, quotDate, paymentTerms,
@@ -132,7 +138,7 @@ function PODocument({
             <tbody>
               {[
                 ...(quotNo ? [["Your Quot. No.", quotNo] as [string, string]] : []),
-                ...(quotDate ? [["Your Quot. Date", new Date(quotDate).toLocaleDateString("en-IN")] as [string, string]] : []),
+                ...(quotDate ? [["Your Quot. Date", new Date(quotDate).toLocaleDateString("en-IN", DATE_FMT)] as [string, string]] : []),
               ].map(([label, val]) => (
                 <tr key={label}>
                   <td style={{ color: "#888", paddingBottom: "5px", width: "45%" }}>{label}</td>
@@ -254,7 +260,7 @@ function PODocument({
   );
 }
 
-// ── POPreviewModal ────────────────────────────────────────────────────────────
+// ── POPreviewModal ─────────────────────────────────────────────────────────────
 function POPreviewModal({
   poNumber, vendor, lineItems, subtotal, pfAmount, grandTotal,
   notes, dispatch, onClose, quotNo, quotDate, paymentTerms,
@@ -272,7 +278,7 @@ function POPreviewModal({
   quotDate: string;
   paymentTerms: string;
 }) {
-  const today = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const today = new Date().toLocaleDateString("en-IN", DATE_FMT);
 
   const poData = {
     po_number: poNumber,
