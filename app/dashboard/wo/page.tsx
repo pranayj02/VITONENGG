@@ -8,13 +8,35 @@ import { useRole, can } from "@/lib/roles";
 import {
   Plus, Search, Printer, Download, Trash2, X, Pencil,
   CheckCircle2, Circle, ArrowLeft, ChevronDown, ChevronUp,
-  Filter, Eye, EyeOff, FileText,
+  Filter, Eye, EyeOff, FileText, ArrowUpDown,
 } from "lucide-react";
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import { WOPdfListDocument } from "@/components/WOPdfList";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 type WOWithItems = WorkOrder & { items: WorkOrderItem[] };
+type SortOption = "wo_number" | "due_date";
+
+// ── Natural Sort for WO numbers (handles WO-1 < WO-2 < WO-10 correctly) ────
+function naturalCompare(a: string, b: string): number {
+  const re = /(\d+)|(\D+)/g;
+  const tokensA = a.match(re) ?? [];
+  const tokensB = b.match(re) ?? [];
+  const len = Math.max(tokensA.length, tokensB.length);
+  for (let i = 0; i < len; i++) {
+    const ta = tokensA[i] ?? "";
+    const tb = tokensB[i] ?? "";
+    const numA = Number(ta);
+    const numB = Number(tb);
+    if (!isNaN(numA) && !isNaN(numB)) {
+      if (numA !== numB) return numA - numB;
+    } else {
+      const cmp = ta.localeCompare(tb);
+      if (cmp !== 0) return cmp;
+    }
+  }
+  return 0;
+}
 
 // ── Date Helpers ──────────────────────────────────────────────────────────────
 function parseDateDDMMYYYY(str: string | null): Date | null {
@@ -203,6 +225,56 @@ function FilterDropdown({
   );
 }
 
+// ── Sort Dropdown ─────────────────────────────────────────────────────────────
+function SortDropdown({
+  value,
+  onChange,
+}: {
+  value: SortOption;
+  onChange: (v: SortOption) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const options: { value: SortOption; label: string }[] = [
+    { value: "wo_number", label: "WO Number" },
+    { value: "due_date", label: "Due Date" },
+  ];
+  const current = options.find((o) => o.value === value)!;
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-2 text-xs font-semibold px-3 py-2 rounded-lg border transition-all bg-white dark:bg-gray-900 border-[#dde1ea] dark:border-gray-700 text-[#4a5578] dark:text-gray-300 hover:border-[#c0c8db]"
+      >
+        <ArrowUpDown size={12} />
+        Sort: {current.label}
+        <ChevronDown size={12} />
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-900 border border-[#dde1ea] dark:border-gray-800 rounded-xl shadow-xl z-30 min-w-[160px]">
+          <div className="p-2">
+            {options.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => { onChange(opt.value); setOpen(false); }}
+                className={`w-full text-left px-3 py-2 text-xs rounded-lg transition-colors ${
+                  value === opt.value
+                    ? "bg-viton-red/10 text-viton-red dark:bg-orange-500/10 dark:text-orange-400 font-bold"
+                    : "text-[#4a5578] dark:text-gray-300 hover:bg-[#f7f8fb] dark:hover:bg-gray-800"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {open && (
+        <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
+      )}
+    </div>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 export default function WOListPage() {
   const router = useRouter();
@@ -219,6 +291,7 @@ export default function WOListPage() {
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [deleteWO, setDeleteWO] = useState<WorkOrder | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [sortBy, setSortBy] = useState<SortOption>("wo_number");
 
   // Filters
   const [filterParty, setFilterParty] = useState("");
@@ -234,8 +307,7 @@ export default function WOListPage() {
     const supabase = createClient();
     const { data, error } = await supabase
       .from("work_orders")
-      .select("*, items:work_order_items(*)")
-      .order("created_at", { ascending: false });
+      .select("*, items:work_order_items(*)");
     if (!error && data) {
       setOrders(data as unknown as WOWithItems[]);
     }
@@ -333,7 +405,7 @@ export default function WOListPage() {
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    return orders.filter((o) => {
+    const result = orders.filter((o) => {
       if (!showCompleted && o.is_completed) return false;
       if (filterParty && o.party_name !== filterParty) return false;
       const items = o.items ?? [];
@@ -347,7 +419,26 @@ export default function WOListPage() {
         (o.po_no || "").toLowerCase().includes(q)
       );
     });
-  }, [orders, search, showCompleted, filterParty, filterClass, filterSize, filterValveType]);
+
+    // Sort
+    result.sort((a, b) => {
+      if (sortBy === "wo_number") {
+        return naturalCompare(a.wo_number, b.wo_number);
+      }
+      if (sortBy === "due_date") {
+        const dateA = parseDateDDMMYYYY(a.delivery_date);
+        const dateB = parseDateDDMMYYYY(b.delivery_date);
+        // nulls go to the end
+        if (!dateA && !dateB) return 0;
+        if (!dateA) return 1;
+        if (!dateB) return -1;
+        return dateA.getTime() - dateB.getTime();
+      }
+      return 0;
+    });
+
+    return result;
+  }, [orders, search, showCompleted, filterParty, filterClass, filterSize, filterValveType, sortBy]);
 
   const activeCount = orders.filter((o) => !o.is_completed).length;
   const completedCount = orders.filter((o) => o.is_completed).length;
@@ -527,6 +618,9 @@ export default function WOListPage() {
               <X size={12} /> Clear
             </button>
           )}
+
+          {/* Sort control */}
+          <SortDropdown value={sortBy} onChange={setSortBy} />
 
           <button
             onClick={() => setShowCompleted((v) => !v)}
@@ -796,7 +890,7 @@ export default function WOListPage() {
                                   <Pencil size={14} />
                                 </button>
                               )}
-                                                            <button
+                              <button
                                 onClick={() => router.push(`/dashboard/wo/print/${wo.id}`)}
                                 title="Preview / PDF"
                                 className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-500/10 text-[#8892a8] hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
