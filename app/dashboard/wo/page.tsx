@@ -428,7 +428,6 @@ export default function WOListPage() {
       if (sortBy === "due_date") {
         const dateA = parseDateDDMMYYYY(a.delivery_date);
         const dateB = parseDateDDMMYYYY(b.delivery_date);
-        // nulls go to the end
         if (!dateA && !dateB) return 0;
         if (!dateA) return 1;
         if (!dateB) return -1;
@@ -834,7 +833,13 @@ export default function WOListPage() {
                             rowSpan={woRowSpan}
                             className={`px-3 py-2.5 text-center align-middle border-r border-[#eef1f6] dark:border-gray-800/60 ${dueStyle}`}
                           >
-                            <span className="text-xs font-semibold">
+                            <span className={`text-xs font-semibold ${
+                              isCompleted
+                                ? "text-[#8892a8] line-through"
+                                : dueStyle
+                                ? "" // color already provided by dueStyle on the <td>
+                                : "text-[#2d3748] dark:text-gray-200"
+                            }`}>
                               {wo.delivery_date || "—"}
                             </span>
                           </td>
